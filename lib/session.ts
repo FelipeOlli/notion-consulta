@@ -4,9 +4,12 @@ import { cookies } from "next/headers";
 const SESSION_COOKIE = "nc_admin_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
 
-type SessionPayload = {
+export type SessionRole = "master" | "viewer";
+
+export type SessionPayload = {
   email: string;
   exp: number;
+  role?: SessionRole;
 };
 
 function getSessionSecret(): string {
@@ -29,10 +32,11 @@ function sign(payload: string): string {
   return crypto.createHmac("sha256", getSessionSecret()).update(payload).digest("base64url");
 }
 
-export function createSessionToken(email: string): string {
+export function createSessionToken(email: string, role: SessionRole): string {
   const payload: SessionPayload = {
     email,
     exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
+    role,
   };
   const encodedPayload = toBase64Url(JSON.stringify(payload));
   const signature = sign(encodedPayload);
@@ -55,6 +59,7 @@ export function validateSessionToken(token: string): SessionPayload | null {
     const parsed = JSON.parse(fromBase64Url(payloadPart)) as SessionPayload;
     if (!parsed.email || typeof parsed.exp !== "number") return null;
     if (Math.floor(Date.now() / 1000) > parsed.exp) return null;
+    if (!parsed.role) parsed.role = "master";
     return parsed;
   } catch {
     return null;

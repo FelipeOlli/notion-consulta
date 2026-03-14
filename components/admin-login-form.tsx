@@ -26,7 +26,11 @@ export function AdminLoginForm() {
         setError(payload?.message || "Nao foi possivel entrar.");
         return;
       }
-      router.push("/admin/links");
+      if (payload.role === "viewer") {
+        router.push("/");
+      } else {
+        router.push("/admin/links");
+      }
       router.refresh();
     } catch {
       setError("Falha de conexao. Tente novamente.");

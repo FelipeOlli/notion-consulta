@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { HeaderActions } from "@/components/header-actions";
 import { PublicLinks } from "@/components/public-links";
 import { PublicLoginForm } from "@/components/public-login-form";
 import { listPublicLinks } from "@/lib/store";
@@ -17,12 +17,7 @@ export default async function Home() {
               <p className="text-xs font-semibold uppercase tracking-widest text-sky-400">Notion Consulta</p>
               <h1 className="mt-1 text-xl font-bold text-slate-50 sm:text-2xl">Biblioteca de Links Notion</h1>
             </div>
-            <Link
-              href="/admin/login"
-              className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-slate-400 hover:text-white"
-            >
-              Entrar
-            </Link>
+            <HeaderActions role={session?.role ?? null} />
           </div>
         </header>
 
@@ -35,7 +30,7 @@ export default async function Home() {
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
                 Para acessar os materiais, entre com seu usuario e senha. Depois do login, esta pagina exibe apenas os
-                links que voce marcou como ativos no painel administrador.
+                links que o usuario master marcou como ativos no painel master.
               </p>
             </div>
 
@@ -43,7 +38,7 @@ export default async function Home() {
               <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Acesso</p>
               <h3 className="mt-1 text-lg font-semibold text-slate-50">Entrar para ver os links</h3>
               <p className="mt-2 text-sm text-slate-300">
-                Use as mesmas credenciais configuradas para o painel. O acesso cria uma sessao segura no navegador.
+                Use seu e-mail e senha de consulta (usuario visualizador) ou do master. O acesso cria uma sessao segura no navegador.
               </p>
               <div className="mt-5">
                 <PublicLoginForm />

@@ -25,19 +25,21 @@ Este guia assume que voce ja tem um servidor com EasyPanel (como no projeto do S
 
 No app do `notion-consulta`, configure as seguintes variaveis em **Environment**:
 
-- `ADMIN_EMAIL` – por exemplo: `ti@cfocontabilidade.com`
-- `ADMIN_PASSWORD` – por exemplo: `Suport3.`
-- `AUTH_SECRET` – um segredo forte (>= 32 caracteres). Pode usar o mesmo que esta no `.env.local`.
+- `MASTER_EMAIL` / `MASTER_PASSWORD` – usuario master (editar/adicionar/remover links)
+- `VIEWER_EMAIL` / `VIEWER_PASSWORD` – usuario visualizador (apenas consulta dos links; opcional)
+- `AUTH_SECRET` – segredo forte (>= 32 caracteres)
 
 Exemplo:
 
 ```text
-ADMIN_EMAIL=ti@cfocontabilidade.com
-ADMIN_PASSWORD=Suport3.
+MASTER_EMAIL=ti@cfcontabilidade.com
+MASTER_PASSWORD=Suport3.
+VIEWER_EMAIL=consulta@cfcontabilidade.com
+VIEWER_PASSWORD=senha-consulta
 AUTH_SECRET=o6asOa0XBcATRDCx0-PKQSrkda01kfxzNlS5Y2SjuJfUDxWAz9sG8qHYE15aF7lK
 ```
 
-> Nao coloque aspas, nem espacos extra.
+> Se nao definir VIEWER_*, apenas o master podera fazer login. Nao coloque aspas, nem espacos extra.
 
 ## 4. Porta e dominio
 
@@ -56,13 +58,13 @@ AUTH_SECRET=o6asOa0XBcATRDCx0-PKQSrkda01kfxzNlS5Y2SjuJfUDxWAz9sG8qHYE15aF7lK
 Se algo falhar:
 
 - Veja os **Logs** do app.
-- Erros de `AUTH_SECRET` ou `ADMIN_EMAIL/ADMIN_PASSWORD` normalmente indicam variavel faltando ou mal escrita.
+- Erros de `AUTH_SECRET` ou `MASTER_EMAIL/MASTER_PASSWORD` normalmente indicam variavel faltando ou mal escrita.
 
 ## 6. Testar em producao
 
 1. Acesse o dominio configurado (ex.: `https://notion.seudominio.com`).
 2. Tela inicial (tema black) aparece com formulario de login.
-3. Entre com as credenciais configuradas nas variaveis (`ADMIN_EMAIL` / `ADMIN_PASSWORD`).
+3. Entre com as credenciais do usuario master (`MASTER_EMAIL` / `MASTER_PASSWORD`).
 4. Depois do login, a home mostra os links ativos.
-5. O painel admin continua em `/admin/login` e `/admin/links`.
+5. O painel master (edicao/adicao/remocao de links) fica em `/admin/login` e `/admin/links`.
 

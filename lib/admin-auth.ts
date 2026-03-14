@@ -1,11 +1,12 @@
-import { cookies } from "next/headers";
-import { validateSessionToken } from "@/lib/session";
+import { getAdminSession } from "@/lib/session";
 
+/** Retorna true apenas se a sessão existe e o usuário é master (pode editar links). */
+export async function ensureMaster() {
+  const session = await getAdminSession();
+  return session !== null && session.role === "master";
+}
+
+/** Mantido para compatibilidade: mesmo que ensureMaster. */
 export async function ensureAdmin() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("nc_admin_session")?.value;
-  if (!token || !validateSessionToken(token)) {
-    return false;
-  }
-  return true;
+  return ensureMaster();
 }

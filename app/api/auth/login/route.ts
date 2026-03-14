@@ -5,33 +5,40 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const email = String(body?.email ?? "").trim().toLowerCase();
-    const password = String(body?.password ?? "");
+    const password = String(body?.password ?? "").trim();
 
-    const adminEmail = String(process.env.ADMIN_EMAIL ?? "").trim().toLowerCase();
-    const adminPassword = String(process.env.ADMIN_PASSWORD ?? "");
+    const masterEmail = String(process.env.MASTER_EMAIL ?? process.env.ADMIN_EMAIL ?? "").trim().toLowerCase();
+    const masterPassword = String(process.env.MASTER_PASSWORD ?? process.env.ADMIN_PASSWORD ?? "").trim();
+    const viewerEmail = String(process.env.VIEWER_EMAIL ?? "").trim().toLowerCase();
+    const viewerPassword = String(process.env.VIEWER_PASSWORD ?? "").trim();
 
-    if (!adminEmail || !adminPassword) {
-      return NextResponse.json(
-        { message: "Credenciais de admin nao configuradas no ambiente." },
-        { status: 500 }
-      );
+    if (masterEmail && masterPassword && email === masterEmail && password === masterPassword) {
+      const token = createSessionToken(email, "master");
+      const response = NextResponse.json({ ok: true, role: "master" });
+      response.cookies.set(sessionCookieConfig.name, token, {
+        maxAge: sessionCookieConfig.maxAge,
+        httpOnly: sessionCookieConfig.httpOnly,
+        sameSite: sessionCookieConfig.sameSite,
+        secure: sessionCookieConfig.secure,
+        path: sessionCookieConfig.path,
+      });
+      return response;
     }
 
-    if (email !== adminEmail || password !== adminPassword) {
-      return NextResponse.json({ message: "E-mail ou senha invalidos." }, { status: 401 });
+    if (viewerEmail && viewerPassword && email === viewerEmail && password === viewerPassword) {
+      const token = createSessionToken(email, "viewer");
+      const response = NextResponse.json({ ok: true, role: "viewer" });
+      response.cookies.set(sessionCookieConfig.name, token, {
+        maxAge: sessionCookieConfig.maxAge,
+        httpOnly: sessionCookieConfig.httpOnly,
+        sameSite: sessionCookieConfig.sameSite,
+        secure: sessionCookieConfig.secure,
+        path: sessionCookieConfig.path,
+      });
+      return response;
     }
 
-    const token = createSessionToken(email);
-    const response = NextResponse.json({ ok: true });
-    response.cookies.set(sessionCookieConfig.name, token, {
-      maxAge: sessionCookieConfig.maxAge,
-      httpOnly: sessionCookieConfig.httpOnly,
-      sameSite: sessionCookieConfig.sameSite,
-      secure: sessionCookieConfig.secure,
-      path: sessionCookieConfig.path,
-    });
-
-    return response;
+    return NextResponse.json({ message: "E-mail ou senha invalidos." }, { status: 401 });
   } catch {
     return NextResponse.json({ message: "Nao foi possivel autenticar." }, { status: 400 });
   }
