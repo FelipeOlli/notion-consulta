@@ -25,11 +25,13 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  const data = users.map((user) => ({
+  const data = users.map((user: (typeof users)[number]) => ({
     id: user.id,
     email: user.email,
     active: user.active,
-    modules: user.moduleAccess.filter((item) => item.canRead).map((item) => item.module.toLowerCase()),
+    modules: user.moduleAccess
+      .filter((item: { canRead: boolean }) => item.canRead)
+      .map((item: { module: string }) => item.module.toLowerCase()),
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   }));
@@ -83,7 +85,7 @@ export async function POST(request: NextRequest) {
           id: created.id,
           email: created.email,
           active: created.active,
-          modules: created.moduleAccess.map((item) => item.module.toLowerCase()),
+          modules: created.moduleAccess.map((item: { module: string }) => item.module.toLowerCase()),
         },
       },
       { status: 201 }

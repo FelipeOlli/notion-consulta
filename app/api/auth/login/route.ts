@@ -42,7 +42,9 @@ export async function POST(request: NextRequest) {
             return response;
           }
 
-          const modules = user.moduleAccess.filter((m) => m.canRead).map((m) => fromPrismaModule(m.module));
+          const modules = (user.moduleAccess as Array<{ canRead: boolean; module: Parameters<typeof fromPrismaModule>[0] }>)
+            .filter((m) => m.canRead)
+            .map((m) => fromPrismaModule(m.module));
           const token = createSessionToken({ email: user.email, userId: user.id, modules });
           const response = NextResponse.json({ ok: true, modules });
           response.cookies.set(sessionCookieConfig.name, token, {
