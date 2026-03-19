@@ -35,7 +35,7 @@ export function PublicLinks({ links }: Props) {
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Buscar por titulo, descricao ou categoria..."
+          placeholder="Buscar por título, descrição ou categoria..."
           className="h-12 rounded-xl border border-slate-600 bg-slate-900 px-4 text-sm text-slate-100 outline-none ring-0 transition focus:border-slate-300"
         />
         <select
@@ -73,7 +73,7 @@ export function PublicLinks({ links }: Props) {
                 rel="noopener noreferrer"
                 className="mt-5 inline-flex items-center text-sm font-semibold text-sky-400 transition group-hover:text-sky-200"
               >
-                Abrir no Notion
+                Abrir recurso
               </a>
             </article>
           ))}

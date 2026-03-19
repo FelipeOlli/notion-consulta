@@ -197,7 +197,7 @@ export function AdminLinksManager({ initialLinks }: Props) {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar no painel..."
+            placeholder="Buscar no gerencial..."
             className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400"
           />
           <div className="flex items-center text-sm text-slate-300">Total: {filtered.length}</div>

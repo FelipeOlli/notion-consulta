@@ -25,21 +25,20 @@ Este guia assume que voce ja tem um servidor com EasyPanel (como no projeto do S
 
 No app do `notion-consulta`, configure as seguintes variaveis em **Environment**:
 
-- `MASTER_EMAIL` / `MASTER_PASSWORD` – usuario master (editar/adicionar/remover links)
-- `VIEWER_EMAIL` / `VIEWER_PASSWORD` – usuario visualizador (apenas consulta dos links; opcional)
+- `MASTER_EMAIL` / `MASTER_PASSWORD` – usuario master (acesso completo)
 - `AUTH_SECRET` – segredo forte (>= 32 caracteres)
+- `DATABASE_URL` – PostgreSQL (obrigatorio)
 
 Exemplo:
 
 ```text
 MASTER_EMAIL=ti@cfcontabilidade.com
 MASTER_PASSWORD=Suport3.
-VIEWER_EMAIL=consulta@cfcontabilidade.com
-VIEWER_PASSWORD=senha-consulta
 AUTH_SECRET=o6asOa0XBcATRDCx0-PKQSrkda01kfxzNlS5Y2SjuJfUDxWAz9sG8qHYE15aF7lK
+DATABASE_URL=postgresql://root:senha@host:5432/notion_consulta?schema=public
 ```
 
-> Se nao definir VIEWER_*, apenas o master podera fazer login. Nao coloque aspas, nem espacos extra.
+> Nao coloque aspas, nem espacos extra.
 
 ## 4. Porta e dominio
 

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureAdmin } from "@/lib/admin-auth";
+import { ensureModuleAccess } from "@/lib/admin-auth";
 import { createLink, listAdminLinks } from "@/lib/store";
 
 export async function GET() {
-  const ok = await ensureAdmin();
+  const ok = await ensureModuleAccess("senha");
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
 
   const data = await listAdminLinks();
@@ -11,7 +11,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const ok = await ensureAdmin();
+  const ok = await ensureModuleAccess("senha");
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
 
   try {

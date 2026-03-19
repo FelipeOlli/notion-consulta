@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Notion Consulta",
-  description: "Compartilhe seus links do Notion com uma experiencia limpa e intuitiva.",
+  title: "Portal corporativo",
+  description: "Informações, acessos, certificados e indicadores da empresa em um ambiente gerencial seguro.",
 };
 
 export default function RootLayout({
@@ -23,8 +23,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}

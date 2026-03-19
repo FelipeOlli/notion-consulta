@@ -26,10 +26,12 @@ export function AdminLoginForm() {
         setError(payload?.message || "Nao foi possivel entrar.");
         return;
       }
-      if (payload.role === "viewer") {
-        router.push("/");
+
+      if (payload.role === "master") {
+        router.push("/admin");
       } else {
-        router.push("/admin/links");
+        const modules = Array.isArray(payload?.modules) ? payload.modules : [];
+        router.push(modules.length > 0 ? "/admin" : "/");
       }
       router.refresh();
     } catch {
@@ -69,7 +71,7 @@ export function AdminLoginForm() {
         disabled={loading}
         className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? "Entrando..." : "Entrar no painel"}
+        {loading ? "Entrando..." : "Entrar no gerencial"}
       </button>
     </form>
   );

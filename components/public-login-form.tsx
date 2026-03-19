@@ -26,6 +26,20 @@ export function PublicLoginForm() {
         setError(payload?.message || "Nao foi possivel entrar.");
         return;
       }
+
+      if (payload.role === "master") {
+        router.push("/admin");
+        router.refresh();
+        return;
+      }
+
+      const modules = Array.isArray(payload?.modules) ? payload.modules : [];
+      if (modules.length > 0) {
+        router.push("/admin");
+        router.refresh();
+        return;
+      }
+
       router.push("/");
       router.refresh();
     } catch {
@@ -65,7 +79,7 @@ export function PublicLoginForm() {
         disabled={loading}
         className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-slate-50 px-4 text-sm font-semibold text-slate-900 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? "Entrando..." : "Entrar e ver links"}
+        {loading ? "Entrando..." : "Entrar"}
       </button>
     </form>
   );

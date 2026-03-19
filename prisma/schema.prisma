@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AppModule {
+  SENHA
+  CERTIFICADOS
+  FINANCEIRO
+  USUARIOS
+}
+
+enum UsageSource {
+  MANUAL
+  IMPORT
+}
+
+model User {
+  id            String             @id @default(cuid())
+  email         String             @unique
+  passwordHash  String
+  active        Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  moduleAccess  UserModuleAccess[]
+}
+
+model UserModuleAccess {
+  id        String    @id @default(cuid())
+  userId    String
+  module    AppModule
+  canRead   Boolean   @default(true)
+  canWrite  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, module])
+}
+
+model Company {
+  id                String               @id @default(cuid())
+  legalName         String
+  document          String?              @unique
+  partnerName       String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  collaborators     Collaborator[]
+  certificates      DigitalCertificate[]
+  emailUsages       EmailUsage[]
+  monitoringCosts   MonitoringCost[]
+}
+
+model Collaborator {
+  id          String       @id @default(cuid())
+  fullName    String
+  /** E-mail de identificação nos serviços CF (.COM / .COM.BR). Obrigatório quando há vínculo com esses serviços. */
+  workEmail   String?
+  companyId   String
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignments CollaboratorServerAssignment[]
+  emailUsages EmailUsage[]
+}
+
+model DigitalCertificate {
+  id                   String    @id @default(cuid())
+  companyId            String
+  certificatePassword  String
+  expiresAt            DateTime
+  filePath             String
+  fileName             String
+  fileSize             Int
+  mimeType             String
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  company              Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model EmailServer {
+  id                        String       @id @default(cuid())
+  name                      String       @unique
+  costPerEmail              Decimal      @db.Decimal(12, 6)
+  /** Se true, colaboradores neste serviço exigem workEmail (ex.: CF .COM e .COM.BR). Time Is Money = false. */
+  requiresCollaboratorEmail Boolean      @default(true)
+  active                    Boolean      @default(true)
+  createdAt                 DateTime     @default(now())
+  updatedAt                 DateTime     @updatedAt
+  collaboratorAssignments   CollaboratorServerAssignment[]
+  emailUsages               EmailUsage[]
+}
+
+model CollaboratorServerAssignment {
+  id             String        @id @default(cuid())
+  collaboratorId String
+  serverId       String
+  createdAt      DateTime      @default(now())
+  collaborator   Collaborator  @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  server         EmailServer   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([collaboratorId, serverId])
+}
+
+model EmailUsage {
+  id              String        @id @default(cuid())
+  serverId        String
+  companyId       String
+  collaboratorId  String?
+  emailsCount     Int
+  competence      DateTime
+  source          UsageSource   @default(MANUAL)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  server          EmailServer   @relation(fields: [serverId], references: [id], onDelete: Restrict)
+  company         Company       @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  collaborator    Collaborator? @relation(fields: [collaboratorId], references: [id], onDelete: SetNull)
+}
+
+model MonitoringCost {
+  id         String    @id @default(cuid())
+  companyId  String
+  unitCost   Decimal   @db.Decimal(12, 2)
+  competence DateTime
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}

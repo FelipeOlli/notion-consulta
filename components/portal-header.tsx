@@ -2,22 +2,13 @@
 
 import { useRouter } from "next/navigation";
 
-type Props = {
-  /** Só exibe ações (ex.: Sair) quando há sessão. Na home não há link para o gerencial. */
-  isAuthenticated: boolean;
-};
-
-export function HeaderActions({ isAuthenticated }: Props) {
+export function PortalHeader() {
   const router = useRouter();
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/");
     router.refresh();
-  }
-
-  if (!isAuthenticated) {
-    return null;
   }
 
   return (
