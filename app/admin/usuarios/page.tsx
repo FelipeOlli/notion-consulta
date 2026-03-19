@@ -16,17 +16,29 @@ export default async function AdminUsersPage() {
   const modules: AppModule[] =
     session.role === "master" ? [...ALL_MODULES_FOR_MASTER] : session.modules ?? [];
 
-  const users = await prisma.user.findMany({
-    include: { moduleAccess: true },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const initialUsers = users.map((user: (typeof users)[number]) => ({
-    id: user.id,
-    email: user.email,
-    active: user.active,
-    modules: user.moduleAccess.filter((item) => item.canRead).map((item) => item.module.toLowerCase()),
-  }));
+    const users: Array<{
+      id: string;
+      email: string;
+      active: boolean;
+      moduleAccess: Array<{ canRead: boolean; module: string }>;
+    }> = await prisma.user.findMany({
+      include: { moduleAccess: true },
+      orderBy: { createdAt: "desc" },
+    }) as Array<{
+      id: string;
+      email: string;
+      active: boolean;
+      moduleAccess: Array<{ canRead: boolean; module: string }>;
+    }>;
+    
+    const initialUsers = users.map((user) => ({
+      id: user.id,
+      email: user.email,
+      active: user.active,
+      modules: user.moduleAccess
+        .filter((item) => item.canRead)
+        .map((item) => item.module.toLowerCase()),
+    }));
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-black">
