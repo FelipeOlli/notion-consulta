@@ -1,15 +1,10 @@
 import { redirect } from "next/navigation";
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/session";
 import { AdminNav } from "@/components/admin-nav";
 import { AdminUsersManager } from "@/components/admin-users-manager";
 import { LOCKED_PRIMARY_ADMIN_EMAIL } from "@/lib/locked-admin";
 import { ALL_MODULES_FOR_MASTER, type AppModule } from "@/lib/modules";
-
-type UserWithModuleAccess = Prisma.UserGetPayload<{
-  include: { moduleAccess: true };
-}>;
 
 export default async function AdminUsersPage() {
   const session = await getAdminSession();
@@ -26,7 +21,7 @@ export default async function AdminUsersPage() {
     orderBy: { createdAt: "desc" },
   });
 
-  const initialUsers = (users as UserWithModuleAccess[]).map((user) => ({
+  const initialUsers = users.map((user: (typeof users)[number]) => ({
     id: user.id,
     email: user.email,
     active: user.active,
