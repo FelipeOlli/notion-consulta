@@ -9,6 +9,7 @@ RUN npm install
 
 FROM deps AS builder
 COPY . .
+RUN npx prisma generate
 # Segredo dummy apenas para o build (nao usar segredo real aqui).
 ENV AUTH_SECRET=build-secret-notion-consulta-pelo-menos-32-caracteres-123
 RUN npm run build
