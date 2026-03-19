@@ -44,38 +44,38 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       ? body.modules.map((value) => normalizeModule(String(value))).filter(isModuleKey)
       : undefined;
 
-    const updated = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.update({
-        where: { id },
-        data: {
-          email,
-          active: body.active,
-          passwordHash: password ? await hashPassword(password) : undefined,
-        },
-      });
-
-      if (modules) {
-        await tx.userModuleAccess.deleteMany({ where: { userId: user.id } });
-        if (modules.length > 0) {
-          await tx.userModuleAccess.createMany({
-            data: modules.map((moduleKey) => ({
-              userId: user.id,
-              module: toPrismaModule(moduleKey),
-              canRead: true,
-              canWrite: true,
-            })),
-          });
-        }
-      }
-
-      const moduleAccess = await tx.userModuleAccess.findMany({ where: { userId: user.id } });
-      return {
-        id: user.id,
-        email: user.email,
-        active: user.active,
-        modules: moduleAccess.filter((item) => item.canRead).map((item) => item.module.toLowerCase()),
-      };
+    const user = await prisma.user.update({
+      where: { id },
+      data: {
+        email,
+        active: body.active,
+        passwordHash: password ? await hashPassword(password) : undefined,
+      },
     });
+
+    if (modules) {
+      await prisma.userModuleAccess.deleteMany({ where: { userId: user.id } });
+      if (modules.length > 0) {
+        await prisma.userModuleAccess.createMany({
+          data: modules.map((moduleKey) => ({
+            userId: user.id,
+            module: toPrismaModule(moduleKey),
+            canRead: true,
+            canWrite: true,
+          })),
+        });
+      }
+    }
+
+    const moduleAccess = await prisma.userModuleAccess.findMany({ where: { userId: user.id } });
+    const updated = {
+      id: user.id,
+      email: user.email,
+      active: user.active,
+      modules: moduleAccess
+        .filter((item: { canRead: boolean }) => item.canRead)
+        .map((item: { module: string | { toString(): string } }) => item.module.toString().toLowerCase()),
+    };
 
     return NextResponse.json({ data: updated });
   } catch (error) {
