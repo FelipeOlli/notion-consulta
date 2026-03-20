@@ -8,11 +8,13 @@ export function AdminLoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [errorIsWait, setErrorIsWait] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setErrorIsWait(false);
     setLoading(true);
 
     try {
@@ -23,6 +25,7 @@ export function AdminLoginForm() {
       });
       const payload = await response.json();
       if (!response.ok) {
+        setErrorIsWait(response.status === 503);
         setError(payload?.message || "Nao foi possivel entrar.");
         return;
       }
@@ -65,7 +68,9 @@ export function AdminLoginForm() {
           placeholder="Sua senha"
         />
       </div>
-      {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
+      {error ? (
+        <p className={`text-sm font-medium ${errorIsWait ? "text-amber-700" : "text-red-600"}`}>{error}</p>
+      ) : null}
       <button
         type="submit"
         disabled={loading}

@@ -4,6 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { ALL_MODULES_FOR_MASTER, fromPrismaModule } from "@/lib/modules";
 import { verifyPassword } from "@/lib/password";
 import { isLockedPrimaryAdminEmail } from "@/lib/locked-admin";
+import {
+  isTransientDbFailure,
+  TRANSIENT_DB_USER_MESSAGE,
+  withTransientDbRetry,
+} from "@/lib/prisma-transient-retry";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,10 +19,20 @@ export async function POST(request: NextRequest) {
     const masterEmail = String(process.env.MASTER_EMAIL ?? process.env.ADMIN_EMAIL ?? "").trim().toLowerCase();
     const masterPassword = String(process.env.MASTER_PASSWORD ?? process.env.ADMIN_PASSWORD ?? "").trim();
     if (process.env.DATABASE_URL) {
-      const user = await prisma.user.findUnique({
-        where: { email },
-        include: { moduleAccess: true },
-      });
+      let user;
+      try {
+        user = await withTransientDbRetry(() =>
+          prisma.user.findUnique({
+            where: { email },
+            include: { moduleAccess: true },
+          })
+        );
+      } catch (error) {
+        if (isTransientDbFailure(error)) {
+          return NextResponse.json({ message: TRANSIENT_DB_USER_MESSAGE }, { status: 503 });
+        }
+        throw error;
+      }
       if (user?.active) {
         const valid = await verifyPassword(password, user.passwordHash);
         if (valid) {
@@ -82,7 +97,10 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ message: "E-mail ou senha invalidos." }, { status: 401 });
-  } catch {
+  } catch (error) {
+    if (isTransientDbFailure(error)) {
+      return NextResponse.json({ message: TRANSIENT_DB_USER_MESSAGE }, { status: 503 });
+    }
     return NextResponse.json({ message: "Nao foi possivel autenticar." }, { status: 400 });
   }
 }

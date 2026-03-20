@@ -8,11 +8,13 @@ export function PublicLoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [errorIsWait, setErrorIsWait] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setErrorIsWait(false);
     setLoading(true);
 
     try {
@@ -23,6 +25,7 @@ export function PublicLoginForm() {
       });
       const payload = await response.json();
       if (!response.ok) {
+        setErrorIsWait(response.status === 503);
         setError(payload?.message || "Nao foi possivel entrar.");
         return;
       }
@@ -73,7 +76,9 @@ export function PublicLoginForm() {
           placeholder="Sua senha"
         />
       </div>
-      {error ? <p className="text-sm font-medium text-red-400">{error}</p> : null}
+      {error ? (
+        <p className={`text-sm font-medium ${errorIsWait ? "text-amber-400" : "text-red-400"}`}>{error}</p>
+      ) : null}
       <button
         type="submit"
         disabled={loading}
