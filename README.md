@@ -11,6 +11,7 @@ Gerencial com login, controle de modulos por usuario (email), gestao de acessos/
 - Modulo Financeiro:
   - dashboard de **quantidade de usuarios por servico** (CFCONTABILIDADE.COM, CFCONTABILIDADE.COM.BR, Time Is Money);
   - importacao mensal: JSON do Google Workspace (.COM / .COM.BR) e CSV de colaboradores (Time Is Money);
+  - **clique no card do servico** para ver **planilha** com filtro por empresa (dominio do e-mail no Google; departamento no Time Is Money);
   - historico por competencia (mes) com substituicao do snapshot ao reimportar o mesmo mes.
 
 ## Arquitetura

@@ -82,10 +82,12 @@ export async function GET(request: NextRequest) {
       name: FINANCEIRO_SERVICE_NAMES[key],
       latest: last
         ? {
+            snapshotId: last.id,
             competence: monthKey(last.competence),
             totalUsers: last.totalUsers,
             activeUsers: last.activeUsers,
             importedAt: last.createdAt.toISOString(),
+            source: last.source,
           }
         : null,
     };

@@ -105,7 +105,7 @@ model EmailServer {
 
 /** Snapshot mensal de quantidade de usuários por serviço (dashboard financeiro). */
 model ServiceUserSnapshot {
-  id          String               @id @default(cuid())
+  id          String                    @id @default(cuid())
   serverId    String
   /** Primeiro dia do mês de competência (UTC). */
   competence  DateTime
@@ -114,10 +114,28 @@ model ServiceUserSnapshot {
   activeUsers Int?
   source      SnapshotImportSource
   fileName    String?
-  createdAt   DateTime             @default(now())
-  server      EmailServer          @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  createdAt   DateTime                  @default(now())
+  server      EmailServer               @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  lines       ServiceUserSnapshotLine[]
 
   @@unique([serverId, competence])
+}
+
+/** Linha importada (visualização em planilha); empresa = dominio do e-mail (Google) ou departamento (Time Is Money). */
+model ServiceUserSnapshotLine {
+  id           String              @id @default(cuid())
+  snapshotId   String
+  sortOrder    Int
+  email        String?
+  displayName  String
+  companyLabel String
+  status       String?
+  detail       String?
+  meta         Json?
+  snapshot     ServiceUserSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@index([snapshotId])
+  @@index([snapshotId, companyLabel])
 }
 
 model CollaboratorServerAssignment {

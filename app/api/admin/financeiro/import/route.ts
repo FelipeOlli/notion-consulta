@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { ensureModuleAccess } from "@/lib/admin-auth";
 import {
   competenceFromYearMonth,
-  parseGoogleWorkspaceUsersJson,
-  parseTimeIsMoneyCollaboratorsCsv,
+  parseGoogleWorkspaceUsersJsonRows,
+  parseTimeIsMoneyCollaboratorsCsvRows,
 } from "@/lib/financeiro-import";
 import { ensureFinanceiroEmailServer } from "@/lib/financeiro-ensure-server";
 import { serviceKeyFromForm } from "@/lib/financeiro-services";
@@ -38,38 +38,88 @@ export async function POST(request: NextRequest) {
     let totalUsers: number;
     let activeUsers: number | null;
     let source: "GOOGLE_JSON" | "TIM_CSV";
+    type LineInput = {
+      sortOrder: number;
+      email: string | null;
+      displayName: string;
+      companyLabel: string;
+      status: string | null;
+      detail: string | null;
+      meta: Record<string, string> | null;
+    };
+    let lineInputs: LineInput[];
 
     if (serviceKey === "timeIsMoney") {
-      const parsed = parseTimeIsMoneyCollaboratorsCsv(text);
+      const parsed = parseTimeIsMoneyCollaboratorsCsvRows(text);
       totalUsers = parsed.totalUsers;
       activeUsers = null;
       source = "TIM_CSV";
+      lineInputs = parsed.rows.map((r, i) => ({
+        sortOrder: i,
+        email: null,
+        displayName: r.displayName,
+        companyLabel: r.companyLabel,
+        status: null,
+        detail: r.detail || null,
+        meta: r.meta,
+      }));
     } else {
-      const parsed = parseGoogleWorkspaceUsersJson(text);
+      const parsed = parseGoogleWorkspaceUsersJsonRows(text);
       totalUsers = parsed.totalUsers;
       activeUsers = parsed.activeUsers;
       source = "GOOGLE_JSON";
+      lineInputs = parsed.rows.map((r, i) => ({
+        sortOrder: i,
+        email: r.email || null,
+        displayName: r.displayName,
+        companyLabel: r.companyLabel,
+        status: r.status || null,
+        detail: r.detail || null,
+        meta: null,
+      }));
     }
 
-    const snapshot = await prisma.serviceUserSnapshot.upsert({
-      where: {
-        serverId_competence: { serverId: server.id, competence },
-      },
-      create: {
-        serverId: server.id,
-        competence,
-        totalUsers,
-        activeUsers,
-        source,
-        fileName: file.name || null,
-      },
-      update: {
-        totalUsers,
-        activeUsers,
-        source,
-        fileName: file.name || null,
-      },
-      include: { server: true },
+    const snapshot = await prisma.$transaction(async (tx) => {
+      const snap = await tx.serviceUserSnapshot.upsert({
+        where: {
+          serverId_competence: { serverId: server.id, competence },
+        },
+        create: {
+          serverId: server.id,
+          competence,
+          totalUsers,
+          activeUsers,
+          source,
+          fileName: file.name || null,
+        },
+        update: {
+          totalUsers,
+          activeUsers,
+          source,
+          fileName: file.name || null,
+        },
+        include: { server: true },
+      });
+
+      await tx.serviceUserSnapshotLine.deleteMany({ where: { snapshotId: snap.id } });
+      const chunk = 500;
+      for (let i = 0; i < lineInputs.length; i += chunk) {
+        const part = lineInputs.slice(i, i + chunk);
+        await tx.serviceUserSnapshotLine.createMany({
+          data: part.map((row) => ({
+            snapshotId: snap.id,
+            sortOrder: row.sortOrder,
+            email: row.email,
+            displayName: row.displayName,
+            companyLabel: row.companyLabel,
+            status: row.status,
+            detail: row.detail,
+            meta: row.meta ?? undefined,
+          })),
+        });
+      }
+
+      return snap;
     });
 
     return NextResponse.json({
@@ -87,7 +137,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const raw = error instanceof Error ? error.message : String(error);
-    if (/does not exist/i.test(raw) && /ServiceUserSnapshot|relation/i.test(raw)) {
+    if (/does not exist/i.test(raw) && /ServiceUserSnapshot|ServiceUserSnapshotLine|relation/i.test(raw)) {
       return NextResponse.json(
         {
           message:
