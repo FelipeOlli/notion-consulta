@@ -6,7 +6,14 @@ import { getAdminSession } from "@/lib/session";
 
 export default async function Home() {
   const session = await getAdminSession();
-  const links = session ? await listPublicLinks() : [];
+  let links: Awaited<ReturnType<typeof listPublicLinks>> = [];
+  if (session) {
+    try {
+      links = await listPublicLinks();
+    } catch (error) {
+      console.error("[home] Nao foi possivel carregar links publicos (ex.: disco somente leitura em data/).", error);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-black">

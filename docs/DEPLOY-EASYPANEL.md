@@ -80,6 +80,11 @@ O que fazer:
 
 Apos o banco estavel, rode **`npx prisma migrate deploy`** (ou comando equivalente no deploy) se ainda nao aplicou as migracoes.
 
+### Internal Server Error na home (`/`)
+
+- Se o **Postgres** nao sobe a tempo, o app **nao encerra mais o processo** por falha de conexao na `instrumentation`; a home deve abrir mesmo assim (sem modulos que precisam de banco).
+- Se a home quebrar **com usuario logado**, pode ser **disco somente leitura**: a lista de links publicos grava em `data/links.json`. Monte um volume em **`/app/data`** (mesma ideia dos certificados em `data/certificados`).
+
 ## 7. Testar em producao
 
 1. Acesse o dominio configurado (ex.: `https://notion.seudominio.com`).
