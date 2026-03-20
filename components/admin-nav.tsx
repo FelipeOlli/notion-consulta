@@ -60,7 +60,7 @@ export function AdminNav({ modules }: Props) {
         onClick={handleLogout}
         className="rounded-lg border border-slate-600 px-3 py-2 text-sm font-medium text-slate-100 transition hover:border-red-400/80 hover:bg-red-950/40 hover:text-red-200"
       >
-        Sair do gerencial
+        Sair
       </button>
     </nav>
   );

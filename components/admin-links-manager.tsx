@@ -109,27 +109,12 @@ export function AdminLinksManager({ initialLinks }: Props) {
     router.refresh();
   }
 
-  async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/");
-    router.refresh();
-  }
-
   return (
     <section className="space-y-6">
       <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-sm sm:p-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold text-slate-50">
-            {editingId ? "Editar link" : "Novo link do Notion"}
-          </h2>
-          <button
-            type="button"
-            onClick={logout}
-            className="rounded-xl border border-slate-700 px-3 py-2 text-sm font-medium text-slate-100 transition hover:border-slate-400 hover:text-white"
-          >
-            Sair
-          </button>
-        </div>
+        <h2 className="mb-4 text-lg font-semibold text-slate-50">
+          {editingId ? "Editar link" : "Novo link do Notion"}
+        </h2>
 
         <form onSubmit={onSubmit} className="grid gap-3 md:grid-cols-2">
           <input
