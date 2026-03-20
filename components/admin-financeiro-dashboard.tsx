@@ -34,6 +34,17 @@ type DashboardPayload = {
   servers: { id: string; name: string }[];
 };
 
+async function parseJsonBody(res: Response): Promise<{ message?: string; data?: unknown }> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as { message?: string; data?: unknown };
+  } catch {
+    return {
+      message: `Resposta invalida (HTTP ${res.status}). Verifique se o deploy aplicou migracoes e o app esta no ar.`,
+    };
+  }
+}
+
 export function AdminFinanceiroDashboard() {
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -56,7 +67,7 @@ export function AdminFinanceiroDashboard() {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/financeiro/snapshots?months=18");
-      const json = await res.json();
+      const json = await parseJsonBody(res);
       if (!res.ok) {
         setLoadError(json?.message || "Nao foi possivel carregar o dashboard.");
         setData(null);
@@ -64,7 +75,7 @@ export function AdminFinanceiroDashboard() {
       }
       setData(json.data as DashboardPayload);
     } catch {
-      setLoadError("Falha de conexao.");
+      setLoadError("Falha de conexao. Verifique rede ou se o servidor respondeu.");
       setData(null);
     } finally {
       setLoading(false);
@@ -101,14 +112,19 @@ export function AdminFinanceiroDashboard() {
       form.set("competence", competence);
       form.set("file", file);
       const res = await fetch("/api/admin/financeiro/import", { method: "POST", body: form });
-      const json = await res.json();
+      const json = await parseJsonBody(res);
       if (!res.ok) {
         setImportError(json?.message || "Importacao falhou.");
         return;
       }
+      const imported = json.data as {
+        serverName: string;
+        totalUsers: number;
+        activeUsers: number | null;
+      };
       setImportOk(
-        `Importado: ${json.data.serverName} — ${json.data.totalUsers} usuario(s)` +
-          (json.data.activeUsers != null ? ` (${json.data.activeUsers} ativos no Google).` : ".")
+        `Importado: ${imported.serverName} — ${imported.totalUsers} usuario(s)` +
+          (imported.activeUsers != null ? ` (${imported.activeUsers} ativos no Google).` : ".")
       );
       setFile(null);
       await load();

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ensureModuleAccess } from "@/lib/admin-auth";
+import { ensureAllFinanceiroEmailServers } from "@/lib/financeiro-ensure-server";
 import { FINANCEIRO_SERVICE_NAMES, FINANCEIRO_SERVICE_KEYS } from "@/lib/financeiro-services";
 
 function monthKey(d: Date): string {
@@ -15,6 +16,8 @@ export async function GET(request: NextRequest) {
 
   const monthsParam = request.nextUrl.searchParams.get("months");
   const monthsBack = Math.min(36, Math.max(1, Number(monthsParam) || 18));
+
+  await ensureAllFinanceiroEmailServers();
 
   const servers = await prisma.emailServer.findMany({
     where: {

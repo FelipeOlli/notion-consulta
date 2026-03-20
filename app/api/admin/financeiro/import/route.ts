@@ -6,7 +6,8 @@ import {
   parseGoogleWorkspaceUsersJson,
   parseTimeIsMoneyCollaboratorsCsv,
 } from "@/lib/financeiro-import";
-import { serverNameForKey, serviceKeyFromForm } from "@/lib/financeiro-services";
+import { ensureFinanceiroEmailServer } from "@/lib/financeiro-ensure-server";
+import { serviceKeyFromForm } from "@/lib/financeiro-services";
 
 export async function POST(request: NextRequest) {
   const ok = await ensureModuleAccess("financeiro");
@@ -31,14 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     const competence = competenceFromYearMonth(competenceRaw);
-    const serverName = serverNameForKey(serviceKey);
-    const server = await prisma.emailServer.findUnique({ where: { name: serverName } });
-    if (!server) {
-      return NextResponse.json(
-        { message: `Servico "${serverName}" nao encontrado no banco. Execute o seed ou cadastre o EmailServer.` },
-        { status: 400 }
-      );
-    }
+    const server = await ensureFinanceiroEmailServer(serviceKey);
 
     const text = await file.text();
     let totalUsers: number;
