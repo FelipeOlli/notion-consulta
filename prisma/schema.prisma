@@ -25,6 +25,12 @@ enum SnapshotImportSource {
   TIM_CSV
 }
 
+/** Linha veio do arquivo de importação ou foi cadastrada manualmente no portal. */
+enum SnapshotLineSource {
+  IMPORTED
+  MANUAL
+}
+
 model User {
   id            String             @id @default(cuid())
   email         String             @unique
@@ -101,6 +107,22 @@ model EmailServer {
   collaboratorAssignments   CollaboratorServerAssignment[]
   emailUsages               EmailUsage[]
   userSnapshots             ServiceUserSnapshot[]
+  /** Cadastro de empresas para alocação no dashboard financeiro (por serviço). */
+  financeiroCompanies       FinanceiroServerCompany[]
+}
+
+/** Empresa cadastrada por servidor de e-mail (CF .COM / .COM.BR / Time Is Money) para alocar linhas de snapshot. */
+model FinanceiroServerCompany {
+  id        String   @id @default(cuid())
+  serverId  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  server    EmailServer               @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  lines     ServiceUserSnapshotLine[]
+
+  @@unique([serverId, name])
+  @@index([serverId])
 }
 
 /** Snapshot mensal de quantidade de usuários por serviço (dashboard financeiro). */
@@ -121,21 +143,28 @@ model ServiceUserSnapshot {
   @@unique([serverId, competence])
 }
 
-/** Linha importada (visualização em planilha); empresa = dominio do e-mail (Google) ou departamento (Time Is Money). */
+/** Linha importada (visualização em planilha); alocação por empresa via FinanceiroServerCompany. */
 model ServiceUserSnapshotLine {
-  id           String              @id @default(cuid())
-  snapshotId   String
-  sortOrder    Int
-  email        String?
-  displayName  String
-  companyLabel String
-  status       String?
-  detail       String?
-  meta         Json?
-  snapshot     ServiceUserSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  id                        String                   @id @default(cuid())
+  snapshotId                String
+  sortOrder                 Int
+  email                     String?
+  displayName               String
+  /** Legado; métricas usam financeiroServerCompany. */
+  companyLabel              String
+  companyLabelOverride      String?
+  /** Empresa alocada para métricas e filtros (catálogo do mesmo servidor do snapshot). */
+  financeiroServerCompanyId String?
+  financeiroServerCompany   FinanceiroServerCompany? @relation(fields: [financeiroServerCompanyId], references: [id], onDelete: SetNull)
+  status                    String?
+  detail                    String?
+  meta                      Json?
+  lineSource                SnapshotLineSource         @default(IMPORTED)
+  snapshot                  ServiceUserSnapshot      @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
   @@index([snapshotId])
   @@index([snapshotId, companyLabel])
+  @@index([snapshotId, financeiroServerCompanyId])
 }
 
 model CollaboratorServerAssignment {

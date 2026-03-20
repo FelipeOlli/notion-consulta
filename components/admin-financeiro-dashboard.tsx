@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FINANCEIRO_SEM_EMPRESA } from "@/lib/financeiro-allocation";
 
 type SnapshotPoint = {
   totalUsers: number;
@@ -35,15 +36,60 @@ type LineRow = {
   email: string | null;
   displayName: string;
   companyLabel: string;
+  companyLabelOverride: string | null;
+  financeiroServerCompanyId?: string | null;
+  allocatedCompany?: { id: string; name: string } | null;
+  effectiveCompany: string;
   status: string | null;
   detail: string | null;
   meta: unknown;
+  lineSource?: "IMPORTED" | "MANUAL";
+};
+
+type LineEditorState =
+  | null
+  | {
+      mode: "create";
+      financeiroServerCompanyId: string;
+      displayName: string;
+      email: string;
+      status: string;
+      detail: string;
+      telefone: string;
+      dispositivo: string;
+      ultimaAtividade: string;
+      criadoEm: string;
+    }
+  | {
+      mode: "edit";
+      lineId: string;
+      financeiroServerCompanyId: string;
+      displayName: string;
+      email: string;
+      status: string;
+      detail: string;
+      telefone: string;
+      dispositivo: string;
+      ultimaAtividade: string;
+      criadoEm: string;
+    };
+
+type ByCompanyRow = { label: string; count: number };
+
+type UsersByCompanyLatestBlock = {
+  key: string;
+  name: string;
+  serverId: string | null;
+  competence: string | null;
+  snapshotId: string | null;
+  byCompany: { label: string; count: number }[];
 };
 
 type DashboardPayload = {
   labels: string[];
   series: SeriesRow[];
   latestByService: LatestRow[];
+  usersByCompanyLatest?: UsersByCompanyLatestBlock[];
   servers: { id: string; name: string }[];
 };
 
@@ -82,8 +128,17 @@ export function AdminFinanceiroDashboard() {
   const [sheetCompanies, setSheetCompanies] = useState<string[]>([]);
   const [sheetCompanyFilter, setSheetCompanyFilter] = useState("");
   const [sheetLines, setSheetLines] = useState<LineRow[]>([]);
+  const [sheetByCompany, setSheetByCompany] = useState<ByCompanyRow[]>([]);
   const [sheetLoading, setSheetLoading] = useState(false);
   const [sheetError, setSheetError] = useState("");
+  const [lineEditor, setLineEditor] = useState<LineEditorState>(null);
+  const [editorSaving, setEditorSaving] = useState(false);
+  const [sheetServerId, setSheetServerId] = useState<string | null>(null);
+  const [serverCatalog, setServerCatalog] = useState<{ id: string; name: string }[]>([]);
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [companyUiError, setCompanyUiError] = useState("");
+  const [newCompanyName, setNewCompanyName] = useState("");
+  const [patchingLineId, setPatchingLineId] = useState<string | null>(null);
 
   const loadLines = useCallback(async (snapshotId: string, company?: string) => {
     setSheetLoading(true);
@@ -96,19 +151,61 @@ export function AdminFinanceiroDashboard() {
         setSheetError(json?.message || "Nao foi possivel carregar a planilha.");
         setSheetLines([]);
         setSheetCompanies([]);
+        setSheetByCompany([]);
+        setSheetServerId(null);
+        setServerCatalog([]);
         return;
       }
       const d = json.data as {
         companies: string[];
+        byCompany?: ByCompanyRow[];
         lines: LineRow[];
-        snapshot: { source: string };
+        snapshot: { source: string; serverId?: string };
       };
       setSheetCompanies(d.companies);
+      setSheetByCompany(
+        Array.isArray(d.byCompany)
+          ? d.byCompany
+          : d.companies.map((label) => ({
+              label,
+              count: d.lines.filter((l) => (l.effectiveCompany ?? l.companyLabel) === label).length,
+            }))
+      );
       setSheetLines(d.lines);
       setSheetSource(d.snapshot.source);
+      setLineEditor(null);
+
+      const sid = d.snapshot.serverId ?? null;
+      setSheetServerId(sid);
+      if (sid) {
+        setCompaniesLoading(true);
+        setCompanyUiError("");
+        try {
+          const cr = await fetch(`/api/admin/financeiro/servers/${sid}/companies`);
+          const cj = await parseJsonBody(cr);
+          if (cr.ok) {
+            const payload = cj.data as { companies: { id: string; name: string }[] };
+            setServerCatalog(payload.companies ?? []);
+          } else {
+            setCompanyUiError(cj.message || "Falha ao carregar empresas.");
+            setServerCatalog([]);
+          }
+        } catch {
+          setCompanyUiError("Falha de conexao (empresas).");
+          setServerCatalog([]);
+        } finally {
+          setCompaniesLoading(false);
+        }
+      } else {
+        setServerCatalog([]);
+      }
     } catch {
       setSheetError("Falha de conexao.");
       setSheetLines([]);
+      setSheetCompanies([]);
+      setSheetByCompany([]);
+      setSheetServerId(null);
+      setServerCatalog([]);
     } finally {
       setSheetLoading(false);
     }
@@ -119,6 +216,7 @@ export function AdminFinanceiroDashboard() {
     setSheetTitle(row.name);
     setSheetSnapshotId(row.latest.snapshotId);
     setSheetCompanyFilter("");
+    setLineEditor(null);
     setSheetOpen(true);
     setSheetSource(row.latest.source);
     await loadLines(row.latest.snapshotId);
@@ -129,8 +227,287 @@ export function AdminFinanceiroDashboard() {
     setSheetSnapshotId(null);
     setSheetLines([]);
     setSheetCompanies([]);
+    setSheetByCompany([]);
     setSheetCompanyFilter("");
     setSheetError("");
+    setLineEditor(null);
+    setEditorSaving(false);
+    setSheetServerId(null);
+    setServerCatalog([]);
+    setCompanyUiError("");
+    setNewCompanyName("");
+    setPatchingLineId(null);
+  }
+
+  async function addServerCompany() {
+    if (!sheetServerId || !newCompanyName.trim()) return;
+    setCompanyUiError("");
+    try {
+      const res = await fetch(`/api/admin/financeiro/servers/${sheetServerId}/companies`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCompanyName.trim() }),
+      });
+      const json = await parseJsonBody(res);
+      if (!res.ok) {
+        setCompanyUiError(json?.message || "Nao foi possivel criar a empresa.");
+        return;
+      }
+      setNewCompanyName("");
+      const cr = await fetch(`/api/admin/financeiro/servers/${sheetServerId}/companies`);
+      const cj = await parseJsonBody(cr);
+      if (cr.ok) {
+        const payload = cj.data as { companies: { id: string; name: string }[] };
+        setServerCatalog(payload.companies ?? []);
+      }
+      await load();
+    } catch {
+      setCompanyUiError("Falha de conexao.");
+    }
+  }
+
+  async function renameServerCompany(c: { id: string; name: string }) {
+    if (!sheetServerId) return;
+    const name = window.prompt("Novo nome da empresa:", c.name);
+    if (name == null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setCompanyUiError("");
+    try {
+      const res = await fetch(`/api/admin/financeiro/servers/${sheetServerId}/companies/${c.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      const json = await parseJsonBody(res);
+      if (!res.ok) {
+        setCompanyUiError(json?.message || "Nao foi possivel renomear.");
+        return;
+      }
+      const cr = await fetch(`/api/admin/financeiro/servers/${sheetServerId}/companies`);
+      const cj = await parseJsonBody(cr);
+      if (cr.ok) {
+        const payload = cj.data as { companies: { id: string; name: string }[] };
+        setServerCatalog(payload.companies ?? []);
+      }
+      if (sheetSnapshotId) await loadLines(sheetSnapshotId, sheetCompanyFilter || undefined);
+      await load();
+    } catch {
+      setCompanyUiError("Falha de conexao.");
+    }
+  }
+
+  async function deleteServerCompany(companyId: string) {
+    if (!sheetServerId) return;
+    if (!window.confirm("Excluir esta empresa? Linhas alocadas ficam sem empresa.")) return;
+    setCompanyUiError("");
+    try {
+      const res = await fetch(`/api/admin/financeiro/servers/${sheetServerId}/companies/${companyId}`, {
+        method: "DELETE",
+      });
+      const json = await parseJsonBody(res);
+      if (!res.ok) {
+        setCompanyUiError(json?.message || "Nao foi possivel excluir.");
+        return;
+      }
+      const cr = await fetch(`/api/admin/financeiro/servers/${sheetServerId}/companies`);
+      const cj = await parseJsonBody(cr);
+      if (cr.ok) {
+        const payload = cj.data as { companies: { id: string; name: string }[] };
+        setServerCatalog(payload.companies ?? []);
+      }
+      if (sheetSnapshotId) await loadLines(sheetSnapshotId, sheetCompanyFilter || undefined);
+      await load();
+    } catch {
+      setCompanyUiError("Falha de conexao.");
+    }
+  }
+
+  async function patchLineAllocation(lineId: string, companyId: string | null) {
+    if (!sheetSnapshotId) return;
+    setPatchingLineId(lineId);
+    setSheetError("");
+    try {
+      const res = await fetch(`/api/admin/financeiro/snapshots/${sheetSnapshotId}/lines/${lineId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ financeiroServerCompanyId: companyId }),
+      });
+      const json = await parseJsonBody(res);
+      if (!res.ok) {
+        setSheetError(json?.message || "Nao foi possivel alocar empresa.");
+        return;
+      }
+      await loadLines(sheetSnapshotId, sheetCompanyFilter || undefined);
+      await load();
+    } catch {
+      setSheetError("Falha de conexao ao alocar.");
+    } finally {
+      setPatchingLineId(null);
+    }
+  }
+
+  const sheetCompanyChartMax = useMemo(() => {
+    if (sheetByCompany.length === 0) return 1;
+    return Math.max(...sheetByCompany.map((b) => b.count), 1);
+  }, [sheetByCompany]);
+
+  function timMetaFromLine(line: LineRow): Record<string, string> {
+    const m = (line.meta && typeof line.meta === "object" ? line.meta : {}) as Record<string, string>;
+    return {
+      telefone: m.telefone ?? "",
+      dispositivo: m.dispositivo ?? "",
+      ultimaAtividade: m.ultimaAtividade ?? "",
+      criadoEm: m.criadoEm ?? "",
+    };
+  }
+
+  function openLineEditorCreate() {
+    setLineEditor({
+      mode: "create",
+      financeiroServerCompanyId: "",
+      displayName: "",
+      email: "",
+      status: "Active",
+      detail: "",
+      telefone: "",
+      dispositivo: "",
+      ultimaAtividade: "",
+      criadoEm: "",
+    });
+  }
+
+  function openLineEditorEdit(line: LineRow) {
+    const tim = timMetaFromLine(line);
+    const next: Extract<LineEditorState, { mode: "edit" }> = {
+      mode: "edit",
+      lineId: line.id,
+      financeiroServerCompanyId: line.financeiroServerCompanyId ?? "",
+      displayName: line.displayName,
+      email: line.email ?? "",
+      status: line.status ?? "",
+      detail: line.detail ?? "",
+      telefone: tim.telefone,
+      dispositivo: tim.dispositivo,
+      ultimaAtividade: tim.ultimaAtividade,
+      criadoEm: tim.criadoEm,
+    };
+    setLineEditor(next);
+  }
+
+  function closeLineEditor() {
+    setLineEditor(null);
+  }
+
+  async function submitLineEditor() {
+    if (!sheetSnapshotId || !lineEditor) return;
+    setSheetError("");
+    const isTim = sheetSource === "TIM_CSV";
+    const displayName = lineEditor.displayName.trim();
+    if (!displayName) {
+      setSheetError("Nome e obrigatorio.");
+      return;
+    }
+
+    const financeiroServerCompanyId = lineEditor.financeiroServerCompanyId.trim() || null;
+
+    setEditorSaving(true);
+    try {
+      if (lineEditor.mode === "create") {
+        const body: Record<string, unknown> = {
+          displayName,
+          financeiroServerCompanyId,
+        };
+        if (!isTim) {
+          body.email = lineEditor.email.trim() || null;
+          body.status = lineEditor.status.trim() || null;
+          body.detail = lineEditor.detail.trim() || null;
+        } else {
+          body.meta = {
+            telefone: lineEditor.telefone.trim() || "",
+            dispositivo: lineEditor.dispositivo.trim() || "",
+            ultimaAtividade: lineEditor.ultimaAtividade.trim() || "",
+            criadoEm: lineEditor.criadoEm.trim() || "",
+          };
+        }
+        const res = await fetch(`/api/admin/financeiro/snapshots/${sheetSnapshotId}/lines`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const json = await parseJsonBody(res);
+        if (!res.ok) {
+          setSheetError(json?.message || "Nao foi possivel criar a linha.");
+          return;
+        }
+        setLineEditor(null);
+        await loadLines(sheetSnapshotId, sheetCompanyFilter || undefined);
+        await load();
+        return;
+      }
+
+      const body: Record<string, unknown> = {
+        displayName,
+        financeiroServerCompanyId,
+      };
+      if (!isTim) {
+        body.email = lineEditor.email.trim() || null;
+        body.status = lineEditor.status.trim() || null;
+        body.detail = lineEditor.detail.trim() || null;
+      } else {
+        body.meta = {
+          telefone: lineEditor.telefone.trim() || "",
+          dispositivo: lineEditor.dispositivo.trim() || "",
+          ultimaAtividade: lineEditor.ultimaAtividade.trim() || "",
+          criadoEm: lineEditor.criadoEm.trim() || "",
+        };
+      }
+      const res = await fetch(
+        `/api/admin/financeiro/snapshots/${sheetSnapshotId}/lines/${lineEditor.lineId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
+      const json = await parseJsonBody(res);
+      if (!res.ok) {
+        setSheetError(json?.message || "Nao foi possivel salvar.");
+        return;
+      }
+      setLineEditor(null);
+      await loadLines(sheetSnapshotId, sheetCompanyFilter || undefined);
+      await load();
+    } catch {
+      setSheetError("Falha de conexao ao salvar.");
+    } finally {
+      setEditorSaving(false);
+    }
+  }
+
+  async function deleteLineFromEditor() {
+    if (!sheetSnapshotId || !lineEditor || lineEditor.mode !== "edit") return;
+    if (!window.confirm("Excluir esta linha do snapshot?")) return;
+    setEditorSaving(true);
+    setSheetError("");
+    try {
+      const res = await fetch(
+        `/api/admin/financeiro/snapshots/${sheetSnapshotId}/lines/${lineEditor.lineId}`,
+        { method: "DELETE" }
+      );
+      const json = await parseJsonBody(res);
+      if (!res.ok) {
+        setSheetError(json?.message || "Nao foi possivel excluir.");
+        return;
+      }
+      setLineEditor(null);
+      await loadLines(sheetSnapshotId, sheetCompanyFilter || undefined);
+      await load();
+    } catch {
+      setSheetError("Falha de conexao ao excluir.");
+    } finally {
+      setEditorSaving(false);
+    }
   }
 
   async function applyCompanyFilter() {
@@ -168,6 +545,18 @@ export function AdminFinanceiroDashboard() {
     for (const s of data.series) {
       for (const v of s.values) {
         if (v && v.totalUsers > m) m = v.totalUsers;
+      }
+    }
+    return m;
+  }, [data]);
+
+  const maxUsersByCompanyBar = useMemo(() => {
+    const blocks = data?.usersByCompanyLatest;
+    if (!blocks?.length) return 1;
+    let m = 1;
+    for (const b of blocks) {
+      for (const r of b.byCompany) {
+        if (r.count > m) m = r.count;
       }
     }
     return m;
@@ -301,6 +690,47 @@ export function AdminFinanceiroDashboard() {
             ))}
           </section>
 
+          {data.usersByCompanyLatest && data.usersByCompanyLatest.length > 0 ? (
+            <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-sm sm:p-6">
+              <h2 className="text-lg font-semibold text-slate-50">Usuarios por empresa (ultimo snapshot de cada servico)</h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Baseado na alocacao feita na planilha. Cadastre empresas no servico e atribua cada linha a uma empresa.
+              </p>
+              <div className="mt-6 grid gap-6 lg:grid-cols-3">
+                {data.usersByCompanyLatest.map((block) => (
+                  <div key={block.key} className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-sky-400">{block.name}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Competencia: {block.competence ?? "—"}
+                      {block.byCompany.length === 0 ? " — sem dados" : null}
+                    </p>
+                    <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1">
+                      {block.byCompany.map(({ label, count }) => {
+                        const pct = Math.round((count / maxUsersByCompanyBar) * 100);
+                        return (
+                          <div key={label}>
+                            <div className="mb-0.5 flex justify-between text-xs text-slate-400">
+                              <span className="truncate pr-2" title={label}>
+                                {label}
+                              </span>
+                              <span className="shrink-0 font-medium text-slate-300">{count}</span>
+                            </div>
+                            <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                              <div
+                                className="h-full rounded-full bg-violet-500/85"
+                                style={{ width: `${Math.max(pct, 2)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           {sheetOpen ? (
             <div
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
@@ -315,8 +745,10 @@ export function AdminFinanceiroDashboard() {
                       {sheetTitle}
                     </h2>
                     <p className="mt-1 text-sm text-slate-400">
-                      Categorizacao por empresa: dominio do e-mail (Google) ou departamento (Time Is Money). Reimporte o
-                      mes se a planilha estiver vazia (import anterior sem linhas salvas).
+                      Cadastre <strong className="text-slate-300">empresas deste servico</strong> abaixo e aloque cada
+                      usuario pelo menu na coluna de empresa. Linhas <strong className="text-slate-300">Manual</strong>{" "}
+                      sao mantidas ao reimportar; linhas do arquivo sao substituidas a cada import (sem alocacao ate voce
+                      definir).
                     </p>
                   </div>
                   <button
@@ -352,12 +784,264 @@ export function AdminFinanceiroDashboard() {
                     Aplicar
                   </button>
                   {sheetLoading ? <span className="text-sm text-slate-500">Carregando...</span> : null}
+                  <button
+                    type="button"
+                    onClick={openLineEditorCreate}
+                    disabled={sheetLoading}
+                    className="h-10 rounded-lg border border-emerald-600/60 bg-emerald-950/40 px-4 text-sm font-medium text-emerald-200 hover:bg-emerald-900/50 disabled:opacity-50"
+                  >
+                    Nova linha
+                  </button>
                 </div>
                 <div className="min-h-0 flex-1 overflow-auto p-4">
                   {sheetError ? <p className="text-sm text-red-400">{sheetError}</p> : null}
+                  {sheetServerId ? (
+                    <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+                      <h3 className="text-sm font-semibold text-slate-200">Empresas deste servico</h3>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        Lista unica para todos os meses. Use na coluna &quot;Empresa alocada&quot; da planilha.
+                      </p>
+                      {companyUiError ? <p className="mt-2 text-xs text-red-400">{companyUiError}</p> : null}
+                      <div className="mt-3 flex flex-wrap items-end gap-2">
+                        <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-xs text-slate-400">
+                          Nova empresa
+                          <input
+                            value={newCompanyName}
+                            onChange={(e) => setNewCompanyName(e.target.value)}
+                            className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                            placeholder="Nome"
+                            disabled={companiesLoading}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => void addServerCompany()}
+                          disabled={companiesLoading || !newCompanyName.trim()}
+                          className="h-10 rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                        >
+                          Adicionar
+                        </button>
+                      </div>
+                      {companiesLoading ? (
+                        <p className="mt-3 text-xs text-slate-500">Carregando empresas...</p>
+                      ) : (
+                        <ul className="mt-3 divide-y divide-slate-800 border-t border-slate-800 pt-2 text-sm text-slate-300">
+                          {serverCatalog.length === 0 ? (
+                            <li className="py-2 text-slate-500">Nenhuma empresa cadastrada ainda.</li>
+                          ) : (
+                            serverCatalog.map((c) => (
+                              <li
+                                key={c.id}
+                                className="flex flex-wrap items-center justify-between gap-2 py-2"
+                              >
+                                <span className="font-medium text-slate-200">{c.name}</span>
+                                <span className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => void renameServerCompany(c)}
+                                    className="rounded border border-slate-600 px-2 py-0.5 text-xs text-sky-300 hover:bg-slate-800"
+                                  >
+                                    Renomear
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => void deleteServerCompany(c.id)}
+                                    className="rounded border border-red-900/60 px-2 py-0.5 text-xs text-red-300 hover:bg-red-950/40"
+                                  >
+                                    Excluir
+                                  </button>
+                                </span>
+                              </li>
+                            ))
+                          )}
+                        </ul>
+                      )}
+                    </div>
+                  ) : null}
+                  {!sheetLoading && !sheetError && sheetByCompany.length > 0 ? (
+                    <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+                      <h3 className="text-sm font-semibold text-slate-200">Colaboradores por empresa</h3>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        Contagem pela empresa alocada na planilha ({FINANCEIRO_SEM_EMPRESA} = sem selecao).
+                      </p>
+                      <div className="mt-4 max-h-52 space-y-2.5 overflow-y-auto pr-1">
+                        {sheetByCompany.map(({ label, count }) => {
+                          const pct = Math.round((count / sheetCompanyChartMax) * 100);
+                          return (
+                            <div key={label}>
+                              <div className="mb-0.5 flex justify-between text-xs text-slate-400">
+                                <span className="truncate pr-2" title={label}>
+                                  {label}
+                                </span>
+                                <span className="shrink-0 font-medium text-slate-300">{count}</span>
+                              </div>
+                              <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                                <div
+                                  className="h-full rounded-full bg-emerald-500/85"
+                                  style={{ width: `${Math.max(pct, 2)}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+                  {lineEditor ? (
+                    <div className="mb-6 rounded-xl border border-sky-800/60 bg-slate-900/70 p-4">
+                      <h3 className="text-sm font-semibold text-sky-100">
+                        {lineEditor.mode === "create" ? "Nova linha" : "Editar linha"}
+                      </h3>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <label className="flex flex-col gap-1 text-xs text-slate-400">
+                          Empresa alocada
+                          <select
+                            value={lineEditor.financeiroServerCompanyId}
+                            onChange={(e) =>
+                              setLineEditor((p) =>
+                                p ? { ...p, financeiroServerCompanyId: e.target.value } : p
+                              )
+                            }
+                            className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                            disabled={editorSaving}
+                          >
+                            <option value="">{FINANCEIRO_SEM_EMPRESA}</option>
+                            {serverCatalog.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="flex flex-col gap-1 text-xs text-slate-400">
+                          Nome
+                          <input
+                            value={lineEditor.displayName}
+                            onChange={(e) =>
+                              setLineEditor((p) => (p ? { ...p, displayName: e.target.value } : p))
+                            }
+                            className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                            disabled={editorSaving}
+                          />
+                        </label>
+                        {sheetSource !== "TIM_CSV" ? (
+                          <>
+                            <label className="flex flex-col gap-1 text-xs text-slate-400">
+                              E-mail
+                              <input
+                                value={lineEditor.email}
+                                onChange={(e) =>
+                                  setLineEditor((p) => (p ? { ...p, email: e.target.value } : p))
+                                }
+                                className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100"
+                                disabled={editorSaving}
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs text-slate-400">
+                              Status
+                              <input
+                                value={lineEditor.status}
+                                onChange={(e) =>
+                                  setLineEditor((p) => (p ? { ...p, status: e.target.value } : p))
+                                }
+                                className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                                disabled={editorSaving}
+                              />
+                            </label>
+                            <label className="sm:col-span-2 flex flex-col gap-1 text-xs text-slate-400">
+                              Detalhes
+                              <input
+                                value={lineEditor.detail}
+                                onChange={(e) =>
+                                  setLineEditor((p) => (p ? { ...p, detail: e.target.value } : p))
+                                }
+                                className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                                disabled={editorSaving}
+                              />
+                            </label>
+                          </>
+                        ) : (
+                          <>
+                            <label className="flex flex-col gap-1 text-xs text-slate-400">
+                              Telefone
+                              <input
+                                value={lineEditor.telefone}
+                                onChange={(e) =>
+                                  setLineEditor((p) => (p ? { ...p, telefone: e.target.value } : p))
+                                }
+                                className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                                disabled={editorSaving}
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs text-slate-400">
+                              Dispositivo
+                              <input
+                                value={lineEditor.dispositivo}
+                                onChange={(e) =>
+                                  setLineEditor((p) => (p ? { ...p, dispositivo: e.target.value } : p))
+                                }
+                                className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                                disabled={editorSaving}
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs text-slate-400">
+                              Ultima atividade
+                              <input
+                                value={lineEditor.ultimaAtividade}
+                                onChange={(e) =>
+                                  setLineEditor((p) => (p ? { ...p, ultimaAtividade: e.target.value } : p))
+                                }
+                                className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                                disabled={editorSaving}
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs text-slate-400">
+                              Criado em
+                              <input
+                                value={lineEditor.criadoEm}
+                                onChange={(e) =>
+                                  setLineEditor((p) => (p ? { ...p, criadoEm: e.target.value } : p))
+                                }
+                                className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                                disabled={editorSaving}
+                              />
+                            </label>
+                          </>
+                        )}
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={editorSaving}
+                          onClick={() => void submitLineEditor()}
+                          className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+                        >
+                          {editorSaving ? "Salvando..." : "Salvar"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={editorSaving}
+                          onClick={closeLineEditor}
+                          className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800"
+                        >
+                          Cancelar
+                        </button>
+                        {lineEditor.mode === "edit" ? (
+                          <button
+                            type="button"
+                            disabled={editorSaving}
+                            onClick={() => void deleteLineFromEditor()}
+                            className="rounded-lg border border-red-800/80 bg-red-950/40 px-4 py-2 text-sm text-red-200 hover:bg-red-950/70 disabled:opacity-50"
+                          >
+                            Excluir linha
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
                   {!sheetLoading && !sheetError && sheetLines.length === 0 ? (
                     <p className="text-sm text-slate-500">
-                      Nenhuma linha neste snapshot. Importe novamente o arquivo deste mes para gravar o detalhamento.
+                      Nenhuma linha neste snapshot. Importe o arquivo deste mes ou use <strong className="text-slate-400">Nova linha</strong> para cadastrar manualmente.
                     </p>
                   ) : null}
                   {sheetLines.length > 0 ? (
@@ -366,20 +1050,22 @@ export function AdminFinanceiroDashboard() {
                         <thead className="sticky top-0 z-10 bg-slate-900">
                           {sheetSource === "TIM_CSV" ? (
                             <tr className="border-b border-slate-700 text-slate-400">
-                              <th className="p-2 font-semibold">Empresa (departamento)</th>
+                              <th className="min-w-[200px] p-2 font-semibold">Empresa alocada</th>
                               <th className="p-2 font-semibold">Nome</th>
                               <th className="p-2 font-semibold">Telefone</th>
                               <th className="p-2 font-semibold">Dispositivo</th>
                               <th className="p-2 font-semibold">Ultima atividade</th>
                               <th className="p-2 font-semibold">Criado em</th>
+                              <th className="w-44 p-2 font-semibold">Acoes</th>
                             </tr>
                           ) : (
                             <tr className="border-b border-slate-700 text-slate-400">
-                              <th className="p-2 font-semibold">Empresa (dominio)</th>
+                              <th className="min-w-[200px] p-2 font-semibold">Empresa alocada</th>
                               <th className="p-2 font-semibold">E-mail</th>
                               <th className="p-2 font-semibold">Nome</th>
                               <th className="p-2 font-semibold">Status</th>
                               <th className="p-2 font-semibold">Detalhes</th>
+                              <th className="w-44 p-2 font-semibold">Acoes</th>
                             </tr>
                           )}
                         </thead>
@@ -392,24 +1078,92 @@ export function AdminFinanceiroDashboard() {
                                 >;
                                 return (
                                   <tr key={line.id} className="border-b border-slate-800/80 text-slate-200">
-                                    <td className="p-2 align-top text-sky-200/90">{line.companyLabel}</td>
+                                    <td className="p-2 align-top">
+                                      <div className="flex flex-col gap-2">
+                                        <select
+                                          value={line.financeiroServerCompanyId ?? ""}
+                                          disabled={patchingLineId === line.id || companiesLoading}
+                                          onChange={(e) => {
+                                            const v = e.target.value;
+                                            void patchLineAllocation(line.id, v === "" ? null : v);
+                                          }}
+                                          className="max-w-[240px] rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+                                        >
+                                          <option value="">{FINANCEIRO_SEM_EMPRESA}</option>
+                                          {serverCatalog.map((c) => (
+                                            <option key={c.id} value={c.id}>
+                                              {c.name}
+                                            </option>
+                                          ))}
+                                        </select>
+                                        {line.lineSource === "MANUAL" ? (
+                                          <span className="w-fit rounded bg-amber-950/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200/90">
+                                            Manual
+                                          </span>
+                                        ) : null}
+                                      </div>
+                                    </td>
                                     <td className="p-2 align-top">{line.displayName}</td>
                                     <td className="p-2 align-top text-slate-400">{m.telefone ?? "—"}</td>
                                     <td className="p-2 align-top text-slate-400">{m.dispositivo ?? "—"}</td>
                                     <td className="p-2 align-top text-slate-400">{m.ultimaAtividade ?? "—"}</td>
                                     <td className="p-2 align-top text-slate-400">{m.criadoEm ?? "—"}</td>
+                                    <td className="p-2 align-top">
+                                      <button
+                                        type="button"
+                                        onClick={() => openLineEditorEdit(line)}
+                                        className="rounded border border-slate-600 px-2 py-1 text-xs text-sky-300 hover:bg-slate-800"
+                                      >
+                                        Editar
+                                      </button>
+                                    </td>
                                   </tr>
                                 );
                               })
-                            : sheetLines.map((line) => (
-                                <tr key={line.id} className="border-b border-slate-800/80 text-slate-200">
-                                  <td className="p-2 align-top text-sky-200/90">{line.companyLabel}</td>
-                                  <td className="p-2 align-top font-mono text-xs text-slate-300">{line.email ?? "—"}</td>
-                                  <td className="p-2 align-top">{line.displayName}</td>
-                                  <td className="p-2 align-top text-slate-400">{line.status ?? "—"}</td>
-                                  <td className="p-2 align-top text-slate-400">{line.detail ?? "—"}</td>
-                                </tr>
-                              ))}
+                            : sheetLines.map((line) => {
+                                return (
+                                  <tr key={line.id} className="border-b border-slate-800/80 text-slate-200">
+                                    <td className="p-2 align-top">
+                                      <div className="flex flex-col gap-2">
+                                        <select
+                                          value={line.financeiroServerCompanyId ?? ""}
+                                          disabled={patchingLineId === line.id || companiesLoading}
+                                          onChange={(e) => {
+                                            const v = e.target.value;
+                                            void patchLineAllocation(line.id, v === "" ? null : v);
+                                          }}
+                                          className="max-w-[240px] rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+                                        >
+                                          <option value="">{FINANCEIRO_SEM_EMPRESA}</option>
+                                          {serverCatalog.map((c) => (
+                                            <option key={c.id} value={c.id}>
+                                              {c.name}
+                                            </option>
+                                          ))}
+                                        </select>
+                                        {line.lineSource === "MANUAL" ? (
+                                          <span className="w-fit rounded bg-amber-950/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200/90">
+                                            Manual
+                                          </span>
+                                        ) : null}
+                                      </div>
+                                    </td>
+                                    <td className="p-2 align-top font-mono text-xs text-slate-300">{line.email ?? "—"}</td>
+                                    <td className="p-2 align-top">{line.displayName}</td>
+                                    <td className="p-2 align-top text-slate-400">{line.status ?? "—"}</td>
+                                    <td className="p-2 align-top text-slate-400">{line.detail ?? "—"}</td>
+                                    <td className="p-2 align-top">
+                                      <button
+                                        type="button"
+                                        onClick={() => openLineEditorEdit(line)}
+                                        className="rounded border border-slate-600 px-2 py-1 text-xs text-sky-300 hover:bg-slate-800"
+                                      >
+                                        Editar
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
                         </tbody>
                       </table>
                     </div>

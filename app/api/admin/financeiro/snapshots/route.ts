@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ensureModuleAccess } from "@/lib/admin-auth";
 import { ensureAllFinanceiroEmailServers } from "@/lib/financeiro-ensure-server";
+import { allocationDisplayLabel } from "@/lib/financeiro-allocation";
 import { FINANCEIRO_SERVICE_NAMES, FINANCEIRO_SERVICE_KEYS } from "@/lib/financeiro-services";
 
 function monthKey(d: Date): string {
@@ -93,11 +94,66 @@ export async function GET(request: NextRequest) {
     };
   });
 
+  async function aggregateUsersByCompany(snapshotId: string) {
+    const lines = await prisma.serviceUserSnapshotLine.findMany({
+      where: { snapshotId },
+      select: { financeiroServerCompany: { select: { name: true } } },
+    });
+    const map = new Map<string, number>();
+    for (const l of lines) {
+      const label = allocationDisplayLabel(l.financeiroServerCompany ?? undefined);
+      map.set(label, (map.get(label) ?? 0) + 1);
+    }
+    return [...map.entries()]
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  }
+
+  const usersByCompanyLatest = await Promise.all(
+    FINANCEIRO_SERVICE_KEYS.map(async (key) => {
+      const name = FINANCEIRO_SERVICE_NAMES[key];
+      const server = servers.find((srv) => srv.name === name);
+      if (!server) {
+        return {
+          key,
+          name,
+          serverId: null as string | null,
+          competence: null as string | null,
+          snapshotId: null as string | null,
+          byCompany: [] as { label: string; count: number }[],
+        };
+      }
+      const last = snapshots
+        .filter((s) => s.serverId === server.id)
+        .sort((a, b) => b.competence.getTime() - a.competence.getTime())[0];
+      if (!last) {
+        return {
+          key,
+          name,
+          serverId: server.id,
+          competence: null,
+          snapshotId: null,
+          byCompany: [],
+        };
+      }
+      const byCompany = await aggregateUsersByCompany(last.id);
+      return {
+        key,
+        name,
+        serverId: server.id,
+        competence: monthKey(last.competence),
+        snapshotId: last.id,
+        byCompany,
+      };
+    })
+  );
+
   return NextResponse.json({
     data: {
       labels,
       series,
       latestByService,
+      usersByCompanyLatest,
       servers: servers.map((s) => ({ id: s.id, name: s.name })),
     },
   });

@@ -7,6 +7,7 @@ import {
   parseTimeIsMoneyCollaboratorsCsvRows,
 } from "@/lib/financeiro-import";
 import { ensureFinanceiroEmailServer } from "@/lib/financeiro-ensure-server";
+import { recalcSnapshotLineAggregates } from "@/lib/financeiro-snapshot-aggregates";
 import { serviceKeyFromForm } from "@/lib/financeiro-services";
 
 export async function POST(request: NextRequest) {
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
         sortOrder: i,
         email: null,
         displayName: r.displayName,
-        companyLabel: r.companyLabel,
+        companyLabel: "",
         status: null,
         detail: r.detail || null,
         meta: r.meta,
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
         sortOrder: i,
         email: r.email || null,
         displayName: r.displayName,
-        companyLabel: r.companyLabel,
+        companyLabel: "",
         status: r.status || null,
         detail: r.detail || null,
         meta: null,
@@ -101,23 +102,37 @@ export async function POST(request: NextRequest) {
         include: { server: true },
       });
 
-      await tx.serviceUserSnapshotLine.deleteMany({ where: { snapshotId: snap.id } });
+      await tx.serviceUserSnapshotLine.deleteMany({
+        where: { snapshotId: snap.id, lineSource: "IMPORTED" },
+      });
+
+      const manualAgg = await tx.serviceUserSnapshotLine.aggregate({
+        where: { snapshotId: snap.id, lineSource: "MANUAL" },
+        _max: { sortOrder: true },
+      });
+      const sortBase = (manualAgg._max.sortOrder ?? -1) + 1;
+
       const chunk = 500;
       for (let i = 0; i < lineInputs.length; i += chunk) {
         const part = lineInputs.slice(i, i + chunk);
         await tx.serviceUserSnapshotLine.createMany({
-          data: part.map((row) => ({
+          data: part.map((row, j) => ({
             snapshotId: snap.id,
-            sortOrder: row.sortOrder,
+            sortOrder: sortBase + i + j,
             email: row.email,
             displayName: row.displayName,
             companyLabel: row.companyLabel,
+            companyLabelOverride: null,
+            financeiroServerCompanyId: null,
             status: row.status,
             detail: row.detail,
             meta: row.meta ?? undefined,
+            lineSource: "IMPORTED",
           })),
         });
       }
+
+      await recalcSnapshotLineAggregates(snap.id, tx as typeof prisma);
 
       return snap;
     });
