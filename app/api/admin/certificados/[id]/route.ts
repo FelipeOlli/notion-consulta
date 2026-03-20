@@ -28,6 +28,15 @@ export async function GET(_request: NextRequest, { params }: Params) {
       },
     });
   } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
+      return NextResponse.json(
+        {
+          message:
+            "Arquivo do certificado nao foi encontrado no servidor. Faca upload novamente para restaurar o download.",
+        },
+        { status: 404 }
+      );
+    }
     const message = error instanceof Error ? error.message : "Nao foi possivel baixar o certificado.";
     return NextResponse.json({ message }, { status: 400 });
   }
