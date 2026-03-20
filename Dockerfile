@@ -19,5 +19,6 @@ FROM base AS runner
 ENV NODE_ENV=production
 COPY --from=builder /app ./
 EXPOSE 3000
-CMD ["npm", "start"]
+# Aplica migracoes pendentes a cada subida (cria ServiceUserSnapshot etc.). Defina SKIP_MIGRATE_ON_START=1 para desligar.
+CMD ["sh", "-c", "if [ \"${SKIP_MIGRATE_ON_START}\" = \"1\" ]; then exec npm start; else npx prisma migrate deploy && exec npm start; fi"]
 

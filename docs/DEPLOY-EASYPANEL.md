@@ -52,7 +52,11 @@ DATABASE_URL=postgresql://root:senha@host:5432/notion_consulta?schema=public
 2. O EasyPanel vai:
    - Fazer o clone do repo
    - Rodar o `docker build` usando o `Dockerfile`
-   - Rodar o container com `npm start`
+   - Ao **subir o container**, o comando padrao roda **`npx prisma migrate deploy`** e depois **`npm start`**, para criar/atualizar tabelas (ex.: `ServiceUserSnapshot` no modulo Financeiro).
+
+> **`DATABASE_URL`** precisa estar correta antes do start; se `migrate deploy` falhar, o container nao sobe o Next — veja os logs.
+
+- Para **nao** rodar migrate na subida (ex.: migracoes so em CI), defina **`SKIP_MIGRATE_ON_START=1`** nas variaveis de ambiente.
 
 Se algo falhar:
 
@@ -78,7 +82,7 @@ O que fazer:
    - `SKIP_PRISMA_CONNECT_RETRY=1` para desligar esse comportamento
 4. Opcional no `DATABASE_URL`: `?connect_timeout=30` (ou maior) para dar mais tempo na primeira conexao.
 
-Apos o banco estavel, rode **`npx prisma migrate deploy`** (ou comando equivalente no deploy) se ainda nao aplicou as migracoes.
+Apos o banco estavel, o deploy normal ja aplica migracoes automaticamente. Se aparecer erro **`ServiceUserSnapshot` does not exist**, o container antigo ainda usava `npm start` sem migrate — faça **redeploy** com a versao atual do `Dockerfile`.
 
 ### Internal Server Error na home (`/`)
 

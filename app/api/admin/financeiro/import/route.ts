@@ -86,8 +86,17 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Nao foi possivel importar.";
-    return NextResponse.json({ message }, { status: 400 });
+    const raw = error instanceof Error ? error.message : String(error);
+    if (/does not exist/i.test(raw) && /ServiceUserSnapshot|relation/i.test(raw)) {
+      return NextResponse.json(
+        {
+          message:
+            "Tabelas do banco ainda nao foram criadas. Redeploy o app (Dockerfile aplica prisma migrate deploy na subida) ou rode manualmente: npx prisma migrate deploy",
+        },
+        { status: 503 }
+      );
+    }
+    return NextResponse.json({ message: raw || "Nao foi possivel importar." }, { status: 400 });
   }
 }
 
