@@ -42,6 +42,8 @@ export function AdminCertificatesManager({ initialCertificates, companies }: Pro
   const [editCompanyId, setEditCompanyId] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [editExpiresAt, setEditExpiresAt] = useState("");
+  const [editSocio, setEditSocio] = useState("");
+  const [editFile, setEditFile] = useState<File | null>(null);
   const [editSaving, setEditSaving] = useState(false);
 
   const filtered = useMemo(() => {
@@ -106,6 +108,8 @@ export function AdminCertificatesManager({ initialCertificates, companies }: Pro
     setEditingId(item.id);
     setEditCompanyId(item.companyId);
     setEditPassword(item.certificatePassword);
+    setEditSocio(item.company.partnerName ?? "");
+    setEditFile(null);
     const dt = new Date(item.expiresAt);
     setEditExpiresAt(dt.toISOString().slice(0, 10));
     setError("");
@@ -113,6 +117,7 @@ export function AdminCertificatesManager({ initialCertificates, companies }: Pro
 
   function cancelEdit() {
     setEditingId(null);
+    setEditFile(null);
   }
 
   async function saveEdit(event: FormEvent<HTMLFormElement>) {
@@ -121,14 +126,16 @@ export function AdminCertificatesManager({ initialCertificates, companies }: Pro
     setEditSaving(true);
     setError("");
     try {
+      const form = new FormData();
+      form.set("companyId", editCompanyId);
+      form.set("certificatePassword", editPassword);
+      form.set("expiresAt", editExpiresAt);
+      if (editSocio.trim()) form.set("socio", editSocio.trim());
+      if (editFile) form.set("file", editFile);
+
       const response = await fetch(`/api/admin/certificados/${editingId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          companyId: editCompanyId,
-          certificatePassword: editPassword,
-          expiresAt: editExpiresAt,
-        }),
+        body: form,
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -246,7 +253,18 @@ export function AdminCertificatesManager({ initialCertificates, companies }: Pro
                     onChange={(event) => setEditPassword(event.target.value)}
                     placeholder="Senha do certificado"
                     required
-                    className="h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 md:col-span-2"
+                    className="h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100"
+                  />
+                  <input
+                    value={editSocio}
+                    onChange={(event) => setEditSocio(event.target.value)}
+                    placeholder="Sócio (opcional)"
+                    className="h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100"
+                  />
+                  <input
+                    type="file"
+                    onChange={(event) => setEditFile(event.target.files?.[0] ?? null)}
+                    className="h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none transition file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-2 file:py-1 file:text-slate-100 md:col-span-2"
                   />
                   <div className="flex gap-2 md:col-span-2">
                     <button
@@ -278,6 +296,7 @@ export function AdminCertificatesManager({ initialCertificates, companies }: Pro
                       <p className="mt-1 text-sm text-slate-300">CPF/CNPJ: {item.company.document}</p>
                     ) : null}
                     <p className="mt-1 text-sm text-slate-300">Socio: {item.company.partnerName || "—"}</p>
+                    <p className="mt-1 text-sm text-slate-300">Senha: {item.certificatePassword}</p>
                     <p className="mt-1 text-sm text-slate-300">
                       Arquivo: {item.fileName} ({Math.round(item.fileSize / 1024)} KB)
                     </p>

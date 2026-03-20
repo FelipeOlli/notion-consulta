@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ensureModuleAccess } from "@/lib/admin-auth";
@@ -37,17 +38,65 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
 
   try {
-    const body = await request.json();
     const { id } = await params;
+    const current = await prisma.digitalCertificate.findUnique({ where: { id } });
+    if (!current) return NextResponse.json({ message: "Certificado nao encontrado." }, { status: 404 });
+
+    const form = await request.formData();
+    const companyId = String(form.get("companyId") ?? "").trim();
+    const certificatePassword = String(form.get("certificatePassword") ?? "").trim();
+    const expiresAt = String(form.get("expiresAt") ?? "").trim();
+    const socio = String(form.get("socio") ?? "").trim();
+    const file = form.get("file");
+
+    if (!companyId) return NextResponse.json({ message: "Empresa obrigatoria." }, { status: 400 });
+    if (!certificatePassword) return NextResponse.json({ message: "Senha do certificado obrigatoria." }, { status: 400 });
+    if (!expiresAt) return NextResponse.json({ message: "Vencimento obrigatorio." }, { status: 400 });
+
+    let nextFilePath = current.filePath;
+    let nextFileName = current.fileName;
+    let nextFileSize = current.fileSize;
+    let nextMimeType = current.mimeType;
+
+    if (file instanceof File) {
+      const dir = path.join(process.cwd(), "data", "certificados");
+      await fs.mkdir(dir, { recursive: true });
+      const ext = path.extname(file.name) || ".bin";
+      const name = `${Date.now()}-${crypto.randomUUID()}${ext}`;
+      const absolutePath = path.join(dir, name);
+      const content = Buffer.from(await file.arrayBuffer());
+      await fs.writeFile(absolutePath, content);
+
+      nextFilePath = path.join("data", "certificados", name);
+      nextFileName = file.name;
+      nextFileSize = content.byteLength;
+      nextMimeType = file.type || "application/octet-stream";
+    }
+
+    await prisma.company.update({
+      where: { id: companyId },
+      data: { partnerName: socio || null },
+    });
+
     const updated = await prisma.digitalCertificate.update({
       where: { id },
       data: {
-        companyId: body?.companyId ? String(body.companyId).trim() : undefined,
-        certificatePassword: body?.certificatePassword ? String(body.certificatePassword).trim() : undefined,
-        expiresAt: body?.expiresAt ? new Date(String(body.expiresAt)) : undefined,
+        companyId,
+        certificatePassword,
+        expiresAt: new Date(expiresAt),
+        filePath: nextFilePath,
+        fileName: nextFileName,
+        fileSize: nextFileSize,
+        mimeType: nextMimeType,
       },
       include: { company: true },
     });
+
+    if (file instanceof File && current.filePath !== nextFilePath) {
+      const oldAbsolutePath = path.join(process.cwd(), current.filePath);
+      await fs.unlink(oldAbsolutePath).catch(() => null);
+    }
+
     return NextResponse.json({ data: updated });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Nao foi possivel atualizar certificado.";
