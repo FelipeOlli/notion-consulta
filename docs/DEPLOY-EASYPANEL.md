@@ -59,11 +59,33 @@ Se algo falhar:
 - Veja os **Logs** do app.
 - Erros de `AUTH_SECRET` ou `MASTER_EMAIL/MASTER_PASSWORD` normalmente indicam variavel faltando ou mal escrita.
 
-## 6. Testar em producao
+## 6. Erro: `database system is not yet accepting connections` / recovery
+
+Se aparecer no log algo como:
+
+`FATAL: the database system is not yet accepting connections`  
+`DETAIL: Consistent recovery state has not been yet reached`
+
+isso vem do **PostgreSQL**, nao do Next.js: o banco ainda esta **iniciando ou recuperando** (restart, restore, failover). O app tentou conectar cedo demais.
+
+O que fazer:
+
+1. **Espere 1–5 minutos** e recarregue a pagina (ou redeploy apos o Postgres ficar saudavel).
+2. No EasyPanel, garanta que o **servico do app depende** do Postgres (sobe depois) ou use **healthcheck** no Postgres antes de marcar o app como pronto.
+3. O projeto tenta **reconectar automaticamente** na subida (`instrumentation.ts` + variaveis opcionais):
+   - `PRISMA_CONNECT_RETRIES` (padrao `20`)
+   - `PRISMA_CONNECT_RETRY_MS` (padrao `2000` ms entre tentativas)
+   - `SKIP_PRISMA_CONNECT_RETRY=1` para desligar esse comportamento
+4. Opcional no `DATABASE_URL`: `?connect_timeout=30` (ou maior) para dar mais tempo na primeira conexao.
+
+Apos o banco estavel, rode **`npx prisma migrate deploy`** (ou comando equivalente no deploy) se ainda nao aplicou as migracoes.
+
+## 7. Testar em producao
 
 1. Acesse o dominio configurado (ex.: `https://notion.seudominio.com`).
 2. Tela inicial (tema black) aparece com formulario de login.
 3. Entre com as credenciais do usuario master (`MASTER_EMAIL` / `MASTER_PASSWORD`).
 4. Depois do login, a home mostra os links ativos.
 5. O painel master (edicao/adicao/remocao de links) fica em `/admin/login` e `/admin/links`.
+6. Modulo Financeiro (`/admin/financeiro`): import de snapshots mensais; exige migracoes aplicadas e Postgres acessivel.
 
