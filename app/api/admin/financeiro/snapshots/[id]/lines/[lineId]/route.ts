@@ -201,6 +201,9 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
 
     const line = await prisma.serviceUserSnapshotLine.findFirst({
       where: { id: lineId, snapshotId },
+      include: {
+        financeiroServerCompany: { select: { id: true, name: true } },
+      },
     });
     if (!line) {
       return NextResponse.json({ message: "Linha nao encontrada." }, { status: 404 });
@@ -209,12 +212,21 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     await prisma.serviceUserSnapshotLine.delete({ where: { id: lineId } });
     await recalcSnapshotLineAggregates(snapshotId);
 
+    const detailPreview =
+      line.detail && line.detail.length > 0 ? line.detail.slice(0, 300) : null;
+
     await logFinanceiroActivity({
       action: "LINE_DELETE",
       metadata: {
         snapshotId,
         lineId,
         lineSource: line.lineSource,
+        displayName: line.displayName,
+        email: line.email,
+        status: line.status,
+        detailPreview,
+        allocatedCompanyId: line.financeiroServerCompanyId,
+        allocatedCompanyName: line.financeiroServerCompany?.name ?? null,
       },
     });
 
