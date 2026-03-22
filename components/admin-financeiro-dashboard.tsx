@@ -139,84 +139,150 @@ export function AdminFinanceiroDashboard() {
   const [companyUiError, setCompanyUiError] = useState("");
   const [newCompanyName, setNewCompanyName] = useState("");
   const [patchingLineId, setPatchingLineId] = useState<string | null>(null);
+  const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(() => new Set());
+  const [bulkCompanyId, setBulkCompanyId] = useState("");
+  const [bulkSaving, setBulkSaving] = useState(false);
   const lineEditorPanelRef = useRef<HTMLDivElement>(null);
+  const sheetScrollRef = useRef<HTMLDivElement>(null);
+  const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
+  const dashboardRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadLines = useCallback(async (snapshotId: string, company?: string) => {
-    setSheetLoading(true);
-    setSheetError("");
+  const load = useCallback(async () => {
+    setLoadError("");
+    setLoading(true);
     try {
-      const q = company ? `?company=${encodeURIComponent(company)}` : "";
-      const res = await fetch(`/api/admin/financeiro/snapshots/${snapshotId}/lines${q}`);
+      const res = await fetch("/api/admin/financeiro/snapshots?months=18");
       const json = await parseJsonBody(res);
       if (!res.ok) {
-        setSheetError(json?.message || "Nao foi possivel carregar a planilha.");
+        setLoadError(json?.message || "Nao foi possivel carregar o dashboard.");
+        setData(null);
+        return;
+      }
+      setData(json.data as DashboardPayload);
+    } catch {
+      setLoadError("Falha de conexao. Verifique rede ou se o servidor respondeu.");
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const scheduleDashboardRefresh = useCallback(() => {
+    if (dashboardRefreshTimerRef.current) clearTimeout(dashboardRefreshTimerRef.current);
+    dashboardRefreshTimerRef.current = setTimeout(() => {
+      dashboardRefreshTimerRef.current = null;
+      void load();
+    }, 750);
+  }, [load]);
+
+  useEffect(() => {
+    return () => {
+      if (dashboardRefreshTimerRef.current) clearTimeout(dashboardRefreshTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const loadLines = useCallback(
+    async (
+      snapshotId: string,
+      company?: string,
+      opts?: { silent?: boolean; preserveLineEditor?: boolean }
+    ) => {
+      const silent = opts?.silent ?? false;
+      const preserveLineEditor = opts?.preserveLineEditor ?? false;
+      const scrollEl = sheetScrollRef.current;
+      const prevScrollTop = silent && scrollEl ? scrollEl.scrollTop : null;
+
+      if (!silent) setSheetLoading(true);
+      setSheetError("");
+      try {
+        const q = company ? `?company=${encodeURIComponent(company)}` : "";
+        const res = await fetch(`/api/admin/financeiro/snapshots/${snapshotId}/lines${q}`);
+        const json = await parseJsonBody(res);
+        if (!res.ok) {
+          setSheetError(json?.message || "Nao foi possivel carregar a planilha.");
+          setSheetLines([]);
+          setSheetCompanies([]);
+          setSheetByCompany([]);
+          setSheetServerId(null);
+          setServerCatalog([]);
+          return;
+        }
+        const d = json.data as {
+          companies: string[];
+          byCompany?: ByCompanyRow[];
+          lines: LineRow[];
+          snapshot: { source: string; serverId?: string };
+        };
+        setSheetCompanies(d.companies);
+        setSheetByCompany(
+          Array.isArray(d.byCompany)
+            ? d.byCompany
+            : d.companies.map((label) => ({
+                label,
+                count: d.lines.filter((l) => (l.effectiveCompany ?? l.companyLabel) === label).length,
+              }))
+        );
+        setSheetLines(d.lines);
+        setSheetSource(d.snapshot.source);
+        if (!preserveLineEditor) setLineEditor(null);
+
+        const sid = d.snapshot.serverId ?? null;
+        setSheetServerId(sid);
+        if (sid) {
+          setCompaniesLoading(true);
+          setCompanyUiError("");
+          try {
+            const cr = await fetch(`/api/admin/financeiro/servers/${sid}/companies`);
+            const cj = await parseJsonBody(cr);
+            if (cr.ok) {
+              const payload = cj.data as { companies: { id: string; name: string }[] };
+              setServerCatalog(payload.companies ?? []);
+            } else {
+              setCompanyUiError(cj.message || "Falha ao carregar empresas.");
+              setServerCatalog([]);
+            }
+          } catch {
+            setCompanyUiError("Falha de conexao (empresas).");
+            setServerCatalog([]);
+          } finally {
+            setCompaniesLoading(false);
+          }
+        } else {
+          setServerCatalog([]);
+        }
+      } catch {
+        setSheetError("Falha de conexao.");
         setSheetLines([]);
         setSheetCompanies([]);
         setSheetByCompany([]);
         setSheetServerId(null);
         setServerCatalog([]);
-        return;
-      }
-      const d = json.data as {
-        companies: string[];
-        byCompany?: ByCompanyRow[];
-        lines: LineRow[];
-        snapshot: { source: string; serverId?: string };
-      };
-      setSheetCompanies(d.companies);
-      setSheetByCompany(
-        Array.isArray(d.byCompany)
-          ? d.byCompany
-          : d.companies.map((label) => ({
-              label,
-              count: d.lines.filter((l) => (l.effectiveCompany ?? l.companyLabel) === label).length,
-            }))
-      );
-      setSheetLines(d.lines);
-      setSheetSource(d.snapshot.source);
-      setLineEditor(null);
-
-      const sid = d.snapshot.serverId ?? null;
-      setSheetServerId(sid);
-      if (sid) {
-        setCompaniesLoading(true);
-        setCompanyUiError("");
-        try {
-          const cr = await fetch(`/api/admin/financeiro/servers/${sid}/companies`);
-          const cj = await parseJsonBody(cr);
-          if (cr.ok) {
-            const payload = cj.data as { companies: { id: string; name: string }[] };
-            setServerCatalog(payload.companies ?? []);
-          } else {
-            setCompanyUiError(cj.message || "Falha ao carregar empresas.");
-            setServerCatalog([]);
-          }
-        } catch {
-          setCompanyUiError("Falha de conexao (empresas).");
-          setServerCatalog([]);
-        } finally {
-          setCompaniesLoading(false);
+      } finally {
+        if (!silent) setSheetLoading(false);
+        if (silent && prevScrollTop !== null && sheetScrollRef.current) {
+          const y = prevScrollTop;
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              if (sheetScrollRef.current) sheetScrollRef.current.scrollTop = y;
+            });
+          });
         }
-      } else {
-        setServerCatalog([]);
       }
-    } catch {
-      setSheetError("Falha de conexao.");
-      setSheetLines([]);
-      setSheetCompanies([]);
-      setSheetByCompany([]);
-      setSheetServerId(null);
-      setServerCatalog([]);
-    } finally {
-      setSheetLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   async function openSheet(row: LatestRow) {
     if (!row.latest?.snapshotId) return;
     setSheetTitle(row.name);
     setSheetSnapshotId(row.latest.snapshotId);
     setSheetCompanyFilter("");
+    setSelectedLineIds(new Set());
+    setBulkCompanyId("");
     setLineEditor(null);
     setSheetOpen(true);
     setSheetSource(row.latest.source);
@@ -238,6 +304,9 @@ export function AdminFinanceiroDashboard() {
     setCompanyUiError("");
     setNewCompanyName("");
     setPatchingLineId(null);
+    setSelectedLineIds(new Set());
+    setBulkCompanyId("");
+    setBulkSaving(false);
   }
 
   async function addServerCompany() {
@@ -339,8 +408,11 @@ export function AdminFinanceiroDashboard() {
         setSheetError(json?.message || "Nao foi possivel alocar empresa.");
         return;
       }
-      await loadLines(sheetSnapshotId, sheetCompanyFilter || undefined);
-      await load();
+      await loadLines(sheetSnapshotId, sheetCompanyFilter || undefined, {
+        silent: true,
+        preserveLineEditor: true,
+      });
+      scheduleDashboardRefresh();
     } catch {
       setSheetError("Falha de conexao ao alocar.");
     } finally {
@@ -348,10 +420,76 @@ export function AdminFinanceiroDashboard() {
     }
   }
 
+  async function applyBulkCompanyAllocation() {
+    if (!sheetSnapshotId || selectedLineIds.size === 0) return;
+    setBulkSaving(true);
+    setSheetError("");
+    try {
+      const companyId = bulkCompanyId.trim() || null;
+      const res = await fetch(`/api/admin/financeiro/snapshots/${sheetSnapshotId}/lines/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lineIds: [...selectedLineIds],
+          financeiroServerCompanyId: companyId,
+        }),
+      });
+      const json = await parseJsonBody(res);
+      if (!res.ok) {
+        setSheetError(json?.message || "Falha na alocacao em massa.");
+        return;
+      }
+      setSelectedLineIds(new Set());
+      await loadLines(sheetSnapshotId, sheetCompanyFilter || undefined, {
+        silent: true,
+        preserveLineEditor: true,
+      });
+      scheduleDashboardRefresh();
+    } catch {
+      setSheetError("Falha de conexao.");
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
   const sheetCompanyChartMax = useMemo(() => {
     if (sheetByCompany.length === 0) return 1;
     return Math.max(...sheetByCompany.map((b) => b.count), 1);
   }, [sheetByCompany]);
+
+  const visibleLineIds = useMemo(() => sheetLines.map((l) => l.id), [sheetLines]);
+  const selectedInViewCount = useMemo(
+    () => visibleLineIds.filter((id) => selectedLineIds.has(id)).length,
+    [visibleLineIds, selectedLineIds]
+  );
+  const allVisibleSelected = visibleLineIds.length > 0 && selectedInViewCount === visibleLineIds.length;
+  const someVisibleSelected = selectedInViewCount > 0 && !allVisibleSelected;
+
+  useEffect(() => {
+    const el = selectAllCheckboxRef.current;
+    if (el) el.indeterminate = someVisibleSelected;
+  }, [someVisibleSelected, allVisibleSelected]);
+
+  function toggleSelectAll(checked: boolean) {
+    setSelectedLineIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        for (const id of visibleLineIds) next.add(id);
+      } else {
+        for (const id of visibleLineIds) next.delete(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleLineSelected(lineId: string, checked: boolean) {
+    setSelectedLineIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(lineId);
+      else next.delete(lineId);
+      return next;
+    });
+  }
 
   function timMetaFromLine(line: LineRow): Record<string, string> {
     const m = (line.meta && typeof line.meta === "object" ? line.meta : {}) as Record<string, string>;
@@ -513,32 +651,9 @@ export function AdminFinanceiroDashboard() {
 
   async function applyCompanyFilter() {
     if (!sheetSnapshotId) return;
+    setSelectedLineIds(new Set());
     await loadLines(sheetSnapshotId, sheetCompanyFilter || undefined);
   }
-
-  const load = useCallback(async () => {
-    setLoadError("");
-    setLoading(true);
-    try {
-      const res = await fetch("/api/admin/financeiro/snapshots?months=18");
-      const json = await parseJsonBody(res);
-      if (!res.ok) {
-        setLoadError(json?.message || "Nao foi possivel carregar o dashboard.");
-        setData(null);
-        return;
-      }
-      setData(json.data as DashboardPayload);
-    } catch {
-      setLoadError("Falha de conexao. Verifique rede ou se o servidor respondeu.");
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   /** Ao abrir criar/editar linha no modal, rolar até o painel e focar o primeiro campo (evita sensação de botão quebrado). */
   useEffect(() => {
@@ -816,7 +931,46 @@ export function AdminFinanceiroDashboard() {
                     Nova linha
                   </button>
                 </div>
-                <div className="min-h-0 flex-1 overflow-auto p-4">
+                {sheetLines.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-3 border-b border-slate-800 bg-slate-900/80 px-4 py-2.5 text-sm">
+                    <span className="text-slate-400">
+                      <strong className="text-slate-200">{selectedLineIds.size}</strong> selecionado(s)
+                    </span>
+                    <label className="flex flex-wrap items-center gap-2 text-slate-400">
+                      <span className="shrink-0">Empresa (em massa)</span>
+                      <select
+                        value={bulkCompanyId}
+                        onChange={(e) => setBulkCompanyId(e.target.value)}
+                        disabled={bulkSaving || companiesLoading}
+                        className="h-9 min-w-[200px] rounded-lg border border-slate-600 bg-slate-950 px-2 text-slate-100"
+                      >
+                        <option value="">{FINANCEIRO_SEM_EMPRESA}</option>
+                        {serverCatalog.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      disabled={selectedLineIds.size === 0 || bulkSaving || companiesLoading}
+                      onClick={() => void applyBulkCompanyAllocation()}
+                      className="h-9 rounded-lg bg-violet-600 px-4 font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+                    >
+                      {bulkSaving ? "Aplicando..." : "Aplicar a selecionados"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={selectedLineIds.size === 0}
+                      onClick={() => setSelectedLineIds(new Set())}
+                      className="h-9 rounded-lg border border-slate-600 px-3 text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                    >
+                      Limpar selecao
+                    </button>
+                  </div>
+                ) : null}
+                <div ref={sheetScrollRef} className="min-h-0 flex-1 overflow-auto p-4">
                   {sheetError ? <p className="text-sm text-red-400">{sheetError}</p> : null}
                   {sheetServerId ? (
                     <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
@@ -1077,6 +1231,17 @@ export function AdminFinanceiroDashboard() {
                         <thead className="sticky top-0 z-10 bg-slate-900">
                           {sheetSource === "TIM_CSV" ? (
                             <tr className="border-b border-slate-700 text-slate-400">
+                              <th className="w-11 p-2">
+                                <input
+                                  ref={selectAllCheckboxRef}
+                                  type="checkbox"
+                                  checked={allVisibleSelected}
+                                  onChange={(e) => toggleSelectAll(e.target.checked)}
+                                  disabled={bulkSaving || sheetLoading}
+                                  aria-label="Selecionar todas as linhas visiveis"
+                                  className="h-4 w-4 accent-violet-500"
+                                />
+                              </th>
                               <th className="min-w-[200px] p-2 font-semibold">Empresa alocada</th>
                               <th className="p-2 font-semibold">Nome</th>
                               <th className="p-2 font-semibold">Telefone</th>
@@ -1087,6 +1252,17 @@ export function AdminFinanceiroDashboard() {
                             </tr>
                           ) : (
                             <tr className="border-b border-slate-700 text-slate-400">
+                              <th className="w-11 p-2">
+                                <input
+                                  ref={selectAllCheckboxRef}
+                                  type="checkbox"
+                                  checked={allVisibleSelected}
+                                  onChange={(e) => toggleSelectAll(e.target.checked)}
+                                  disabled={bulkSaving || sheetLoading}
+                                  aria-label="Selecionar todas as linhas visiveis"
+                                  className="h-4 w-4 accent-violet-500"
+                                />
+                              </th>
                               <th className="min-w-[200px] p-2 font-semibold">Empresa alocada</th>
                               <th className="p-2 font-semibold">E-mail</th>
                               <th className="p-2 font-semibold">Nome</th>
@@ -1105,6 +1281,18 @@ export function AdminFinanceiroDashboard() {
                                 >;
                                 return (
                                   <tr key={line.id} className="border-b border-slate-800/80 text-slate-200">
+                                    <td className="p-2 align-top">
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedLineIds.has(line.id)}
+                                        onChange={(e) => toggleLineSelected(line.id, e.target.checked)}
+                                        disabled={
+                                          bulkSaving || sheetLoading || patchingLineId === line.id
+                                        }
+                                        aria-label={`Selecionar ${line.displayName}`}
+                                        className="mt-1 h-4 w-4 accent-violet-500"
+                                      />
+                                    </td>
                                     <td className="p-2 align-top">
                                       <div className="flex flex-col gap-2">
                                         <select
@@ -1150,6 +1338,18 @@ export function AdminFinanceiroDashboard() {
                             : sheetLines.map((line) => {
                                 return (
                                   <tr key={line.id} className="border-b border-slate-800/80 text-slate-200">
+                                    <td className="p-2 align-top">
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedLineIds.has(line.id)}
+                                        onChange={(e) => toggleLineSelected(line.id, e.target.checked)}
+                                        disabled={
+                                          bulkSaving || sheetLoading || patchingLineId === line.id
+                                        }
+                                        aria-label={`Selecionar ${line.displayName}`}
+                                        className="mt-1 h-4 w-4 accent-violet-500"
+                                      />
+                                    </td>
                                     <td className="p-2 align-top">
                                       <div className="flex flex-col gap-2">
                                         <select
