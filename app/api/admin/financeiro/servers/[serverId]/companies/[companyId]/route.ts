@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { ensureModuleAccess } from "@/lib/admin-auth";
+import { ensureModuleAccess, platformEditorMutationGuard } from "@/lib/admin-auth";
 import { getFinanceiroEmailServerById } from "@/lib/financeiro-server-guard";
 import { logFinanceiroActivity } from "@/lib/financeiro-activity-log";
 
@@ -11,6 +11,8 @@ type Params = { params: Promise<{ serverId: string; companyId: string }> };
 export async function PATCH(request: NextRequest, { params }: Params) {
   const ok = await ensureModuleAccess("financeiro");
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
+  const denied = await platformEditorMutationGuard();
+  if (denied) return denied;
 
   try {
     const { serverId, companyId } = await params;
@@ -70,6 +72,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 export async function DELETE(_request: NextRequest, { params }: Params) {
   const ok = await ensureModuleAccess("financeiro");
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
+  const denied = await platformEditorMutationGuard();
+  if (denied) return denied;
 
   try {
     const { serverId, companyId } = await params;

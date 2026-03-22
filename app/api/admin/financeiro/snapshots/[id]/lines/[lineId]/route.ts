@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { ensureModuleAccess } from "@/lib/admin-auth";
+import { ensureModuleAccess, platformEditorMutationGuard } from "@/lib/admin-auth";
 import { allocationDisplayLabel } from "@/lib/financeiro-allocation";
 import { financeiroCompanyForServer } from "@/lib/financeiro-company-line";
 import { companyOverrideForEffective, MAX_COMPANY_LABEL_LEN } from "@/lib/financeiro-effective-company";
@@ -13,6 +13,8 @@ type Params = { params: Promise<{ id: string; lineId: string }> };
 export async function PATCH(request: NextRequest, { params }: Params) {
   const ok = await ensureModuleAccess("financeiro");
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
+  const denied = await platformEditorMutationGuard();
+  if (denied) return denied;
 
   try {
     const { id: snapshotId, lineId } = await params;
@@ -195,6 +197,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 export async function DELETE(_request: NextRequest, { params }: Params) {
   const ok = await ensureModuleAccess("financeiro");
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
+  const denied = await platformEditorMutationGuard();
+  if (denied) return denied;
 
   try {
     const { id: snapshotId, lineId } = await params;

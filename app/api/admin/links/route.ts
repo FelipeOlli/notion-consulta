@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureModuleAccess } from "@/lib/admin-auth";
+import { ensureModuleAccess, platformEditorMutationGuard } from "@/lib/admin-auth";
 import { createLink, listAdminLinks } from "@/lib/store";
 
 export async function GET() {
@@ -13,6 +13,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const ok = await ensureModuleAccess("senha");
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
+  const denied = await platformEditorMutationGuard();
+  if (denied) return denied;
 
   try {
     const body = await request.json();

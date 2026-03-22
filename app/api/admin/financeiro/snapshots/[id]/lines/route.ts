@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { ensureModuleAccess } from "@/lib/admin-auth";
+import { ensureModuleAccess, platformEditorMutationGuard } from "@/lib/admin-auth";
 import { allocationDisplayLabel, FINANCEIRO_SEM_EMPRESA } from "@/lib/financeiro-allocation";
 import { financeiroCompanyForServer } from "@/lib/financeiro-company-line";
 import { recalcSnapshotLineAggregates } from "@/lib/financeiro-snapshot-aggregates";
@@ -115,6 +115,8 @@ export async function GET(request: NextRequest, { params }: Params) {
 export async function POST(request: NextRequest, { params }: Params) {
   const ok = await ensureModuleAccess("financeiro");
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
+  const denied = await platformEditorMutationGuard();
+  if (denied) return denied;
 
   try {
     const { id: snapshotId } = await params;
