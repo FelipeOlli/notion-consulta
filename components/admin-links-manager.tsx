@@ -6,6 +6,8 @@ import { NotionLink } from "@/lib/types";
 
 type Props = {
   initialLinks: NotionLink[];
+  /** Se false, somente consulta (ti@ / LOCKED_PRIMARY_ADMIN_EMAIL pode incluir, editar e excluir). */
+  canEditAcessos?: boolean;
 };
 
 type FormState = {
@@ -24,7 +26,8 @@ const emptyForm: FormState = {
   active: true,
 };
 
-export function AdminLinksManager({ initialLinks }: Props) {
+export function AdminLinksManager({ initialLinks, canEditAcessos = true }: Props) {
+  const readOnlyAcessos = !canEditAcessos;
   const router = useRouter();
   const [links, setLinks] = useState(initialLinks);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -64,6 +67,10 @@ export function AdminLinksManager({ initialLinks }: Props) {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (readOnlyAcessos) {
+      setError("Somente o administrador principal pode incluir ou alterar acessos.");
+      return;
+    }
     setError("");
     setSaving(true);
 
@@ -96,6 +103,10 @@ export function AdminLinksManager({ initialLinks }: Props) {
   }
 
   async function onDelete(id: string) {
+    if (readOnlyAcessos) {
+      setError("Somente o administrador principal pode excluir acessos.");
+      return;
+    }
     if (!window.confirm("Deseja mesmo excluir este link?")) return;
 
     const response = await fetch(`/api/admin/links/${id}`, { method: "DELETE" });
@@ -111,6 +122,15 @@ export function AdminLinksManager({ initialLinks }: Props) {
 
   return (
     <section className="space-y-6">
+      {readOnlyAcessos ? (
+        <div className="rounded-2xl border border-amber-700/50 bg-amber-950/35 p-4 text-sm text-amber-100">
+          <p className="font-semibold text-amber-50">Acessos em modo somente leitura</p>
+          <p className="mt-1 text-amber-200/90">
+            Apenas o administrador principal pode incluir, editar ou excluir acessos. Voce pode consultar e buscar na
+            lista.
+          </p>
+        </div>
+      ) : null}
       <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-sm sm:p-6">
         <h2 className="mb-4 text-lg font-semibold text-slate-50">
           {editingId ? "Editar link" : "Novo link do Notion"}
@@ -122,35 +142,40 @@ export function AdminLinksManager({ initialLinks }: Props) {
             onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
             placeholder="Titulo"
             required
-            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400"
+            disabled={readOnlyAcessos}
+            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400 disabled:opacity-50"
           />
           <input
             value={form.category}
             onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
             placeholder="Categoria (texto livre)"
             required
-            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400"
+            disabled={readOnlyAcessos}
+            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400 disabled:opacity-50"
           />
           <input
             value={form.url}
             onChange={(event) => setForm((prev) => ({ ...prev, url: event.target.value }))}
             placeholder="https://www.notion.so/..."
             required
-            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400 md:col-span-2"
+            disabled={readOnlyAcessos}
+            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400 md:col-span-2 disabled:opacity-50"
           />
           <textarea
             value={form.description}
             onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
             placeholder="Descricao curta"
             rows={3}
-            className="rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-slate-100 outline-none transition focus:border-slate-400 md:col-span-2"
+            disabled={readOnlyAcessos}
+            className="rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-slate-100 outline-none transition focus:border-slate-400 md:col-span-2 disabled:opacity-50"
           />
           <label className="inline-flex items-center gap-2 text-sm text-slate-200">
             <input
               type="checkbox"
               checked={form.active}
               onChange={(event) => setForm((prev) => ({ ...prev, active: event.target.checked }))}
-              className="size-4 rounded border-slate-600 bg-slate-900"
+              disabled={readOnlyAcessos}
+              className="size-4 rounded border-slate-600 bg-slate-900 disabled:opacity-50"
             />
             Link ativo na pagina publica
           </label>
@@ -158,7 +183,7 @@ export function AdminLinksManager({ initialLinks }: Props) {
           <div className="flex flex-wrap gap-2 md:col-span-2">
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || readOnlyAcessos}
               className="rounded-xl bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-white disabled:opacity-60"
             >
               {saving ? "Salvando..." : editingId ? "Salvar alteracoes" : "Cadastrar link"}
@@ -215,14 +240,18 @@ export function AdminLinksManager({ initialLinks }: Props) {
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
+                  type="button"
                   onClick={() => startEdit(item)}
-                  className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm font-medium text-slate-100 transition hover:border-slate-300 hover:text-white"
+                  disabled={readOnlyAcessos}
+                  className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm font-medium text-slate-100 transition hover:border-slate-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Editar
                 </button>
                 <button
+                  type="button"
                   onClick={() => onDelete(item.id)}
-                  className="rounded-lg border border-red-500/60 px-3 py-1.5 text-sm font-medium text-red-300 transition hover:border-red-400 hover:text-red-200"
+                  disabled={readOnlyAcessos}
+                  className="rounded-lg border border-red-500/60 px-3 py-1.5 text-sm font-medium text-red-300 transition hover:border-red-400 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Excluir
                 </button>

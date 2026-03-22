@@ -7,11 +7,12 @@ import { isLockedPrimaryAdminEmail } from "@/lib/locked-admin";
 export const FINANCEIRO_EDITOR_FORBIDDEN_MESSAGE =
   "Somente o administrador principal pode editar linhas do servico e alocar empresas neste modulo.";
 
-/**
- * Módulo Financeiro (import, linhas, alocação, empresas do serviço): apenas LOCKED_PRIMARY_ADMIN_EMAIL
- * (padrão ti@cfcontabilidade.com) pode mutar. Demais usuários com módulo financeiro apenas consultam.
- */
-export async function ensureFinanceiroMutationEditor(): Promise<boolean> {
+/** Mensagem para inclusão, edição ou exclusão no módulo Acessos (links). */
+export const ACESSOS_EDITOR_FORBIDDEN_MESSAGE =
+  "Somente o administrador principal pode incluir, editar ou excluir acessos.";
+
+/** E-mail = LOCKED_PRIMARY_ADMIN_EMAIL (ex.: ti@cfcontabilidade.com). */
+export async function ensureLockedPrimaryAdminEmail(): Promise<boolean> {
   const session = await getAdminSession();
   if (!session?.email) return false;
   return isLockedPrimaryAdminEmail(session.email);
@@ -19,8 +20,16 @@ export async function ensureFinanceiroMutationEditor(): Promise<boolean> {
 
 /** Use só em POST/PATCH/DELETE das rotas /api/admin/financeiro/*. */
 export async function financeiroMutationGuard(): Promise<NextResponse | null> {
-  if (!(await ensureFinanceiroMutationEditor())) {
+  if (!(await ensureLockedPrimaryAdminEmail())) {
     return NextResponse.json({ message: FINANCEIRO_EDITOR_FORBIDDEN_MESSAGE }, { status: 403 });
+  }
+  return null;
+}
+
+/** Use em POST /api/admin/links e PATCH/DELETE /api/admin/links/[id]. */
+export async function linksMutationGuard(): Promise<NextResponse | null> {
+  if (!(await ensureLockedPrimaryAdminEmail())) {
+    return NextResponse.json({ message: ACESSOS_EDITOR_FORBIDDEN_MESSAGE }, { status: 403 });
   }
   return null;
 }

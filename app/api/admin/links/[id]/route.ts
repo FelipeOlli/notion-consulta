@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureModuleAccess } from "@/lib/admin-auth";
+import { ensureModuleAccess, linksMutationGuard } from "@/lib/admin-auth";
 import { removeLink, updateLink } from "@/lib/store";
 
 type Params = { params: Promise<{ id: string }> };
@@ -7,6 +7,8 @@ type Params = { params: Promise<{ id: string }> };
 export async function PATCH(request: NextRequest, { params }: Params) {
   const ok = await ensureModuleAccess("senha");
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
+  const denied = await linksMutationGuard();
+  if (denied) return denied;
 
   try {
     const body = await request.json();
@@ -22,6 +24,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 export async function DELETE(_request: NextRequest, { params }: Params) {
   const ok = await ensureModuleAccess("senha");
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
+  const denied = await linksMutationGuard();
+  if (denied) return denied;
 
   try {
     const { id } = await params;
