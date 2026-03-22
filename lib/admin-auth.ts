@@ -34,6 +34,18 @@ export async function linksMutationGuard(): Promise<NextResponse | null> {
   return null;
 }
 
+/** Mensagem para inclusão, edição ou exclusão de certificados digitais. */
+export const CERTIFICADOS_EDITOR_FORBIDDEN_MESSAGE =
+  "Somente o administrador principal pode incluir, editar ou excluir certificados.";
+
+/** Use em POST /api/admin/certificados e PATCH/DELETE /api/admin/certificados/[id]. */
+export async function certificadosMutationGuard(): Promise<NextResponse | null> {
+  if (!(await ensureLockedPrimaryAdminEmail())) {
+    return NextResponse.json({ message: CERTIFICADOS_EDITOR_FORBIDDEN_MESSAGE }, { status: 403 });
+  }
+  return null;
+}
+
 /** Retorna true apenas se a sessão existe e o usuário é master (pode editar links). */
 export async function ensureMaster() {
   const session = await getAdminSession();

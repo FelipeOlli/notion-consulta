@@ -24,9 +24,16 @@ type Certificate = {
 type Props = {
   initialCertificates: Certificate[];
   companies: Company[];
+  /** Se false, somente consulta e download (ti@ / LOCKED_PRIMARY_ADMIN_EMAIL pode incluir, editar e excluir). */
+  canEditCertificados?: boolean;
 };
 
-export function AdminCertificatesManager({ initialCertificates, companies }: Props) {
+export function AdminCertificatesManager({
+  initialCertificates,
+  companies,
+  canEditCertificados = true,
+}: Props) {
+  const readOnlyCertificados = !canEditCertificados;
   const router = useRouter();
   const [items, setItems] = useState(initialCertificates);
   const [companyId, setCompanyId] = useState(companies[0]?.id ?? "");
@@ -60,6 +67,10 @@ export function AdminCertificatesManager({ initialCertificates, companies }: Pro
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (readOnlyCertificados) {
+      setError("Somente o administrador principal pode registrar certificados.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -93,6 +104,10 @@ export function AdminCertificatesManager({ initialCertificates, companies }: Pro
   }
 
   async function remove(id: string) {
+    if (readOnlyCertificados) {
+      setError("Somente o administrador principal pode excluir certificados.");
+      return;
+    }
     if (!confirm("Deseja excluir este certificado?")) return;
     const response = await fetch(`/api/admin/certificados/${id}`, { method: "DELETE" });
     if (!response.ok) {
@@ -122,6 +137,10 @@ export function AdminCertificatesManager({ initialCertificates, companies }: Pro
 
   async function saveEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (readOnlyCertificados) {
+      setError("Somente o administrador principal pode editar certificados.");
+      return;
+    }
     if (!editingId) return;
     setEditSaving(true);
     setError("");
@@ -158,6 +177,15 @@ export function AdminCertificatesManager({ initialCertificates, companies }: Pro
 
   return (
     <section className="space-y-6">
+      {readOnlyCertificados ? (
+        <div className="rounded-2xl border border-amber-700/50 bg-amber-950/35 p-4 text-sm text-amber-100">
+          <p className="font-semibold text-amber-50">Certificados em modo somente leitura</p>
+          <p className="mt-1 text-amber-200/90">
+            Apenas o administrador principal pode incluir, alterar ou remover certificados. Voce pode consultar a lista
+            e usar Download.
+          </p>
+        </div>
+      ) : null}
       <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-sm sm:p-6">
         <h2 className="mb-4 text-lg font-semibold text-slate-50">Novo certificado digital</h2>
         <form onSubmit={submit} className="grid gap-3 md:grid-cols-2">
@@ -165,7 +193,8 @@ export function AdminCertificatesManager({ initialCertificates, companies }: Pro
             value={companyId}
             onChange={(event) => setCompanyId(event.target.value)}
             required
-            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400"
+            disabled={readOnlyCertificados}
+            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400 disabled:opacity-50"
           >
             {companies.map((company) => (
               <option key={company.id} value={company.id}>
@@ -178,7 +207,8 @@ export function AdminCertificatesManager({ initialCertificates, companies }: Pro
             value={expiresAt}
             onChange={(event) => setExpiresAt(event.target.value)}
             required
-            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400"
+            disabled={readOnlyCertificados}
+            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400 disabled:opacity-50"
           />
           <input
             type="password"
@@ -186,24 +216,27 @@ export function AdminCertificatesManager({ initialCertificates, companies }: Pro
             onChange={(event) => setCertificatePassword(event.target.value)}
             placeholder="Senha do certificado"
             required
-            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400"
+            disabled={readOnlyCertificados}
+            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400 disabled:opacity-50"
           />
           <input
             value={socio}
             onChange={(event) => setSocio(event.target.value)}
             placeholder="Sócio (opcional)"
-            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400"
+            disabled={readOnlyCertificados}
+            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400 disabled:opacity-50"
           />
           <input
             type="file"
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
             required
-            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none transition file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-2 file:py-1 file:text-slate-100 md:col-span-2"
+            disabled={readOnlyCertificados}
+            className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none transition file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-2 file:py-1 file:text-slate-100 md:col-span-2 disabled:opacity-50"
           />
           <div className="md:col-span-2">
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || readOnlyCertificados}
               className="rounded-xl bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-white disabled:opacity-60"
             >
               {saving ? "Salvando..." : "Registrar certificado"}
@@ -307,20 +340,25 @@ export function AdminCertificatesManager({ initialCertificates, companies }: Pro
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
+                    type="button"
                     onClick={() => downloadCert(item.id)}
                     className="rounded-lg border border-sky-500/60 px-3 py-1.5 text-sm font-medium text-sky-300 transition hover:border-sky-400 hover:text-sky-200"
                   >
                     Download
                   </button>
                   <button
+                    type="button"
                     onClick={() => startEdit(item)}
-                    className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm font-medium text-slate-300 transition hover:border-slate-400 hover:text-white"
+                    disabled={readOnlyCertificados}
+                    className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm font-medium text-slate-300 transition hover:border-slate-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Editar
                   </button>
                   <button
+                    type="button"
                     onClick={() => remove(item.id)}
-                    className="rounded-lg border border-red-500/60 px-3 py-1.5 text-sm font-medium text-red-300 transition hover:border-red-400 hover:text-red-200"
+                    disabled={readOnlyCertificados}
+                    className="rounded-lg border border-red-500/60 px-3 py-1.5 text-sm font-medium text-red-300 transition hover:border-red-400 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Excluir
                   </button>

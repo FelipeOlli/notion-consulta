@@ -4,6 +4,7 @@ import { getAdminSession } from "@/lib/session";
 import { AdminNav } from "@/components/admin-nav";
 import { AdminCertificatesManager } from "@/components/admin-certificates-manager";
 import { ALL_MODULES_FOR_MASTER, type AppModule } from "@/lib/modules";
+import { isLockedPrimaryAdminEmail } from "@/lib/locked-admin";
 
 export default async function AdminCertificatesPage() {
   const session = await getAdminSession();
@@ -19,6 +20,7 @@ export default async function AdminCertificatesPage() {
   ]);
 
   const modules: AppModule[] = session.role === "master" ? [...ALL_MODULES_FOR_MASTER] : session.modules ?? [];
+  const canEditCertificados = session.email ? isLockedPrimaryAdminEmail(session.email) : false;
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-black">
@@ -28,10 +30,15 @@ export default async function AdminCertificatesPage() {
           <p className="text-xs font-semibold uppercase tracking-widest text-sky-400">Modulo Certificados</p>
           <h1 className="mt-1 text-2xl font-bold text-slate-50 sm:text-3xl">Certificados digitais</h1>
           <p className="mt-2 text-sm text-slate-300">
-            Controle de razao social, CPF/CNPJ, arquivo do certificado, senha, vencimento e socio.
+            Inclusao, edicao e exclusao de certificados ficam apenas com o administrador principal; demais usuarios com
+            modulo Certificados podem consultar, buscar e baixar arquivos.
           </p>
         </header>
-        <AdminCertificatesManager initialCertificates={certificates} companies={companies} />
+        <AdminCertificatesManager
+          initialCertificates={certificates}
+          companies={companies}
+          canEditCertificados={canEditCertificados}
+        />
       </div>
     </main>
   );

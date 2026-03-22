@@ -3,7 +3,7 @@ import path from "path";
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { ensureModuleAccess } from "@/lib/admin-auth";
+import { certificadosMutationGuard, ensureModuleAccess } from "@/lib/admin-auth";
 
 const certificatesDir = path.join(process.cwd(), "data", "certificados");
 
@@ -36,6 +36,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const ok = await ensureModuleAccess("certificados");
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
+  const denied = await certificadosMutationGuard();
+  if (denied) return denied;
 
   try {
     const form = await request.formData();
