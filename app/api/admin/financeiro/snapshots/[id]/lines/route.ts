@@ -5,6 +5,7 @@ import { ensureModuleAccess } from "@/lib/admin-auth";
 import { allocationDisplayLabel, FINANCEIRO_SEM_EMPRESA } from "@/lib/financeiro-allocation";
 import { financeiroCompanyForServer } from "@/lib/financeiro-company-line";
 import { recalcSnapshotLineAggregates } from "@/lib/financeiro-snapshot-aggregates";
+import { logFinanceiroActivity } from "@/lib/financeiro-activity-log";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -225,6 +226,16 @@ export async function POST(request: NextRequest, { params }: Params) {
     });
 
     await recalcSnapshotLineAggregates(snapshotId);
+
+    await logFinanceiroActivity({
+      action: "LINE_CREATE",
+      metadata: {
+        snapshotId,
+        lineId: created.id,
+        lineSource: created.lineSource,
+        hasCompanyAllocation: Boolean(created.financeiroServerCompanyId),
+      },
+    });
 
     return NextResponse.json({
       data: {

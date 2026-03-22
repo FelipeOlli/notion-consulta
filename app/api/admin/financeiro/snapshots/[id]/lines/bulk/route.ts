@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ensureModuleAccess } from "@/lib/admin-auth";
 import { financeiroCompanyForServer } from "@/lib/financeiro-company-line";
 import { recalcSnapshotLineAggregates } from "@/lib/financeiro-snapshot-aggregates";
+import { logFinanceiroActivity } from "@/lib/financeiro-activity-log";
 
 const MAX_BULK = 2000;
 
@@ -80,6 +81,16 @@ export async function POST(request: NextRequest, { params }: Params) {
     });
 
     await recalcSnapshotLineAggregates(snapshotId);
+
+    await logFinanceiroActivity({
+      action: "LINE_BULK_ALLOCATE",
+      metadata: {
+        snapshotId,
+        serverId: snapshot.serverId,
+        updatedCount: lineIds.length,
+        financeiroServerCompanyId,
+      },
+    });
 
     return NextResponse.json({ data: { updated: lineIds.length } });
   } catch (error) {

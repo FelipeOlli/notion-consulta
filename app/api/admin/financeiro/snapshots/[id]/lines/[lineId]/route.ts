@@ -6,6 +6,7 @@ import { allocationDisplayLabel } from "@/lib/financeiro-allocation";
 import { financeiroCompanyForServer } from "@/lib/financeiro-company-line";
 import { companyOverrideForEffective, MAX_COMPANY_LABEL_LEN } from "@/lib/financeiro-effective-company";
 import { recalcSnapshotLineAggregates } from "@/lib/financeiro-snapshot-aggregates";
+import { logFinanceiroActivity } from "@/lib/financeiro-activity-log";
 
 type Params = { params: Promise<{ id: string; lineId: string }> };
 
@@ -152,9 +153,21 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     await recalcSnapshotLineAggregates(snapshotId);
 
+    const fieldsUpdated = allowed.filter((k) => k in b);
     const updated = await prisma.serviceUserSnapshotLine.findUniqueOrThrow({
       where: { id: lineId },
       include: { financeiroServerCompany: { select: { id: true, name: true } } },
+    });
+
+    await logFinanceiroActivity({
+      action: "LINE_UPDATE",
+      metadata: {
+        snapshotId,
+        lineId,
+        fieldsUpdated,
+        lineSource: updated.lineSource,
+        financeiroServerCompanyId: updated.financeiroServerCompanyId,
+      },
     });
 
     return NextResponse.json({
@@ -195,6 +208,15 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
 
     await prisma.serviceUserSnapshotLine.delete({ where: { id: lineId } });
     await recalcSnapshotLineAggregates(snapshotId);
+
+    await logFinanceiroActivity({
+      action: "LINE_DELETE",
+      metadata: {
+        snapshotId,
+        lineId,
+        lineSource: line.lineSource,
+      },
+    });
 
     return NextResponse.json({ data: { ok: true } });
   } catch (error) {

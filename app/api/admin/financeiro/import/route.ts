@@ -9,6 +9,7 @@ import {
 import { ensureFinanceiroEmailServer } from "@/lib/financeiro-ensure-server";
 import { recalcSnapshotLineAggregates } from "@/lib/financeiro-snapshot-aggregates";
 import { serviceKeyFromForm } from "@/lib/financeiro-services";
+import { logFinanceiroActivity } from "@/lib/financeiro-activity-log";
 
 export async function POST(request: NextRequest) {
   const ok = await ensureModuleAccess("financeiro");
@@ -135,6 +136,21 @@ export async function POST(request: NextRequest) {
       await recalcSnapshotLineAggregates(snap.id, tx as typeof prisma);
 
       return snap;
+    });
+
+    await logFinanceiroActivity({
+      action: "IMPORT_SNAPSHOT",
+      metadata: {
+        snapshotId: snapshot.id,
+        serverId: snapshot.serverId,
+        serverName: snapshot.server.name,
+        competence: snapshot.competence.toISOString(),
+        serviceKey: serviceKeyRaw,
+        totalUsers: snapshot.totalUsers,
+        activeUsers: snapshot.activeUsers,
+        source: snapshot.source,
+        fileName: snapshot.fileName,
+      },
     });
 
     return NextResponse.json({

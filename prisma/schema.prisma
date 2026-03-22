@@ -31,6 +31,18 @@ enum SnapshotLineSource {
   MANUAL
 }
 
+/** Ações auditadas no módulo Financeiro (admin). */
+enum FinanceiroActivityAction {
+  IMPORT_SNAPSHOT
+  COMPANY_CREATE
+  COMPANY_RENAME
+  COMPANY_DELETE
+  LINE_CREATE
+  LINE_UPDATE
+  LINE_DELETE
+  LINE_BULK_ALLOCATE
+}
+
 model User {
   id            String             @id @default(cuid())
   email         String             @unique
@@ -165,6 +177,19 @@ model ServiceUserSnapshotLine {
   @@index([snapshotId])
   @@index([snapshotId, companyLabel])
   @@index([snapshotId, financeiroServerCompanyId])
+}
+
+/** Registro append-only de movimentações na área financeira (admin). */
+model FinanceiroActivityLog {
+  id          String                   @id @default(cuid())
+  createdAt   DateTime                 @default(now())
+  actorEmail  String
+  actorUserId String?
+  action      FinanceiroActivityAction
+  metadata    Json?
+
+  @@index([createdAt])
+  @@index([action, createdAt])
 }
 
 model CollaboratorServerAssignment {

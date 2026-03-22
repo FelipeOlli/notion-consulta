@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ensureModuleAccess } from "@/lib/admin-auth";
 import { getFinanceiroEmailServerById } from "@/lib/financeiro-server-guard";
+import { logFinanceiroActivity } from "@/lib/financeiro-activity-log";
 
 const MAX_NAME = 200;
 
@@ -45,6 +46,17 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       select: { id: true, name: true, createdAt: true, updatedAt: true },
     });
 
+    await logFinanceiroActivity({
+      action: "COMPANY_RENAME",
+      metadata: {
+        serverId,
+        serverName: server.name,
+        companyId,
+        previousName: existing.name,
+        newName: updated.name,
+      },
+    });
+
     return NextResponse.json({ data: updated });
   } catch (error) {
     const raw = error instanceof Error ? error.message : String(error);
@@ -74,6 +86,16 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     }
 
     await prisma.financeiroServerCompany.delete({ where: { id: companyId } });
+
+    await logFinanceiroActivity({
+      action: "COMPANY_DELETE",
+      metadata: {
+        serverId,
+        serverName: server.name,
+        companyId,
+        companyName: existing.name,
+      },
+    });
 
     return NextResponse.json({ data: { ok: true } });
   } catch (error) {

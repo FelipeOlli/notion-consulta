@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ensureModuleAccess } from "@/lib/admin-auth";
 import { getFinanceiroEmailServerById } from "@/lib/financeiro-server-guard";
+import { logFinanceiroActivity } from "@/lib/financeiro-activity-log";
 
 const MAX_NAME = 200;
 
@@ -70,6 +71,16 @@ export async function POST(request: NextRequest, { params }: Params) {
     const created = await prisma.financeiroServerCompany.create({
       data: { serverId, name },
       select: { id: true, name: true, createdAt: true, updatedAt: true },
+    });
+
+    await logFinanceiroActivity({
+      action: "COMPANY_CREATE",
+      metadata: {
+        serverId,
+        serverName: server.name,
+        companyId: created.id,
+        companyName: created.name,
+      },
     });
 
     return NextResponse.json({ data: created });
