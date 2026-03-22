@@ -5,6 +5,7 @@ import { AdminNav } from "@/components/admin-nav";
 import { AdminFinanceiroSubNav } from "@/components/admin-financeiro-subnav";
 import { AdminFinanceiroDashboard } from "@/components/admin-financeiro-dashboard";
 import { ALL_MODULES_FOR_MASTER, type AppModule } from "@/lib/modules";
+import { isLockedPrimaryAdminEmail } from "@/lib/locked-admin";
 
 export default async function AdminFinanceiroPage() {
   const session = await getAdminSession();
@@ -12,6 +13,7 @@ export default async function AdminFinanceiroPage() {
   if (session.role !== "master" && !session.modules?.includes("financeiro")) redirect("/admin");
 
   const modules: AppModule[] = session.role === "master" ? [...ALL_MODULES_FOR_MASTER] : session.modules ?? [];
+  const canEditFinanceiro = session.email ? isLockedPrimaryAdminEmail(session.email) : false;
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-black">
@@ -31,7 +33,7 @@ export default async function AdminFinanceiroPage() {
             </Link>
           </p>
         </header>
-        <AdminFinanceiroDashboard />
+        <AdminFinanceiroDashboard canEditFinanceiro={canEditFinanceiro} />
       </div>
     </main>
   );

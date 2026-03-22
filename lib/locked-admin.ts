@@ -1,7 +1,7 @@
 /**
- * E-mail do administrador principal: não pode ser editado, excluído nem recriado por API.
- * Também é o único usuário que pode alterar dados via API admin (POST/PATCH/DELETE); os demais ficam em leitura.
- * Opcional: defina LOCKED_PRIMARY_ADMIN_EMAIL no .env para sobrescrever (mesmo padrão em dev).
+ * E-mail do administrador principal: não pode ser editado, excluído nem recriado por API de usuários.
+ * No módulo Financeiro, é o único que pode importar, editar linhas, alocar empresas e CRUD de empresas do serviço
+ * (mutações em /api/admin/financeiro/*). Opcional: LOCKED_PRIMARY_ADMIN_EMAIL no .env (padrão ti@cfcontabilidade.com).
  */
 export const LOCKED_PRIMARY_ADMIN_EMAIL = (
   process.env.LOCKED_PRIMARY_ADMIN_EMAIL ?? "ti@cfcontabilidade.com"

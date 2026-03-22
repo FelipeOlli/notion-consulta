@@ -104,7 +104,10 @@ async function parseJsonBody(res: Response): Promise<{ message?: string; data?: 
   }
 }
 
-export function AdminFinanceiroDashboard() {
+export type AdminFinanceiroDashboardProps = { canEditFinanceiro?: boolean };
+
+export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFinanceiroDashboardProps) {
+  const readOnlyFinanceiro = !canEditFinanceiro;
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -702,6 +705,10 @@ export function AdminFinanceiroDashboard() {
 
   async function onImport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (readOnlyFinanceiro) {
+      setImportError("Somente o administrador principal pode importar dados.");
+      return;
+    }
     setImportError("");
     setImportOk("");
     if (!file) {
@@ -740,6 +747,15 @@ export function AdminFinanceiroDashboard() {
 
   return (
     <div className="space-y-8">
+      {readOnlyFinanceiro ? (
+        <div className="rounded-2xl border border-amber-700/50 bg-amber-950/35 p-4 text-sm text-amber-100">
+          <p className="font-semibold text-amber-50">Financeiro em modo somente leitura</p>
+          <p className="mt-1 text-amber-200/90">
+            Apenas o administrador principal pode importar arquivos, cadastrar ou renomear empresas do servico, criar ou
+            editar linhas e alocar empresas. Voce pode visualizar o dashboard e abrir a planilha para consulta.
+          </p>
+        </div>
+      ) : null}
       <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-sm sm:p-6">
         <h2 className="text-lg font-semibold text-slate-50">Importar dados mensais</h2>
         <p className="mt-1 text-sm text-slate-400">
@@ -753,7 +769,8 @@ export function AdminFinanceiroDashboard() {
               type="month"
               value={competence}
               onChange={(e) => setCompetence(e.target.value)}
-              className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-slate-100"
+              disabled={readOnlyFinanceiro}
+              className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-slate-100 disabled:opacity-50"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-slate-300">
@@ -761,7 +778,8 @@ export function AdminFinanceiroDashboard() {
             <select
               value={serviceKey}
               onChange={(e) => setServiceKey(e.target.value)}
-              className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-slate-100"
+              disabled={readOnlyFinanceiro}
+              className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-slate-100 disabled:opacity-50"
             >
               <option value="cf-com">CFCONTABILIDADE.COM (JSON Google)</option>
               <option value="cf-com-br">CFCONTABILIDADE.COM.BR (JSON Google)</option>
@@ -774,13 +792,14 @@ export function AdminFinanceiroDashboard() {
               type="file"
               accept={serviceKey === "time-is-money" ? ".csv,text/csv" : ".json,application/json"}
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-2 file:py-1"
+              disabled={readOnlyFinanceiro}
+              className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-2 file:py-1 disabled:opacity-50"
             />
           </label>
           <div className="md:col-span-2 lg:col-span-4">
             <button
               type="submit"
-              disabled={importing}
+              disabled={readOnlyFinanceiro || importing}
               className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:opacity-60"
             >
               {importing ? "Importando..." : "Importar snapshot"}
@@ -925,7 +944,7 @@ export function AdminFinanceiroDashboard() {
                   <button
                     type="button"
                     onClick={openLineEditorCreate}
-                    disabled={sheetLoading}
+                    disabled={readOnlyFinanceiro || sheetLoading}
                     className="h-10 rounded-lg border border-emerald-600/60 bg-emerald-950/40 px-4 text-sm font-medium text-emerald-200 hover:bg-emerald-900/50 disabled:opacity-50"
                   >
                     Nova linha
@@ -941,7 +960,7 @@ export function AdminFinanceiroDashboard() {
                       <select
                         value={bulkCompanyId}
                         onChange={(e) => setBulkCompanyId(e.target.value)}
-                        disabled={bulkSaving || companiesLoading}
+                        disabled={readOnlyFinanceiro || bulkSaving || companiesLoading}
                         className="h-9 min-w-[200px] rounded-lg border border-slate-600 bg-slate-950 px-2 text-slate-100"
                       >
                         <option value="">{FINANCEIRO_SEM_EMPRESA}</option>
@@ -954,7 +973,12 @@ export function AdminFinanceiroDashboard() {
                     </label>
                     <button
                       type="button"
-                      disabled={selectedLineIds.size === 0 || bulkSaving || companiesLoading}
+                      disabled={
+                        readOnlyFinanceiro ||
+                        selectedLineIds.size === 0 ||
+                        bulkSaving ||
+                        companiesLoading
+                      }
                       onClick={() => void applyBulkCompanyAllocation()}
                       className="h-9 rounded-lg bg-violet-600 px-4 font-medium text-white hover:bg-violet-500 disabled:opacity-50"
                     >
@@ -962,7 +986,7 @@ export function AdminFinanceiroDashboard() {
                     </button>
                     <button
                       type="button"
-                      disabled={selectedLineIds.size === 0}
+                      disabled={readOnlyFinanceiro || selectedLineIds.size === 0}
                       onClick={() => setSelectedLineIds(new Set())}
                       className="h-9 rounded-lg border border-slate-600 px-3 text-slate-300 hover:bg-slate-800 disabled:opacity-50"
                     >
@@ -987,13 +1011,13 @@ export function AdminFinanceiroDashboard() {
                             onChange={(e) => setNewCompanyName(e.target.value)}
                             className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
                             placeholder="Nome"
-                            disabled={companiesLoading}
+                            disabled={readOnlyFinanceiro || companiesLoading}
                           />
                         </label>
                         <button
                           type="button"
                           onClick={() => void addServerCompany()}
-                          disabled={companiesLoading || !newCompanyName.trim()}
+                          disabled={readOnlyFinanceiro || companiesLoading || !newCompanyName.trim()}
                           className="h-10 rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
                         >
                           Adicionar
@@ -1016,14 +1040,16 @@ export function AdminFinanceiroDashboard() {
                                   <button
                                     type="button"
                                     onClick={() => void renameServerCompany(c)}
-                                    className="rounded border border-slate-600 px-2 py-0.5 text-xs text-sky-300 hover:bg-slate-800"
+                                    disabled={readOnlyFinanceiro}
+                                    className="rounded border border-slate-600 px-2 py-0.5 text-xs text-sky-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
                                   >
                                     Renomear
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => void deleteServerCompany(c.id)}
-                                    className="rounded border border-red-900/60 px-2 py-0.5 text-xs text-red-300 hover:bg-red-950/40"
+                                    disabled={readOnlyFinanceiro}
+                                    className="rounded border border-red-900/60 px-2 py-0.5 text-xs text-red-300 hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-40"
                                   >
                                     Excluir
                                   </button>
@@ -1084,7 +1110,7 @@ export function AdminFinanceiroDashboard() {
                               )
                             }
                             className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
-                            disabled={editorSaving}
+                            disabled={readOnlyFinanceiro || editorSaving}
                           >
                             <option value="">{FINANCEIRO_SEM_EMPRESA}</option>
                             {serverCatalog.map((c) => (
@@ -1102,7 +1128,7 @@ export function AdminFinanceiroDashboard() {
                               setLineEditor((p) => (p ? { ...p, displayName: e.target.value } : p))
                             }
                             className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
-                            disabled={editorSaving}
+                            disabled={readOnlyFinanceiro || editorSaving}
                           />
                         </label>
                         {sheetSource !== "TIM_CSV" ? (
@@ -1115,7 +1141,7 @@ export function AdminFinanceiroDashboard() {
                                   setLineEditor((p) => (p ? { ...p, email: e.target.value } : p))
                                 }
                                 className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100"
-                                disabled={editorSaving}
+                                disabled={readOnlyFinanceiro || editorSaving}
                               />
                             </label>
                             <label className="flex flex-col gap-1 text-xs text-slate-400">
@@ -1126,7 +1152,7 @@ export function AdminFinanceiroDashboard() {
                                   setLineEditor((p) => (p ? { ...p, status: e.target.value } : p))
                                 }
                                 className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
-                                disabled={editorSaving}
+                                disabled={readOnlyFinanceiro || editorSaving}
                               />
                             </label>
                             <label className="sm:col-span-2 flex flex-col gap-1 text-xs text-slate-400">
@@ -1137,7 +1163,7 @@ export function AdminFinanceiroDashboard() {
                                   setLineEditor((p) => (p ? { ...p, detail: e.target.value } : p))
                                 }
                                 className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
-                                disabled={editorSaving}
+                                disabled={readOnlyFinanceiro || editorSaving}
                               />
                             </label>
                           </>
@@ -1151,7 +1177,7 @@ export function AdminFinanceiroDashboard() {
                                   setLineEditor((p) => (p ? { ...p, telefone: e.target.value } : p))
                                 }
                                 className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
-                                disabled={editorSaving}
+                                disabled={readOnlyFinanceiro || editorSaving}
                               />
                             </label>
                             <label className="flex flex-col gap-1 text-xs text-slate-400">
@@ -1162,7 +1188,7 @@ export function AdminFinanceiroDashboard() {
                                   setLineEditor((p) => (p ? { ...p, dispositivo: e.target.value } : p))
                                 }
                                 className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
-                                disabled={editorSaving}
+                                disabled={readOnlyFinanceiro || editorSaving}
                               />
                             </label>
                             <label className="flex flex-col gap-1 text-xs text-slate-400">
@@ -1173,7 +1199,7 @@ export function AdminFinanceiroDashboard() {
                                   setLineEditor((p) => (p ? { ...p, ultimaAtividade: e.target.value } : p))
                                 }
                                 className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
-                                disabled={editorSaving}
+                                disabled={readOnlyFinanceiro || editorSaving}
                               />
                             </label>
                             <label className="flex flex-col gap-1 text-xs text-slate-400">
@@ -1184,7 +1210,7 @@ export function AdminFinanceiroDashboard() {
                                   setLineEditor((p) => (p ? { ...p, criadoEm: e.target.value } : p))
                                 }
                                 className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
-                                disabled={editorSaving}
+                                disabled={readOnlyFinanceiro || editorSaving}
                               />
                             </label>
                           </>
@@ -1193,7 +1219,7 @@ export function AdminFinanceiroDashboard() {
                       <div className="mt-4 flex flex-wrap gap-2">
                         <button
                           type="button"
-                          disabled={editorSaving}
+                          disabled={readOnlyFinanceiro || editorSaving}
                           onClick={() => void submitLineEditor()}
                           className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
                         >
@@ -1201,7 +1227,7 @@ export function AdminFinanceiroDashboard() {
                         </button>
                         <button
                           type="button"
-                          disabled={editorSaving}
+                          disabled={readOnlyFinanceiro || editorSaving}
                           onClick={closeLineEditor}
                           className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800"
                         >
@@ -1210,7 +1236,7 @@ export function AdminFinanceiroDashboard() {
                         {lineEditor.mode === "edit" ? (
                           <button
                             type="button"
-                            disabled={editorSaving}
+                            disabled={readOnlyFinanceiro || editorSaving}
                             onClick={() => void deleteLineFromEditor()}
                             className="rounded-lg border border-red-800/80 bg-red-950/40 px-4 py-2 text-sm text-red-200 hover:bg-red-950/70 disabled:opacity-50"
                           >
@@ -1237,7 +1263,7 @@ export function AdminFinanceiroDashboard() {
                                   type="checkbox"
                                   checked={allVisibleSelected}
                                   onChange={(e) => toggleSelectAll(e.target.checked)}
-                                  disabled={bulkSaving || sheetLoading}
+                                  disabled={readOnlyFinanceiro || bulkSaving || sheetLoading}
                                   aria-label="Selecionar todas as linhas visiveis"
                                   className="h-4 w-4 accent-violet-500"
                                 />
@@ -1258,7 +1284,7 @@ export function AdminFinanceiroDashboard() {
                                   type="checkbox"
                                   checked={allVisibleSelected}
                                   onChange={(e) => toggleSelectAll(e.target.checked)}
-                                  disabled={bulkSaving || sheetLoading}
+                                  disabled={readOnlyFinanceiro || bulkSaving || sheetLoading}
                                   aria-label="Selecionar todas as linhas visiveis"
                                   className="h-4 w-4 accent-violet-500"
                                 />
@@ -1287,7 +1313,10 @@ export function AdminFinanceiroDashboard() {
                                         checked={selectedLineIds.has(line.id)}
                                         onChange={(e) => toggleLineSelected(line.id, e.target.checked)}
                                         disabled={
-                                          bulkSaving || sheetLoading || patchingLineId === line.id
+                                          readOnlyFinanceiro ||
+                                          bulkSaving ||
+                                          sheetLoading ||
+                                          patchingLineId === line.id
                                         }
                                         aria-label={`Selecionar ${line.displayName}`}
                                         className="mt-1 h-4 w-4 accent-violet-500"
@@ -1297,7 +1326,11 @@ export function AdminFinanceiroDashboard() {
                                       <div className="flex flex-col gap-2">
                                         <select
                                           value={line.financeiroServerCompanyId ?? ""}
-                                          disabled={patchingLineId === line.id || companiesLoading}
+                                          disabled={
+                                            readOnlyFinanceiro ||
+                                            patchingLineId === line.id ||
+                                            companiesLoading
+                                          }
                                           onChange={(e) => {
                                             const v = e.target.value;
                                             void patchLineAllocation(line.id, v === "" ? null : v);
@@ -1327,7 +1360,8 @@ export function AdminFinanceiroDashboard() {
                                       <button
                                         type="button"
                                         onClick={() => openLineEditorEdit(line)}
-                                        className="rounded border border-slate-600 px-2 py-1 text-xs text-sky-300 hover:bg-slate-800"
+                                        disabled={readOnlyFinanceiro}
+                                        className="rounded border border-slate-600 px-2 py-1 text-xs text-sky-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
                                       >
                                         Editar
                                       </button>
@@ -1344,7 +1378,10 @@ export function AdminFinanceiroDashboard() {
                                         checked={selectedLineIds.has(line.id)}
                                         onChange={(e) => toggleLineSelected(line.id, e.target.checked)}
                                         disabled={
-                                          bulkSaving || sheetLoading || patchingLineId === line.id
+                                          readOnlyFinanceiro ||
+                                          bulkSaving ||
+                                          sheetLoading ||
+                                          patchingLineId === line.id
                                         }
                                         aria-label={`Selecionar ${line.displayName}`}
                                         className="mt-1 h-4 w-4 accent-violet-500"
@@ -1354,7 +1391,11 @@ export function AdminFinanceiroDashboard() {
                                       <div className="flex flex-col gap-2">
                                         <select
                                           value={line.financeiroServerCompanyId ?? ""}
-                                          disabled={patchingLineId === line.id || companiesLoading}
+                                          disabled={
+                                            readOnlyFinanceiro ||
+                                            patchingLineId === line.id ||
+                                            companiesLoading
+                                          }
                                           onChange={(e) => {
                                             const v = e.target.value;
                                             void patchLineAllocation(line.id, v === "" ? null : v);
@@ -1383,7 +1424,8 @@ export function AdminFinanceiroDashboard() {
                                       <button
                                         type="button"
                                         onClick={() => openLineEditorEdit(line)}
-                                        className="rounded border border-slate-600 px-2 py-1 text-xs text-sky-300 hover:bg-slate-800"
+                                        disabled={readOnlyFinanceiro}
+                                        className="rounded border border-slate-600 px-2 py-1 text-xs text-sky-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
                                       >
                                         Editar
                                       </button>

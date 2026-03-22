@@ -3,7 +3,7 @@ import path from "path";
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { ensureModuleAccess, platformEditorMutationGuard } from "@/lib/admin-auth";
+import { ensureModuleAccess } from "@/lib/admin-auth";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -45,8 +45,6 @@ export async function GET(_request: NextRequest, { params }: Params) {
 export async function PATCH(request: NextRequest, { params }: Params) {
   const ok = await ensureModuleAccess("certificados");
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
-  const denied = await platformEditorMutationGuard();
-  if (denied) return denied;
 
   try {
     const { id } = await params;
@@ -118,8 +116,6 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 export async function DELETE(_request: NextRequest, { params }: Params) {
   const ok = await ensureModuleAccess("certificados");
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
-  const denied = await platformEditorMutationGuard();
-  if (denied) return denied;
 
   try {
     const { id } = await params;

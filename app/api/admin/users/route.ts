@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { ensureUserManagementAccess, platformEditorMutationGuard } from "@/lib/admin-auth";
+import { ensureUserManagementAccess } from "@/lib/admin-auth";
 import { normalizeModule, toPrismaModule } from "@/lib/modules";
 import { hashPassword } from "@/lib/password";
 import { isLockedPrimaryAdminEmail } from "@/lib/locked-admin";
@@ -41,8 +41,6 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const ok = await ensureUserManagementAccess();
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
-  const denied = await platformEditorMutationGuard();
-  if (denied) return denied;
 
   try {
     const body = (await request.json()) as CreateBody;

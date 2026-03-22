@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { ensureUserManagementAccess, platformEditorMutationGuard } from "@/lib/admin-auth";
+import { ensureUserManagementAccess } from "@/lib/admin-auth";
 import { normalizeModule, toPrismaModule } from "@/lib/modules";
 import { hashPassword } from "@/lib/password";
 import { isLockedPrimaryAdminEmail, LOCKED_PRIMARY_ADMIN_EMAIL } from "@/lib/locked-admin";
@@ -21,8 +21,6 @@ function isModuleKey(value: ReturnType<typeof normalizeModule>): value is NonNul
 export async function PATCH(request: NextRequest, { params }: Params) {
   const ok = await ensureUserManagementAccess();
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
-  const denied = await platformEditorMutationGuard();
-  if (denied) return denied;
 
   try {
     const body = (await request.json()) as UpdateBody;
@@ -89,8 +87,6 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 export async function DELETE(_request: NextRequest, { params }: Params) {
   const ok = await ensureUserManagementAccess();
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
-  const denied = await platformEditorMutationGuard();
-  if (denied) return denied;
 
   try {
     const { id } = await params;
