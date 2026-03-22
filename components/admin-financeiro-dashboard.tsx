@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FINANCEIRO_SEM_EMPRESA } from "@/lib/financeiro-allocation";
 
 type SnapshotPoint = {
@@ -139,6 +139,7 @@ export function AdminFinanceiroDashboard() {
   const [companyUiError, setCompanyUiError] = useState("");
   const [newCompanyName, setNewCompanyName] = useState("");
   const [patchingLineId, setPatchingLineId] = useState<string | null>(null);
+  const lineEditorPanelRef = useRef<HTMLDivElement>(null);
 
   const loadLines = useCallback(async (snapshotId: string, company?: string) => {
     setSheetLoading(true);
@@ -539,6 +540,28 @@ export function AdminFinanceiroDashboard() {
     void load();
   }, [load]);
 
+  /** Ao abrir criar/editar linha no modal, rolar até o painel e focar o primeiro campo (evita sensação de botão quebrado). */
+  useEffect(() => {
+    if (!sheetOpen || !lineEditor) return;
+    let cancelled = false;
+    const raf = requestAnimationFrame(() => {
+      const panel = lineEditorPanelRef.current;
+      if (!panel || cancelled) return;
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        const focusable = panel.querySelector<HTMLElement>(
+          "select:not([disabled]), input:not([disabled]), textarea:not([disabled])"
+        );
+        focusable?.focus({ preventScroll: true });
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+  }, [lineEditor, sheetOpen]);
+
   const maxTotal = useMemo(() => {
     if (!data) return 1;
     let m = 1;
@@ -888,7 +911,11 @@ export function AdminFinanceiroDashboard() {
                     </div>
                   ) : null}
                   {lineEditor ? (
-                    <div className="mb-6 rounded-xl border border-sky-800/60 bg-slate-900/70 p-4">
+                    <div
+                      ref={lineEditorPanelRef}
+                      id="financeiro-line-editor-panel"
+                      className="mb-6 scroll-mt-4 rounded-xl border border-sky-800/60 bg-slate-900/70 p-4"
+                    >
                       <h3 className="text-sm font-semibold text-sky-100">
                         {lineEditor.mode === "create" ? "Nova linha" : "Editar linha"}
                       </h3>
