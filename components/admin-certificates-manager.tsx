@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Company = {
@@ -36,7 +36,21 @@ export function AdminCertificatesManager({
   const readOnlyCertificados = !canEditCertificados;
   const router = useRouter();
   const [items, setItems] = useState(initialCertificates);
+  const [companyOptions, setCompanyOptions] = useState(companies);
+  useEffect(() => {
+    setCompanyOptions(companies);
+  }, [companies]);
   const [companyId, setCompanyId] = useState(companies[0]?.id ?? "");
+  useEffect(() => {
+    if (companyOptions.length && !companyOptions.some((c) => c.id === companyId)) {
+      setCompanyId(companyOptions[0].id);
+    }
+  }, [companyOptions, companyId]);
+  const [newCompanyLegalName, setNewCompanyLegalName] = useState("");
+  const [newCompanyDocument, setNewCompanyDocument] = useState("");
+  const [newCompanyPartner, setNewCompanyPartner] = useState("");
+  const [newCompanySaving, setNewCompanySaving] = useState(false);
+  const [newCompanyError, setNewCompanyError] = useState("");
   const [certificatePassword, setCertificatePassword] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [socio, setSocio] = useState("");
@@ -65,10 +79,55 @@ export function AdminCertificatesManager({
     });
   }, [items, query]);
 
+  async function createCompany(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (readOnlyCertificados) return;
+    const name = newCompanyLegalName.trim();
+    setNewCompanyError("");
+    if (!name) {
+      setNewCompanyError("Informe a razao social.");
+      return;
+    }
+    setNewCompanySaving(true);
+    try {
+      const response = await fetch("/api/admin/certificados/companies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          legalName: name,
+          document: newCompanyDocument.trim() || undefined,
+          partnerName: newCompanyPartner.trim() || undefined,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setNewCompanyError(payload?.message || "Nao foi possivel cadastrar a empresa.");
+        return;
+      }
+      const row = payload.data as Company;
+      setCompanyOptions((prev) =>
+        [...prev, row].sort((a, b) => a.legalName.localeCompare(b.legalName, "pt-BR"))
+      );
+      setCompanyId(row.id);
+      setNewCompanyLegalName("");
+      setNewCompanyDocument("");
+      setNewCompanyPartner("");
+      router.refresh();
+    } catch {
+      setNewCompanyError("Falha de conexao.");
+    } finally {
+      setNewCompanySaving(false);
+    }
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (readOnlyCertificados) {
       setError("Somente o administrador principal pode registrar certificados.");
+      return;
+    }
+    if (!companyOptions.length) {
+      setError("Cadastre pelo menos uma empresa antes de registrar o certificado.");
       return;
     }
     setSaving(true);
@@ -186,6 +245,47 @@ export function AdminCertificatesManager({
           </p>
         </div>
       ) : null}
+      {!readOnlyCertificados ? (
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-sm sm:p-6">
+          <h2 className="mb-1 text-lg font-semibold text-slate-50">Cadastrar empresa</h2>
+          <p className="mb-4 text-sm text-slate-400">
+            Empresas aparecem no select ao registrar ou editar certificados. CPF/CNPJ deve ser unico quando informado.
+          </p>
+          <form onSubmit={createCompany} className="grid gap-3 md:grid-cols-2">
+            <input
+              value={newCompanyLegalName}
+              onChange={(event) => setNewCompanyLegalName(event.target.value)}
+              placeholder="Razao social *"
+              required
+              className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400 md:col-span-2"
+            />
+            <input
+              value={newCompanyDocument}
+              onChange={(event) => setNewCompanyDocument(event.target.value)}
+              placeholder="CPF/CNPJ (opcional)"
+              className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400"
+            />
+            <input
+              value={newCompanyPartner}
+              onChange={(event) => setNewCompanyPartner(event.target.value)}
+              placeholder="Socio (opcional)"
+              className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400"
+            />
+            <div className="md:col-span-2">
+              <button
+                type="submit"
+                disabled={newCompanySaving}
+                className="rounded-xl border border-sky-600/60 bg-sky-950/40 px-4 py-2 text-sm font-semibold text-sky-100 transition hover:bg-sky-900/50 disabled:opacity-60"
+              >
+                {newCompanySaving ? "Salvando..." : "Salvar empresa"}
+              </button>
+            </div>
+            {newCompanyError ? (
+              <p className="text-sm font-medium text-red-500 md:col-span-2">{newCompanyError}</p>
+            ) : null}
+          </form>
+        </div>
+      ) : null}
       <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-sm sm:p-6">
         <h2 className="mb-4 text-lg font-semibold text-slate-50">Novo certificado digital</h2>
         <form onSubmit={submit} className="grid gap-3 md:grid-cols-2">
@@ -193,14 +293,18 @@ export function AdminCertificatesManager({
             value={companyId}
             onChange={(event) => setCompanyId(event.target.value)}
             required
-            disabled={readOnlyCertificados}
+            disabled={readOnlyCertificados || companyOptions.length === 0}
             className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-400 disabled:opacity-50"
           >
-            {companies.map((company) => (
-              <option key={company.id} value={company.id}>
-                {company.legalName}
-              </option>
-            ))}
+            {companyOptions.length === 0 ? (
+              <option value="">Nenhuma empresa cadastrada</option>
+            ) : (
+              companyOptions.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.legalName}
+                </option>
+              ))
+            )}
           </select>
           <input
             type="date"
@@ -267,7 +371,7 @@ export function AdminCertificatesManager({
                     required
                     className="h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100"
                   >
-                    {companies.map((company) => (
+                    {companyOptions.map((company) => (
                       <option key={company.id} value={company.id}>
                         {company.legalName}
                       </option>
