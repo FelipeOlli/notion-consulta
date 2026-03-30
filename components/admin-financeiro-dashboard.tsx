@@ -145,6 +145,7 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
   const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(() => new Set());
   const [bulkCompanyId, setBulkCompanyId] = useState("");
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
   const lineEditorPanelRef = useRef<HTMLDivElement>(null);
   const sheetScrollRef = useRef<HTMLDivElement>(null);
   const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
@@ -658,6 +659,49 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
     await loadLines(sheetSnapshotId, sheetCompanyFilter || undefined);
   }
 
+  async function exportSheetToExcel() {
+    if (!sheetSnapshotId) return;
+    setExportingExcel(true);
+    setSheetError("");
+    try {
+      const res = await fetch(`/api/admin/financeiro/snapshots/${sheetSnapshotId}/export-excel`);
+      if (!res.ok) {
+        const text = await res.text();
+        try {
+          const j = JSON.parse(text) as { message?: string };
+          setSheetError(j.message || "Nao foi possivel gerar o Excel.");
+        } catch {
+          setSheetError("Nao foi possivel gerar o Excel.");
+        }
+        return;
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get("Content-Disposition");
+      let filename = "financeiro_export.xlsx";
+      const star = cd?.match(/filename\*=UTF-8''([^;\s]+)/i);
+      const quoted = cd?.match(/filename="([^"]+)"/i);
+      if (star?.[1]) {
+        try {
+          filename = decodeURIComponent(star[1]);
+        } catch {
+          filename = star[1];
+        }
+      } else if (quoted?.[1]) {
+        filename = quoted[1];
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setSheetError("Falha de conexao ao exportar.");
+    } finally {
+      setExportingExcel(false);
+    }
+  }
+
   /** Ao abrir criar/editar linha no modal, rolar até o painel e focar o primeiro campo (evita sensação de botão quebrado). */
   useEffect(() => {
     if (!sheetOpen || !lineEditor) return;
@@ -948,6 +992,15 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                     className="h-10 rounded-lg border border-emerald-600/60 bg-emerald-950/40 px-4 text-sm font-medium text-emerald-200 hover:bg-emerald-900/50 disabled:opacity-50"
                   >
                     Nova linha
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void exportSheetToExcel()}
+                    disabled={sheetLoading || !sheetSnapshotId || exportingExcel}
+                    title="Exporta todos os usuarios deste snapshot (nao apenas o filtro da tela), com aba Resumo por empresa."
+                    className="h-10 rounded-lg border border-slate-500 bg-slate-800/80 px-4 text-sm font-medium text-slate-100 hover:bg-slate-700 disabled:opacity-50"
+                  >
+                    {exportingExcel ? "Gerando Excel..." : "Exportar Excel"}
                   </button>
                 </div>
                 {sheetLines.length > 0 ? (
