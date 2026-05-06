@@ -343,31 +343,27 @@ export function AdminCertificatesManager({
                 </article>
               ) : (
                 <article key={item.id} className="rounded-xl p-4" style={{ background: "rgba(3,8,15,0.5)", border: "1px solid rgba(29,127,229,0.1)" }}>
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-semibold text-white">{item.company.legalName}</h3>
-                      <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: M }}>
-                        {item.company.document ? <span>CPF/CNPJ: {item.company.document}</span> : null}
-                        {item.company.partnerName ? <span>Sócio: {item.company.partnerName}</span> : null}
-                        <span>Vencimento: {new Date(item.expiresAt).toLocaleDateString("pt-BR")}</span>
-                        <span>Arquivo: {item.fileName} ({Math.round(item.fileSize / 1024)} KB)</span>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                      <button type="button" onClick={() => window.open(`/api/admin/certificados/${item.id}`, "_blank")} className="rounded-md px-3 py-1.5 text-xs font-medium transition" style={{ border: "1px solid rgba(29,127,229,0.4)", color: "#1d7fe5", background: "rgba(8,15,26,0.5)" }}>
-                        Download
-                      </button>
-                      {!readOnly ? (
-                        <>
-                          <button type="button" onClick={() => startEdit(item)} className="rounded-md px-3 py-1.5 text-xs font-medium text-white transition" style={btnGhost}>
-                            Editar
-                          </button>
-                          <button type="button" onClick={() => remove(item.id)} className="rounded-md px-3 py-1.5 text-xs font-medium transition" style={{ border: "1px solid rgba(255,69,58,0.35)", color: "#ff453a", background: "rgba(8,15,26,0.5)" }}>
-                            Excluir
-                          </button>
-                        </>
-                      ) : null}
-                    </div>
+                  <h3 className="text-sm font-semibold text-white">{item.company.legalName}</h3>
+                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: M }}>
+                    {item.company.document ? <span>CPF/CNPJ: {item.company.document}</span> : null}
+                    {item.company.partnerName ? <span>Sócio: {item.company.partnerName}</span> : null}
+                    <span>Vencimento: {new Date(item.expiresAt).toLocaleDateString("pt-BR")}</span>
+                    <span>Arquivo: {item.fileName} ({Math.round(item.fileSize / 1024)} KB)</span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => window.open(`/api/admin/certificados/${item.id}`, "_blank")} className="rounded-md px-3 py-1.5 text-xs font-medium transition" style={{ border: "1px solid rgba(29,127,229,0.4)", color: "#1d7fe5", background: "rgba(8,15,26,0.5)" }}>
+                      Download
+                    </button>
+                    {!readOnly ? (
+                      <>
+                        <button type="button" onClick={() => startEdit(item)} className="rounded-md px-3 py-1.5 text-xs font-medium text-white transition" style={btnGhost}>
+                          Editar
+                        </button>
+                        <button type="button" onClick={() => remove(item.id)} className="rounded-md px-3 py-1.5 text-xs font-medium transition" style={{ border: "1px solid rgba(255,69,58,0.35)", color: "#ff453a", background: "rgba(8,15,26,0.5)" }}>
+                          Excluir
+                        </button>
+                      </>
+                    ) : null}
                   </div>
                 </article>
               )
