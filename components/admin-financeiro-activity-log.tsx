@@ -112,26 +112,30 @@ export function AdminFinanceiroActivityLog() {
     }
   }
 
+  const muted = "var(--onity-dark-text-muted)";
+
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-sm sm:p-6">
-      <h2 className="text-lg font-semibold text-slate-50">Histórico</h2>
-      <p className="mt-1 text-sm text-slate-400">
+    <section
+      className="rounded-2xl p-5 sm:p-6"
+      style={{ background: "rgba(8,15,26,0.7)", border: "1px solid rgba(29,127,229,0.15)" }}
+    >
+      <h2 className="text-lg font-semibold text-white">Histórico</h2>
+      <p className="mt-1 text-sm" style={{ color: muted }}>
         Ações registradas após a implantação deste log. Importações, empresas do serviço, linhas e alocações.
       </p>
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
+        <label className="flex flex-col gap-1 text-sm text-white">
           Filtrar por tipo
           <select
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
-            className="h-10 min-w-[220px] rounded-lg border border-slate-700 bg-slate-900 px-3 text-slate-100"
+            className="ds-input h-10 min-w-[220px]"
+            style={{ cursor: "pointer" }}
           >
-            <option value="">Todos</option>
+            <option value="" style={{ background: "#0d1829" }}>Todos</option>
             {ACTION_OPTIONS.map(({ value, label }) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
+              <option key={value} value={value} style={{ background: "#0d1829" }}>{label}</option>
             ))}
           </select>
         </label>
@@ -139,23 +143,23 @@ export function AdminFinanceiroActivityLog() {
           type="button"
           onClick={() => void applyFilter()}
           disabled={loading}
-          className="h-10 rounded-lg bg-sky-600 px-4 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-60"
+          className="btn-primary h-10 rounded-lg px-4 text-sm font-medium disabled:opacity-60"
         >
           Aplicar filtro
         </button>
       </div>
 
-      {error ? <p className="mt-4 text-sm font-medium text-red-400">{error}</p> : null}
+      {error ? <p className="mt-4 text-sm font-medium" style={{ color: "#ff453a" }}>{error}</p> : null}
 
       {loading ? (
-        <p className="mt-6 text-sm text-slate-500">Carregando…</p>
+        <p className="mt-6 text-sm" style={{ color: muted }}>Carregando…</p>
       ) : items.length === 0 ? (
-        <p className="mt-6 text-sm text-slate-500">Nenhum registro ainda.</p>
+        <p className="mt-6 text-sm" style={{ color: muted }}>Nenhum registro ainda.</p>
       ) : (
         <>
-          <div className="mt-6 overflow-x-auto rounded-lg border border-slate-800">
+          <div className="mt-6 overflow-x-auto rounded-lg" style={{ border: "1px solid rgba(29,127,229,0.12)" }}>
             <table className="w-full min-w-[720px] border-collapse text-left text-sm">
-              <thead className="bg-slate-900 text-slate-400">
+              <thead style={{ background: "rgba(3,8,15,0.6)", color: "var(--onity-dark-text-muted)" }}>
                 <tr>
                   <th className="whitespace-nowrap p-2 font-semibold">Data</th>
                   <th className="p-2 font-semibold">Usuário</th>
@@ -165,16 +169,14 @@ export function AdminFinanceiroActivityLog() {
               </thead>
               <tbody>
                 {items.map((row) => (
-                  <tr key={row.id} className="border-t border-slate-800/90 text-slate-200">
-                    <td className="whitespace-nowrap p-2 align-top text-slate-400">
+                  <tr key={row.id} className="text-white" style={{ borderTop: "1px solid rgba(29,127,229,0.08)" }}>
+                    <td className="whitespace-nowrap p-2 align-top" style={{ color: muted }}>
                       {new Date(row.createdAt).toLocaleString("pt-BR")}
                     </td>
-                    <td className="p-2 align-top font-mono text-xs text-slate-300">{row.actorEmail}</td>
-                    <td className="p-2 align-top text-slate-200">
-                      {ACTION_LABELS[row.action] ?? row.action}
-                    </td>
+                    <td className="p-2 align-top font-mono text-xs" style={{ color: muted }}>{row.actorEmail}</td>
+                    <td className="p-2 align-top text-white">{ACTION_LABELS[row.action] ?? row.action}</td>
                     <td className="p-2 align-top">
-                      <pre className="max-h-40 max-w-xl overflow-auto whitespace-pre-wrap break-all rounded bg-slate-900/80 p-2 text-xs text-slate-400">
+                      <pre className="max-h-40 max-w-xl overflow-auto whitespace-pre-wrap break-all rounded p-2 text-xs" style={{ background: "rgba(3,8,15,0.6)", color: muted }}>
                         {formatMetadata(row.metadata)}
                       </pre>
                     </td>
@@ -189,7 +191,8 @@ export function AdminFinanceiroActivityLog() {
                 type="button"
                 disabled={loadingMore}
                 onClick={() => void loadMore()}
-                className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+                className="rounded-lg px-4 py-2 text-sm text-white transition disabled:opacity-50"
+                style={{ border: "1px solid rgba(29,127,229,0.2)", background: "rgba(8,15,26,0.5)" }}
               >
                 {loadingMore ? "Carregando…" : "Carregar mais"}
               </button>

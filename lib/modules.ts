@@ -1,17 +1,24 @@
 import type { AppModule as PrismaAppModule } from "@prisma/client";
 
-export const appModules = ["senha", "certificados", "financeiro", "usuarios"] as const;
+export const appModules = ["senha", "certificados", "financeiro", "usuarios", "cadastro_empresa"] as const;
 
 export type AppModule = (typeof appModules)[number];
 
 /** Todos os modulos exibidos para sessao master (env). */
-export const ALL_MODULES_FOR_MASTER: AppModule[] = ["senha", "certificados", "financeiro", "usuarios"];
+export const ALL_MODULES_FOR_MASTER: AppModule[] = [
+  "senha",
+  "certificados",
+  "financeiro",
+  "usuarios",
+  "cadastro_empresa",
+];
 
 export const moduleLabels: Record<AppModule, string> = {
   senha: "Acessos",
   certificados: "Certificados",
   financeiro: "Financeiro",
   usuarios: "E-mails cadastrados",
+  cadastro_empresa: "Cadastro de empresa",
 };
 
 export function normalizeModule(value: string): AppModule | null {
@@ -30,6 +37,8 @@ export function toPrismaModule(moduleKey: AppModule): PrismaAppModule {
       return "FINANCEIRO";
     case "usuarios":
       return "USUARIOS";
+    case "cadastro_empresa":
+      return "CADASTRO_EMPRESA";
   }
 }
 
@@ -43,5 +52,7 @@ export function fromPrismaModule(moduleKey: PrismaAppModule): AppModule {
       return "financeiro";
     case "USUARIOS":
       return "usuarios";
+    case "CADASTRO_EMPRESA":
+      return "cadastro_empresa";
   }
 }

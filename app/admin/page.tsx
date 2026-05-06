@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminNav } from "@/components/admin-nav";
+import { AdminMonitorDashboard } from "@/components/admin-monitor-dashboard";
 import { getAdminSession } from "@/lib/session";
 import { ALL_MODULES_FOR_MASTER, type AppModule } from "@/lib/modules";
 
@@ -50,29 +51,45 @@ export default async function AdminPage() {
       description: "Crie e edite usuários do gerencial: e-mail, senha e módulos liberados para cada conta.",
     });
   }
+  if (modules.includes("cadastro_empresa")) {
+    cards.push({
+      href: "/admin/cadastro-empresa",
+      title: "Cadastro de empresa",
+      description: "Sistema externo de cadastro e gestão de empresas.",
+    });
+  }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-black">
+    <main className="relative z-10 min-h-screen">
       <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <AdminNav modules={modules} />
+
         <header className="mb-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-sky-400">Gerencial</p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-50 sm:text-3xl">Central da empresa</h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-300">
-            Informações operacionais, acessos, certificados e indicadores financeiros em um só lugar. Escolha abaixo o
-            módulo autorizado para o seu usuário.
+          <p className="section-label">Gerencial</p>
+          <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">Central da empresa</h1>
+          <p className="mt-2 max-w-2xl text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
+            Informações operacionais, acessos, certificados e indicadores financeiros em um só lugar.
+            Escolha abaixo o módulo autorizado para o seu usuário.
           </p>
         </header>
+
+        <div className="mb-10">
+          <AdminMonitorDashboard />
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           {cards.map((card) => (
-            <Link
-              key={card.href}
-              href={card.href}
-              className="group rounded-2xl border border-slate-800 bg-slate-950/80 p-6 shadow-sm transition hover:border-sky-500/50 hover:bg-slate-900/90"
-            >
-              <h2 className="text-lg font-semibold text-slate-50 group-hover:text-sky-200">{card.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-slate-400">{card.description}</p>
-              <span className="mt-4 inline-flex text-sm font-medium text-sky-400 group-hover:text-sky-200">
+            <Link key={card.href} href={card.href} className="glass-card group rounded-2xl p-6">
+              <h2 className="text-lg font-semibold text-white transition-colors group-hover:text-[#4da3ff]">
+                {card.title}
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--onity-dark-text-muted)" }}>
+                {card.description}
+              </p>
+              <span
+                className="mt-4 inline-flex items-center gap-1 text-sm font-medium transition-colors group-hover:text-[#4da3ff]"
+                style={{ color: "#1d7fe5" }}
+              >
                 Abrir módulo →
               </span>
             </Link>

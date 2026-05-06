@@ -55,38 +55,39 @@ export function PublicLoginForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-100">E-mail</label>
+        <label className="mb-1.5 block text-sm font-medium text-white">E-mail</label>
         <input
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(e) => setEmail(e.target.value)}
           type="email"
           required
-          className="h-11 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-300"
+          className="ds-input"
           placeholder="seu-email@dominio.com"
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-100">Senha</label>
+        <label className="mb-1.5 block text-sm font-medium text-white">Senha</label>
         <input
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
           type="password"
           required
-          className="h-11 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-slate-300"
+          className="ds-input"
           placeholder="Sua senha"
         />
       </div>
       {error ? (
-        <p className={`text-sm font-medium ${errorIsWait ? "text-amber-400" : "text-red-400"}`}>{error}</p>
+        <p className="text-sm font-medium" style={{ color: errorIsWait ? "#ffaa00" : "#ff453a" }}>
+          {error}
+        </p>
       ) : null}
       <button
         type="submit"
         disabled={loading}
-        className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-slate-50 px-4 text-sm font-semibold text-slate-900 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+        className="btn-primary inline-flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? "Entrando..." : "Entrar"}
       </button>
     </form>
   );
 }
-

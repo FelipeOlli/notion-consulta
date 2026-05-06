@@ -16,13 +16,13 @@ export default async function AdminLinksPage() {
   const canEditAcessos = session.email ? isLockedPrimaryAdminEmail(session.email) : false;
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-black">
+    <main className="relative z-10 min-h-screen">
       <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <AdminNav modules={modules} />
         <header className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-widest text-sky-400">Acessos</p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-50 sm:text-3xl">Gerenciamento de acessos e links</h1>
-          <p className="mt-2 text-sm text-slate-300">
+          <p className="section-label">Acessos</p>
+          <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">Gerenciamento de acessos e links</h1>
+          <p className="mt-2 text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
             Inclusao, edicao e exclusao de acessos ficam a cargo do administrador principal; demais usuarios com modulo
             Acessos podem apenas consultar a lista.
           </p>

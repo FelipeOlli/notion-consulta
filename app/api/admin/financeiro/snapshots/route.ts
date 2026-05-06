@@ -159,4 +159,28 @@ export async function GET(request: NextRequest) {
   });
 }
 
+export async function DELETE(request: NextRequest) {
+  const ok = await ensureModuleAccess("financeiro");
+  if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
+
+  const session = await import("@/lib/session").then((m) => m.getAdminSession());
+  if (!session || session.role !== "master") {
+    return NextResponse.json({ message: "Somente o administrador principal pode limpar dados." }, { status: 403 });
+  }
+
+  const serviceKeyParam = request.nextUrl.searchParams.get("serviceKey") as keyof typeof FINANCEIRO_SERVICE_NAMES | null;
+  if (!serviceKeyParam || !(serviceKeyParam in FINANCEIRO_SERVICE_NAMES)) {
+    return NextResponse.json({ message: "serviceKey invalido." }, { status: 400 });
+  }
+
+  const serverName = FINANCEIRO_SERVICE_NAMES[serviceKeyParam];
+  const server = await prisma.emailServer.findFirst({ where: { name: serverName } });
+  if (!server) return NextResponse.json({ message: "Servico nao encontrado." }, { status: 404 });
+
+  await prisma.serviceUserSnapshotLine.deleteMany({ where: { snapshot: { serverId: server.id } } });
+  await prisma.serviceUserSnapshot.deleteMany({ where: { serverId: server.id } });
+
+  return NextResponse.json({ data: { deleted: true } });
+}
+
 export const dynamic = "force-dynamic";

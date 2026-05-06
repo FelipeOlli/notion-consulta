@@ -13,6 +13,7 @@ const descriptions: Record<AppModule, string> = {
   certificados: "Empresas, documentos, arquivos e vencimentos de certificados.",
   financeiro: "E-mails por servidor, colaboradores, custos e monitoramento.",
   usuarios: "Criar e editar usuários do gerencial e módulos por e-mail.",
+  cadastro_empresa: "Sistema externo de cadastro e gestão de empresas.",
 };
 
 const hrefs: Record<AppModule, string> = {
@@ -20,6 +21,7 @@ const hrefs: Record<AppModule, string> = {
   certificados: "/admin/certificados",
   financeiro: "/admin/financeiro",
   usuarios: "/admin/usuarios",
+  cadastro_empresa: "/admin/cadastro-empresa",
 };
 
 export function getPortalCardsForModules(modules: AppModule[]): PortalModuleCard[] {

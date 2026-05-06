@@ -146,6 +146,8 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
   const [bulkCompanyId, setBulkCompanyId] = useState("");
   const [bulkSaving, setBulkSaving] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [clearingServiceKey, setClearingServiceKey] = useState<string | null>(null);
   const lineEditorPanelRef = useRef<HTMLDivElement>(null);
   const sheetScrollRef = useRef<HTMLDivElement>(null);
   const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
@@ -747,6 +749,29 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
     return m;
   }, [data]);
 
+  async function clearServiceData(serviceKey: string, serviceName: string) {
+    const confirmed = window.confirm(
+      `Tem certeza que deseja apagar TODOS os snapshots de "${serviceName}"?\n\nEsta acao nao pode ser desfeita.`
+    );
+    if (!confirmed) return;
+    setClearingServiceKey(serviceKey);
+    try {
+      const res = await fetch(`/api/admin/financeiro/snapshots?serviceKey=${encodeURIComponent(serviceKey)}`, {
+        method: "DELETE",
+      });
+      const json = await parseJsonBody(res);
+      if (!res.ok) {
+        alert(json?.message || "Nao foi possivel limpar os dados.");
+        return;
+      }
+      await load();
+    } catch {
+      alert("Falha de conexao ao limpar dados.");
+    } finally {
+      setClearingServiceKey(null);
+    }
+  }
+
   async function onImport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (readOnlyFinanceiro) {
@@ -781,6 +806,7 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
           (imported.activeUsers != null ? ` (${imported.activeUsers} ativos no Google).` : ".")
       );
       setFile(null);
+      setShowImport(false);
       await load();
     } catch {
       setImportError("Falha de conexao.");
@@ -792,116 +818,148 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
   return (
     <div className="space-y-8">
       {readOnlyFinanceiro ? (
-        <div className="rounded-2xl border border-amber-700/50 bg-amber-950/35 p-4 text-sm text-amber-100">
+        <div className="rounded-2xl border border-[rgba(255,170,0,0.3)]/50 bg-[rgba(255,170,0,0.07)]/35 p-4 text-sm text-[#ffaa00]">
           <p className="font-semibold text-amber-50">Financeiro em modo somente leitura</p>
-          <p className="mt-1 text-amber-200/90">
+          <p className="mt-1 text-[#ffaa00]/90">
             Apenas o administrador principal pode importar arquivos, cadastrar ou renomear empresas do servico, criar ou
             editar linhas e alocar empresas. Voce pode visualizar o dashboard e abrir a planilha para consulta.
           </p>
         </div>
       ) : null}
-      <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-sm sm:p-6">
-        <h2 className="text-lg font-semibold text-slate-50">Importar dados mensais</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Envie o export do Google Workspace (JSON) para CF .COM e .COM.BR, ou o CSV de colaboradores do Time Is
-          Money. A competencia define o mes do snapshot (substitui se ja existir).
-        </p>
-        <form onSubmit={onImport} className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-          <label className="flex flex-col gap-1 text-sm text-slate-300">
-            Competencia (mes)
-            <input
-              type="month"
-              value={competence}
-              onChange={(e) => setCompetence(e.target.value)}
-              disabled={readOnlyFinanceiro}
-              className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-slate-100 disabled:opacity-50"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-slate-300">
-            Servico
-            <select
-              value={serviceKey}
-              onChange={(e) => setServiceKey(e.target.value)}
-              disabled={readOnlyFinanceiro}
-              className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-slate-100 disabled:opacity-50"
-            >
-              <option value="cf-com">CFCONTABILIDADE.COM (JSON Google)</option>
-              <option value="cf-com-br">CFCONTABILIDADE.COM.BR (JSON Google)</option>
-              <option value="time-is-money">Time Is Money (CSV)</option>
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-slate-300 md:col-span-2 lg:col-span-2">
-            Arquivo
-            <input
-              type="file"
-              accept={serviceKey === "time-is-money" ? ".csv,text/csv" : ".json,application/json"}
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              disabled={readOnlyFinanceiro}
-              className="h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-2 file:py-1 disabled:opacity-50"
-            />
-          </label>
-          <div className="md:col-span-2 lg:col-span-4">
-            <button
-              type="submit"
-              disabled={readOnlyFinanceiro || importing}
-              className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:opacity-60"
-            >
-              {importing ? "Importando..." : "Importar snapshot"}
-            </button>
-          </div>
-          {importError ? <p className="text-sm font-medium text-red-400 md:col-span-2 lg:col-span-4">{importError}</p> : null}
-          {importOk ? <p className="text-sm font-medium text-emerald-400 md:col-span-2 lg:col-span-4">{importOk}</p> : null}
-        </form>
-      </section>
+      {!readOnlyFinanceiro && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setShowImport((v) => !v)}
+            className="rounded-xl px-5 py-2.5 text-sm font-semibold transition"
+            style={
+              showImport
+                ? { background: "rgba(29,127,229,0.2)", border: "1px solid rgba(29,127,229,0.5)", color: "#4da3ff" }
+                : { background: "rgba(29,127,229,0.1)", border: "1px solid rgba(29,127,229,0.3)", color: "#1d7fe5" }
+            }
+          >
+            {showImport ? "✕ Fechar importacao" : "Importar dados mensais"}
+          </button>
+        </div>
+      )}
+
+      {showImport && !readOnlyFinanceiro && (
+        <section className="rounded-2xl border border-[rgba(29,127,229,0.15)] bg-[rgba(8,15,26,0.7)] p-5 shadow-sm sm:p-6">
+          <h2 className="text-lg font-semibold text-white">Importar dados mensais</h2>
+          <p className="mt-1 text-sm text-[#6b8aaa]">
+            Envie o export do Google Workspace (JSON) para CF .COM e .COM.BR, ou o CSV de colaboradores do Time Is
+            Money. A competencia define o mes do snapshot (substitui se ja existir).
+          </p>
+          <form onSubmit={onImport} className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+            <label className="flex flex-col gap-1 text-sm text-[#6b8aaa]">
+              Competencia (mes)
+              <input
+                type="month"
+                value={competence}
+                onChange={(e) => setCompetence(e.target.value)}
+                className="h-11 rounded-xl border border-[rgba(29,127,229,0.18)] bg-[rgba(8,15,26,0.7)] px-3 text-white"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-[#6b8aaa]">
+              Servico
+              <select
+                value={serviceKey}
+                onChange={(e) => setServiceKey(e.target.value)}
+                className="h-11 rounded-xl border border-[rgba(29,127,229,0.18)] bg-[rgba(8,15,26,0.7)] px-3 text-white"
+              >
+                <option value="cf-com">CFCONTABILIDADE.COM (JSON Google)</option>
+                <option value="cf-com-br">CFCONTABILIDADE.COM.BR (JSON Google)</option>
+                <option value="time-is-money">Time Is Money (CSV)</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-[#6b8aaa] md:col-span-2 lg:col-span-2">
+              Arquivo
+              <input
+                type="file"
+                accept={serviceKey === "time-is-money" ? ".csv,text/csv" : ".json,application/json"}
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="h-11 rounded-xl border border-[rgba(29,127,229,0.18)] bg-[rgba(8,15,26,0.7)] px-3 py-2 text-sm text-white file:mr-3 file:rounded-lg file:border-0 file:bg-[rgba(29,127,229,0.08)] file:px-2 file:py-1"
+              />
+            </label>
+            <div className="md:col-span-2 lg:col-span-4">
+              <button
+                type="submit"
+                disabled={importing}
+                className="rounded-xl bg-[#1d7fe5] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#4da3ff] disabled:opacity-60"
+              >
+                {importing ? "Importando..." : "Importar snapshot"}
+              </button>
+            </div>
+            {importError ? <p className="text-sm font-medium text-[#ff453a] md:col-span-2 lg:col-span-4">{importError}</p> : null}
+            {importOk ? <p className="text-sm font-medium text-emerald-400 md:col-span-2 lg:col-span-4">{importOk}</p> : null}
+          </form>
+        </section>
+      )}
 
       {loading ? (
-        <p className="text-sm text-slate-400">Carregando dashboard...</p>
+        <p className="text-sm text-[#6b8aaa]">Carregando dashboard...</p>
       ) : loadError ? (
-        <p className="text-sm font-medium text-red-400">{loadError}</p>
+        <p className="text-sm font-medium text-[#ff453a]">{loadError}</p>
       ) : data ? (
         <>
           <section className="grid gap-4 sm:grid-cols-3">
             {data.latestByService.map((row) => (
-              <button
+              <div
                 key={row.key}
-                type="button"
-                disabled={!row.latest}
-                onClick={() => void openSheet(row)}
-                className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-left shadow-sm transition hover:border-sky-500/50 hover:bg-slate-900/80 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-slate-800 disabled:hover:bg-slate-950/80"
+                className="rounded-2xl border border-[rgba(29,127,229,0.15)] bg-[rgba(8,15,26,0.7)] p-4 shadow-sm"
               >
-                <p className="text-xs font-semibold uppercase tracking-wide text-sky-400">{row.name}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#1d7fe5]">{row.name}</p>
                 {row.latest ? (
                   <>
-                    <p className="mt-2 text-3xl font-bold text-slate-50">{row.latest.totalUsers}</p>
-                    <p className="text-sm text-slate-400">usuarios no mes {row.latest.competence}</p>
+                    <p className="mt-2 text-3xl font-bold text-white">{row.latest.totalUsers}</p>
+                    <p className="text-sm text-[#6b8aaa]">usuarios no mes {row.latest.competence}</p>
                     {row.latest.activeUsers != null ? (
-                      <p className="mt-1 text-sm text-slate-300">Ativos (Google): {row.latest.activeUsers}</p>
+                      <p className="mt-1 text-sm text-[#6b8aaa]">Ativos (Google): {row.latest.activeUsers}</p>
                     ) : (
-                      <p className="mt-1 text-sm text-slate-500">Total de colaboradores (CSV)</p>
+                      <p className="mt-1 text-sm text-[#6b8aaa]">Total de colaboradores (CSV)</p>
                     )}
-                    <p className="mt-2 text-xs text-slate-500">
+                    <p className="mt-2 text-xs text-[#6b8aaa]">
                       Importado em {new Date(row.latest.importedAt).toLocaleString("pt-BR")}
                     </p>
-                    <p className="mt-3 text-xs font-medium text-sky-300/90">Clique para ver planilha por empresa</p>
                   </>
                 ) : (
-                  <p className="mt-2 text-sm text-slate-500">Nenhum snapshot ainda. Importe um arquivo.</p>
+                  <p className="mt-2 text-sm text-[#6b8aaa]">Nenhum snapshot ainda. Importe um arquivo.</p>
                 )}
-              </button>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={!row.latest}
+                    onClick={() => void openSheet(row)}
+                    className="rounded-lg border border-[rgba(29,127,229,0.3)] bg-[rgba(29,127,229,0.08)] px-3 py-1.5 text-xs font-medium text-[#4da3ff] transition hover:bg-[rgba(29,127,229,0.15)] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Ver planilha
+                  </button>
+                  {!readOnlyFinanceiro && row.latest && (
+                    <button
+                      type="button"
+                      disabled={clearingServiceKey === row.key}
+                      onClick={() => void clearServiceData(row.key, row.name)}
+                      className="rounded-lg border border-[rgba(255,69,58,0.35)] bg-[rgba(255,69,58,0.06)] px-3 py-1.5 text-xs font-medium text-[#ff453a] transition hover:bg-[rgba(255,69,58,0.12)] disabled:opacity-50"
+                    >
+                      {clearingServiceKey === row.key ? "Limpando..." : "Limpar dados"}
+                    </button>
+                  )}
+                </div>
+              </div>
             ))}
           </section>
 
           {data.usersByCompanyLatest && data.usersByCompanyLatest.length > 0 ? (
-            <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-sm sm:p-6">
-              <h2 className="text-lg font-semibold text-slate-50">Usuarios por empresa (ultimo snapshot de cada servico)</h2>
-              <p className="mt-1 text-sm text-slate-400">
+            <section className="rounded-2xl border border-[rgba(29,127,229,0.15)] bg-[rgba(8,15,26,0.7)] p-5 shadow-sm sm:p-6">
+              <h2 className="text-lg font-semibold text-white">Usuarios por empresa (ultimo snapshot de cada servico)</h2>
+              <p className="mt-1 text-sm text-[#6b8aaa]">
                 Baseado na alocacao feita na planilha. Cadastre empresas no servico e atribua cada linha a uma empresa.
               </p>
               <div className="mt-6 grid gap-6 lg:grid-cols-3">
                 {data.usersByCompanyLatest.map((block) => (
-                  <div key={block.key} className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-sky-400">{block.name}</p>
-                    <p className="mt-1 text-xs text-slate-500">
+                  <div key={block.key} className="rounded-xl border border-[rgba(29,127,229,0.15)] bg-[rgba(8,15,26,0.7)]/40 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#1d7fe5]">{block.name}</p>
+                    <p className="mt-1 text-xs text-[#6b8aaa]">
                       Competencia: {block.competence ?? "—"}
                       {block.byCompany.length === 0 ? " — sem dados" : null}
                     </p>
@@ -910,13 +968,13 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                         const pct = Math.round((count / maxUsersByCompanyBar) * 100);
                         return (
                           <div key={label}>
-                            <div className="mb-0.5 flex justify-between text-xs text-slate-400">
+                            <div className="mb-0.5 flex justify-between text-xs text-[#6b8aaa]">
                               <span className="truncate pr-2" title={label}>
                                 {label}
                               </span>
-                              <span className="shrink-0 font-medium text-slate-300">{count}</span>
+                              <span className="shrink-0 font-medium text-[#6b8aaa]">{count}</span>
                             </div>
-                            <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                            <div className="h-2 overflow-hidden rounded-full bg-[rgba(29,127,229,0.08)]">
                               <div
                                 className="h-full rounded-full bg-violet-500/85"
                                 style={{ width: `${Math.max(pct, 2)}%` }}
@@ -938,16 +996,17 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
               role="dialog"
               aria-modal="true"
               aria-labelledby="financeiro-sheet-title"
+              onClick={(e) => { if (e.target === e.currentTarget) closeSheet(); }}
             >
-              <div className="flex max-h-[90vh] w-full max-w-6xl flex-col rounded-2xl border border-slate-700 bg-slate-950 shadow-xl">
-                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-800 p-4">
+              <div className="flex max-h-[90vh] w-full max-w-6xl flex-col rounded-2xl border border-[rgba(29,127,229,0.18)] bg-[rgba(3,8,15,0.9)] shadow-xl">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[rgba(29,127,229,0.15)] p-4">
                   <div>
-                    <h2 id="financeiro-sheet-title" className="text-lg font-semibold text-slate-50">
+                    <h2 id="financeiro-sheet-title" className="text-lg font-semibold text-white">
                       {sheetTitle}
                     </h2>
-                    <p className="mt-1 text-sm text-slate-400">
-                      Cadastre <strong className="text-slate-300">empresas deste servico</strong> abaixo e aloque cada
-                      usuario pelo menu na coluna de empresa. Linhas <strong className="text-slate-300">Manual</strong>{" "}
+                    <p className="mt-1 text-sm text-[#6b8aaa]">
+                      Cadastre <strong className="text-[#6b8aaa]">empresas deste servico</strong> abaixo e aloque cada
+                      usuario pelo menu na coluna de empresa. Linhas <strong className="text-[#6b8aaa]">Manual</strong>{" "}
                       sao mantidas ao reimportar; linhas do arquivo sao substituidas a cada import (sem alocacao ate voce
                       definir).
                     </p>
@@ -955,18 +1014,18 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                   <button
                     type="button"
                     onClick={closeSheet}
-                    className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800"
+                    className="rounded-lg border border-[rgba(29,127,229,0.2)] px-3 py-1.5 text-sm text-white hover:bg-[rgba(29,127,229,0.12)]"
                   >
                     Fechar
                   </button>
                 </div>
-                <div className="flex flex-wrap items-end gap-3 border-b border-slate-800 p-4">
-                  <label className="flex flex-col gap-1 text-sm text-slate-300">
+                <div className="flex flex-wrap items-end gap-3 border-b border-[rgba(29,127,229,0.15)] p-4">
+                  <label className="flex flex-col gap-1 text-sm text-[#6b8aaa]">
                     Filtrar por empresa
                     <select
                       value={sheetCompanyFilter}
                       onChange={(e) => setSheetCompanyFilter(e.target.value)}
-                      className="h-10 min-w-[220px] rounded-lg border border-slate-700 bg-slate-900 px-3 text-slate-100"
+                      className="h-10 min-w-[220px] rounded-lg border border-[rgba(29,127,229,0.18)] bg-[rgba(8,15,26,0.7)] px-3 text-white"
                     >
                       <option value="">Todas</option>
                       {sheetCompanies.map((c) => (
@@ -980,16 +1039,16 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                     type="button"
                     onClick={() => void applyCompanyFilter()}
                     disabled={sheetLoading}
-                    className="h-10 rounded-lg bg-sky-600 px-4 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-60"
+                    className="h-10 rounded-lg bg-[#1d7fe5] px-4 text-sm font-medium text-white hover:bg-[#4da3ff] disabled:opacity-60"
                   >
                     Aplicar
                   </button>
-                  {sheetLoading ? <span className="text-sm text-slate-500">Carregando...</span> : null}
+                  {sheetLoading ? <span className="text-sm text-[#6b8aaa]">Carregando...</span> : null}
                   <button
                     type="button"
                     onClick={openLineEditorCreate}
                     disabled={readOnlyFinanceiro || sheetLoading}
-                    className="h-10 rounded-lg border border-emerald-600/60 bg-emerald-950/40 px-4 text-sm font-medium text-emerald-200 hover:bg-emerald-900/50 disabled:opacity-50"
+                    className="h-10 rounded-lg border border-[rgba(0,204,102,0.4)] bg-[rgba(0,204,102,0.08)] px-4 text-sm font-medium text-[#00cc66] hover:bg-[rgba(0,204,102,0.12)]/50 disabled:opacity-50"
                   >
                     Nova linha
                   </button>
@@ -998,23 +1057,23 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                     onClick={() => void exportSheetToExcel()}
                     disabled={sheetLoading || !sheetSnapshotId || exportingExcel}
                     title="Exporta todos os usuarios deste snapshot (nao apenas o filtro da tela), com aba Resumo por empresa."
-                    className="h-10 rounded-lg border border-slate-500 bg-slate-800/80 px-4 text-sm font-medium text-slate-100 hover:bg-slate-700 disabled:opacity-50"
+                    className="h-10 rounded-lg border border-[rgba(29,127,229,0.2)] bg-[rgba(29,127,229,0.08)]/80 px-4 text-sm font-medium text-white hover:bg-[rgba(29,127,229,0.12)] disabled:opacity-50"
                   >
                     {exportingExcel ? "Gerando Excel..." : "Exportar Excel"}
                   </button>
                 </div>
                 {sheetLines.length > 0 ? (
-                  <div className="flex flex-wrap items-center gap-3 border-b border-slate-800 bg-slate-900/80 px-4 py-2.5 text-sm">
-                    <span className="text-slate-400">
-                      <strong className="text-slate-200">{selectedLineIds.size}</strong> selecionado(s)
+                  <div className="flex flex-wrap items-center gap-3 border-b border-[rgba(29,127,229,0.15)] bg-[rgba(3,8,15,0.5)] px-4 py-2.5 text-sm">
+                    <span className="text-[#6b8aaa]">
+                      <strong className="text-white">{selectedLineIds.size}</strong> selecionado(s)
                     </span>
-                    <label className="flex flex-wrap items-center gap-2 text-slate-400">
+                    <label className="flex flex-wrap items-center gap-2 text-[#6b8aaa]">
                       <span className="shrink-0">Empresa (em massa)</span>
                       <select
                         value={bulkCompanyId}
                         onChange={(e) => setBulkCompanyId(e.target.value)}
                         disabled={readOnlyFinanceiro || bulkSaving || companiesLoading}
-                        className="h-9 min-w-[200px] rounded-lg border border-slate-600 bg-slate-950 px-2 text-slate-100"
+                        className="h-9 min-w-[200px] rounded-lg border border-[rgba(29,127,229,0.2)] bg-[rgba(3,8,15,0.9)] px-2 text-white"
                       >
                         <option value="">{FINANCEIRO_SEM_EMPRESA}</option>
                         {serverCatalog.map((c) => (
@@ -1041,83 +1100,39 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                       type="button"
                       disabled={readOnlyFinanceiro || selectedLineIds.size === 0}
                       onClick={() => setSelectedLineIds(new Set())}
-                      className="h-9 rounded-lg border border-slate-600 px-3 text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                      className="h-9 rounded-lg border border-[rgba(29,127,229,0.2)] px-3 text-[#6b8aaa] hover:bg-[rgba(29,127,229,0.12)] disabled:opacity-50"
                     >
                       Limpar selecao
                     </button>
                   </div>
                 ) : null}
                 <div ref={sheetScrollRef} className="min-h-0 flex-1 overflow-auto p-4">
-                  {sheetError ? <p className="text-sm text-red-400">{sheetError}</p> : null}
-                  {sheetServerId ? (
-                    <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-                      <h3 className="text-sm font-semibold text-slate-200">Empresas deste servico</h3>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        Lista unica para todos os meses. Use na coluna &quot;Empresa alocada&quot; da planilha.
-                      </p>
-                      {companyUiError ? <p className="mt-2 text-xs text-red-400">{companyUiError}</p> : null}
-                      <div className="mt-3 flex flex-wrap items-end gap-2">
-                        <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-xs text-slate-400">
-                          Nova empresa
-                          <input
-                            value={newCompanyName}
-                            onChange={(e) => setNewCompanyName(e.target.value)}
-                            className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
-                            placeholder="Nome"
-                            disabled={readOnlyFinanceiro || companiesLoading}
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => void addServerCompany()}
-                          disabled={readOnlyFinanceiro || companiesLoading || !newCompanyName.trim()}
-                          className="h-10 rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-                        >
-                          Adicionar
-                        </button>
-                      </div>
-                      {companiesLoading ? (
-                        <p className="mt-3 text-xs text-slate-500">Carregando empresas...</p>
-                      ) : (
-                        <ul className="mt-3 divide-y divide-slate-800 border-t border-slate-800 pt-2 text-sm text-slate-300">
-                          {serverCatalog.length === 0 ? (
-                            <li className="py-2 text-slate-500">Nenhuma empresa cadastrada ainda.</li>
-                          ) : (
-                            serverCatalog.map((c) => (
-                              <li
-                                key={c.id}
-                                className="flex flex-wrap items-center justify-between gap-2 py-2"
-                              >
-                                <span className="font-medium text-slate-200">{c.name}</span>
-                                <span className="flex gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => void renameServerCompany(c)}
-                                    disabled={readOnlyFinanceiro}
-                                    className="rounded border border-slate-600 px-2 py-0.5 text-xs text-sky-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
-                                  >
-                                    Renomear
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => void deleteServerCompany(c.id)}
-                                    disabled={readOnlyFinanceiro}
-                                    className="rounded border border-red-900/60 px-2 py-0.5 text-xs text-red-300 hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-40"
-                                  >
-                                    Excluir
-                                  </button>
-                                </span>
-                              </li>
-                            ))
-                          )}
-                        </ul>
-                      )}
+                  {sheetError ? <p className="text-sm text-[#ff453a]">{sheetError}</p> : null}
+                  {sheetServerId && !readOnlyFinanceiro ? (
+                    <div className="mb-6 flex flex-wrap items-end gap-2">
+                      {companyUiError ? <p className="w-full text-xs text-[#ff453a]">{companyUiError}</p> : null}
+                      <input
+                        value={newCompanyName}
+                        onChange={(e) => setNewCompanyName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void addServerCompany(); } }}
+                        className="h-10 min-w-[200px] flex-1 rounded-lg border border-[rgba(29,127,229,0.2)] bg-[rgba(3,8,15,0.9)] px-3 text-sm text-white placeholder-[#6b8aaa]"
+                        placeholder="Nome da nova empresa"
+                        disabled={companiesLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void addServerCompany()}
+                        disabled={companiesLoading || !newCompanyName.trim()}
+                        className="h-10 rounded-lg bg-[rgba(0,204,102,0.7)] px-4 text-sm font-medium text-white hover:bg-[rgba(0,204,102,0.9)] disabled:opacity-50"
+                      >
+                        + Nova empresa
+                      </button>
                     </div>
                   ) : null}
                   {!sheetLoading && !sheetError && sheetByCompany.length > 0 ? (
-                    <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-                      <h3 className="text-sm font-semibold text-slate-200">Colaboradores por empresa</h3>
-                      <p className="mt-0.5 text-xs text-slate-500">
+                    <div className="mb-6 rounded-xl border border-[rgba(29,127,229,0.15)] bg-[rgba(8,15,26,0.7)]/50 p-4">
+                      <h3 className="text-sm font-semibold text-white">Colaboradores por empresa</h3>
+                      <p className="mt-0.5 text-xs text-[#6b8aaa]">
                         Contagem pela empresa alocada na planilha ({FINANCEIRO_SEM_EMPRESA} = sem selecao).
                       </p>
                       <div className="mt-4 max-h-52 space-y-2.5 overflow-y-auto pr-1">
@@ -1125,13 +1140,13 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                           const pct = Math.round((count / sheetCompanyChartMax) * 100);
                           return (
                             <div key={label}>
-                              <div className="mb-0.5 flex justify-between text-xs text-slate-400">
+                              <div className="mb-0.5 flex justify-between text-xs text-[#6b8aaa]">
                                 <span className="truncate pr-2" title={label}>
                                   {label}
                                 </span>
-                                <span className="shrink-0 font-medium text-slate-300">{count}</span>
+                                <span className="shrink-0 font-medium text-[#6b8aaa]">{count}</span>
                               </div>
-                              <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                              <div className="h-2 overflow-hidden rounded-full bg-[rgba(29,127,229,0.08)]">
                                 <div
                                   className="h-full rounded-full bg-emerald-500/85"
                                   style={{ width: `${Math.max(pct, 2)}%` }}
@@ -1147,13 +1162,13 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                     <div
                       ref={lineEditorPanelRef}
                       id="financeiro-line-editor-panel"
-                      className="mb-6 scroll-mt-4 rounded-xl border border-sky-800/60 bg-slate-900/70 p-4"
+                      className="mb-6 scroll-mt-4 rounded-xl border border-[rgba(29,127,229,0.3)] bg-[rgba(8,15,26,0.7)]/70 p-4"
                     >
-                      <h3 className="text-sm font-semibold text-sky-100">
+                      <h3 className="text-sm font-semibold text-white">
                         {lineEditor.mode === "create" ? "Nova linha" : "Editar linha"}
                       </h3>
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        <label className="flex flex-col gap-1 text-xs text-slate-400">
+                        <label className="flex flex-col gap-1 text-xs text-[#6b8aaa]">
                           Empresa alocada
                           <select
                             value={lineEditor.financeiroServerCompanyId}
@@ -1162,7 +1177,7 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                                 p ? { ...p, financeiroServerCompanyId: e.target.value } : p
                               )
                             }
-                            className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                            className="rounded-lg border border-[rgba(29,127,229,0.2)] bg-[rgba(3,8,15,0.9)] px-3 py-2 text-sm text-white"
                             disabled={readOnlyFinanceiro || editorSaving}
                           >
                             <option value="">{FINANCEIRO_SEM_EMPRESA}</option>
@@ -1173,96 +1188,96 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                             ))}
                           </select>
                         </label>
-                        <label className="flex flex-col gap-1 text-xs text-slate-400">
+                        <label className="flex flex-col gap-1 text-xs text-[#6b8aaa]">
                           Nome
                           <input
                             value={lineEditor.displayName}
                             onChange={(e) =>
                               setLineEditor((p) => (p ? { ...p, displayName: e.target.value } : p))
                             }
-                            className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                            className="rounded-lg border border-[rgba(29,127,229,0.2)] bg-[rgba(3,8,15,0.9)] px-3 py-2 text-sm text-white"
                             disabled={readOnlyFinanceiro || editorSaving}
                           />
                         </label>
                         {sheetSource !== "TIM_CSV" ? (
                           <>
-                            <label className="flex flex-col gap-1 text-xs text-slate-400">
+                            <label className="flex flex-col gap-1 text-xs text-[#6b8aaa]">
                               E-mail
                               <input
                                 value={lineEditor.email}
                                 onChange={(e) =>
                                   setLineEditor((p) => (p ? { ...p, email: e.target.value } : p))
                                 }
-                                className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100"
+                                className="rounded-lg border border-[rgba(29,127,229,0.2)] bg-[rgba(3,8,15,0.9)] px-3 py-2 font-mono text-sm text-white"
                                 disabled={readOnlyFinanceiro || editorSaving}
                               />
                             </label>
-                            <label className="flex flex-col gap-1 text-xs text-slate-400">
+                            <label className="flex flex-col gap-1 text-xs text-[#6b8aaa]">
                               Status
                               <input
                                 value={lineEditor.status}
                                 onChange={(e) =>
                                   setLineEditor((p) => (p ? { ...p, status: e.target.value } : p))
                                 }
-                                className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                                className="rounded-lg border border-[rgba(29,127,229,0.2)] bg-[rgba(3,8,15,0.9)] px-3 py-2 text-sm text-white"
                                 disabled={readOnlyFinanceiro || editorSaving}
                               />
                             </label>
-                            <label className="sm:col-span-2 flex flex-col gap-1 text-xs text-slate-400">
+                            <label className="sm:col-span-2 flex flex-col gap-1 text-xs text-[#6b8aaa]">
                               Detalhes
                               <input
                                 value={lineEditor.detail}
                                 onChange={(e) =>
                                   setLineEditor((p) => (p ? { ...p, detail: e.target.value } : p))
                                 }
-                                className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                                className="rounded-lg border border-[rgba(29,127,229,0.2)] bg-[rgba(3,8,15,0.9)] px-3 py-2 text-sm text-white"
                                 disabled={readOnlyFinanceiro || editorSaving}
                               />
                             </label>
                           </>
                         ) : (
                           <>
-                            <label className="flex flex-col gap-1 text-xs text-slate-400">
+                            <label className="flex flex-col gap-1 text-xs text-[#6b8aaa]">
                               Telefone
                               <input
                                 value={lineEditor.telefone}
                                 onChange={(e) =>
                                   setLineEditor((p) => (p ? { ...p, telefone: e.target.value } : p))
                                 }
-                                className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                                className="rounded-lg border border-[rgba(29,127,229,0.2)] bg-[rgba(3,8,15,0.9)] px-3 py-2 text-sm text-white"
                                 disabled={readOnlyFinanceiro || editorSaving}
                               />
                             </label>
-                            <label className="flex flex-col gap-1 text-xs text-slate-400">
+                            <label className="flex flex-col gap-1 text-xs text-[#6b8aaa]">
                               Dispositivo
                               <input
                                 value={lineEditor.dispositivo}
                                 onChange={(e) =>
                                   setLineEditor((p) => (p ? { ...p, dispositivo: e.target.value } : p))
                                 }
-                                className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                                className="rounded-lg border border-[rgba(29,127,229,0.2)] bg-[rgba(3,8,15,0.9)] px-3 py-2 text-sm text-white"
                                 disabled={readOnlyFinanceiro || editorSaving}
                               />
                             </label>
-                            <label className="flex flex-col gap-1 text-xs text-slate-400">
+                            <label className="flex flex-col gap-1 text-xs text-[#6b8aaa]">
                               Ultima atividade
                               <input
                                 value={lineEditor.ultimaAtividade}
                                 onChange={(e) =>
                                   setLineEditor((p) => (p ? { ...p, ultimaAtividade: e.target.value } : p))
                                 }
-                                className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                                className="rounded-lg border border-[rgba(29,127,229,0.2)] bg-[rgba(3,8,15,0.9)] px-3 py-2 text-sm text-white"
                                 disabled={readOnlyFinanceiro || editorSaving}
                               />
                             </label>
-                            <label className="flex flex-col gap-1 text-xs text-slate-400">
+                            <label className="flex flex-col gap-1 text-xs text-[#6b8aaa]">
                               Criado em
                               <input
                                 value={lineEditor.criadoEm}
                                 onChange={(e) =>
                                   setLineEditor((p) => (p ? { ...p, criadoEm: e.target.value } : p))
                                 }
-                                className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                                className="rounded-lg border border-[rgba(29,127,229,0.2)] bg-[rgba(3,8,15,0.9)] px-3 py-2 text-sm text-white"
                                 disabled={readOnlyFinanceiro || editorSaving}
                               />
                             </label>
@@ -1274,7 +1289,7 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                           type="button"
                           disabled={readOnlyFinanceiro || editorSaving}
                           onClick={() => void submitLineEditor()}
-                          className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+                          className="rounded-lg bg-[#1d7fe5] px-4 py-2 text-sm font-medium text-white hover:bg-[#4da3ff] disabled:opacity-50"
                         >
                           {editorSaving ? "Salvando..." : "Salvar"}
                         </button>
@@ -1282,7 +1297,7 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                           type="button"
                           disabled={readOnlyFinanceiro || editorSaving}
                           onClick={closeLineEditor}
-                          className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800"
+                          className="rounded-lg border border-[rgba(29,127,229,0.2)] px-4 py-2 text-sm text-white hover:bg-[rgba(29,127,229,0.12)]"
                         >
                           Cancelar
                         </button>
@@ -1300,16 +1315,16 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                     </div>
                   ) : null}
                   {!sheetLoading && !sheetError && sheetLines.length === 0 ? (
-                    <p className="text-sm text-slate-500">
-                      Nenhuma linha neste snapshot. Importe o arquivo deste mes ou use <strong className="text-slate-400">Nova linha</strong> para cadastrar manualmente.
+                    <p className="text-sm text-[#6b8aaa]">
+                      Nenhuma linha neste snapshot. Importe o arquivo deste mes ou use <strong className="text-[#6b8aaa]">Nova linha</strong> para cadastrar manualmente.
                     </p>
                   ) : null}
                   {sheetLines.length > 0 ? (
-                    <div className="overflow-x-auto rounded-lg border border-slate-800">
+                    <div className="overflow-x-auto rounded-lg border border-[rgba(29,127,229,0.15)]">
                       <table className="w-full min-w-[640px] border-collapse text-left text-sm">
-                        <thead className="sticky top-0 z-10 bg-slate-900">
+                        <thead className="sticky top-0 z-10 bg-[rgba(8,15,26,0.7)]">
                           {sheetSource === "TIM_CSV" ? (
-                            <tr className="border-b border-slate-700 text-slate-400">
+                            <tr className="border-b border-[rgba(29,127,229,0.18)] text-[#6b8aaa]">
                               <th className="w-11 p-2">
                                 <input
                                   ref={selectAllCheckboxRef}
@@ -1330,7 +1345,7 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                               <th className="w-44 p-2 font-semibold">Acoes</th>
                             </tr>
                           ) : (
-                            <tr className="border-b border-slate-700 text-slate-400">
+                            <tr className="border-b border-[rgba(29,127,229,0.18)] text-[#6b8aaa]">
                               <th className="w-11 p-2">
                                 <input
                                   ref={selectAllCheckboxRef}
@@ -1359,7 +1374,7 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                                   string
                                 >;
                                 return (
-                                  <tr key={line.id} className="border-b border-slate-800/80 text-slate-200">
+                                  <tr key={line.id} className="border-b border-[rgba(29,127,229,0.15)]/80 text-white">
                                     <td className="p-2 align-top">
                                       <input
                                         type="checkbox"
@@ -1388,7 +1403,7 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                                             const v = e.target.value;
                                             void patchLineAllocation(line.id, v === "" ? null : v);
                                           }}
-                                          className="max-w-[240px] rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+                                          className="max-w-[240px] rounded border border-[rgba(29,127,229,0.2)] bg-[rgba(3,8,15,0.9)] px-2 py-1.5 text-sm text-white"
                                         >
                                           <option value="">{FINANCEIRO_SEM_EMPRESA}</option>
                                           {serverCatalog.map((c) => (
@@ -1398,23 +1413,23 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                                           ))}
                                         </select>
                                         {line.lineSource === "MANUAL" ? (
-                                          <span className="w-fit rounded bg-amber-950/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200/90">
+                                          <span className="w-fit rounded bg-[rgba(255,170,0,0.07)]/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#ffaa00]/90">
                                             Manual
                                           </span>
                                         ) : null}
                                       </div>
                                     </td>
                                     <td className="p-2 align-top">{line.displayName}</td>
-                                    <td className="p-2 align-top text-slate-400">{m.telefone ?? "—"}</td>
-                                    <td className="p-2 align-top text-slate-400">{m.dispositivo ?? "—"}</td>
-                                    <td className="p-2 align-top text-slate-400">{m.ultimaAtividade ?? "—"}</td>
-                                    <td className="p-2 align-top text-slate-400">{m.criadoEm ?? "—"}</td>
+                                    <td className="p-2 align-top text-[#6b8aaa]">{m.telefone ?? "—"}</td>
+                                    <td className="p-2 align-top text-[#6b8aaa]">{m.dispositivo ?? "—"}</td>
+                                    <td className="p-2 align-top text-[#6b8aaa]">{m.ultimaAtividade ?? "—"}</td>
+                                    <td className="p-2 align-top text-[#6b8aaa]">{m.criadoEm ?? "—"}</td>
                                     <td className="p-2 align-top">
                                       <button
                                         type="button"
                                         onClick={() => openLineEditorEdit(line)}
                                         disabled={readOnlyFinanceiro}
-                                        className="rounded border border-slate-600 px-2 py-1 text-xs text-sky-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                                        className="rounded border border-[rgba(29,127,229,0.2)] px-2 py-1 text-xs text-[#4da3ff] hover:bg-[rgba(29,127,229,0.12)] disabled:cursor-not-allowed disabled:opacity-40"
                                       >
                                         Editar
                                       </button>
@@ -1424,7 +1439,7 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                               })
                             : sheetLines.map((line) => {
                                 return (
-                                  <tr key={line.id} className="border-b border-slate-800/80 text-slate-200">
+                                  <tr key={line.id} className="border-b border-[rgba(29,127,229,0.15)]/80 text-white">
                                     <td className="p-2 align-top">
                                       <input
                                         type="checkbox"
@@ -1453,7 +1468,7 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                                             const v = e.target.value;
                                             void patchLineAllocation(line.id, v === "" ? null : v);
                                           }}
-                                          className="max-w-[240px] rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+                                          className="max-w-[240px] rounded border border-[rgba(29,127,229,0.2)] bg-[rgba(3,8,15,0.9)] px-2 py-1.5 text-sm text-white"
                                         >
                                           <option value="">{FINANCEIRO_SEM_EMPRESA}</option>
                                           {serverCatalog.map((c) => (
@@ -1463,22 +1478,22 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                                           ))}
                                         </select>
                                         {line.lineSource === "MANUAL" ? (
-                                          <span className="w-fit rounded bg-amber-950/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200/90">
+                                          <span className="w-fit rounded bg-[rgba(255,170,0,0.07)]/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#ffaa00]/90">
                                             Manual
                                           </span>
                                         ) : null}
                                       </div>
                                     </td>
-                                    <td className="p-2 align-top font-mono text-xs text-slate-300">{line.email ?? "—"}</td>
+                                    <td className="p-2 align-top font-mono text-xs text-[#6b8aaa]">{line.email ?? "—"}</td>
                                     <td className="p-2 align-top">{line.displayName}</td>
-                                    <td className="p-2 align-top text-slate-400">{line.status ?? "—"}</td>
-                                    <td className="p-2 align-top text-slate-400">{line.detail ?? "—"}</td>
+                                    <td className="p-2 align-top text-[#6b8aaa]">{line.status ?? "—"}</td>
+                                    <td className="p-2 align-top text-[#6b8aaa]">{line.detail ?? "—"}</td>
                                     <td className="p-2 align-top">
                                       <button
                                         type="button"
                                         onClick={() => openLineEditorEdit(line)}
                                         disabled={readOnlyFinanceiro}
-                                        className="rounded border border-slate-600 px-2 py-1 text-xs text-sky-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                                        className="rounded border border-[rgba(29,127,229,0.2)] px-2 py-1 text-xs text-[#4da3ff] hover:bg-[rgba(29,127,229,0.12)] disabled:cursor-not-allowed disabled:opacity-40"
                                       >
                                         Editar
                                       </button>
@@ -1495,45 +1510,6 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
             </div>
           ) : null}
 
-          <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-sm sm:p-6">
-            <h2 className="text-lg font-semibold text-slate-50">Usuarios por servico ao longo do tempo</h2>
-            <p className="mt-1 text-sm text-slate-400">Barras proporcionais ao maior valor exibido no periodo.</p>
-            <div className="mt-6 space-y-6">
-              {data.labels.map((label, idx) => {
-                const hasAny = data.series.some((s) => s.values[idx]);
-                if (!hasAny) return null;
-                return (
-                  <div key={label}>
-                    <p className="mb-2 text-sm font-medium text-slate-300">{label}</p>
-                    <div className="space-y-2">
-                      {data.series.map((s) => {
-                        const v = s.values[idx];
-                        if (!v) return null;
-                        const pct = Math.round((v.totalUsers / maxTotal) * 100);
-                        return (
-                          <div key={s.key}>
-                            <div className="mb-0.5 flex justify-between text-xs text-slate-400">
-                              <span>{s.name}</span>
-                              <span>
-                                {v.totalUsers}
-                                {v.activeUsers != null ? ` (${v.activeUsers} ativos)` : ""}
-                              </span>
-                            </div>
-                            <div className="h-2.5 overflow-hidden rounded-full bg-slate-800">
-                              <div
-                                className="h-full rounded-full bg-sky-500/90"
-                                style={{ width: `${Math.max(pct, 2)}%` }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
         </>
       ) : null}
     </div>

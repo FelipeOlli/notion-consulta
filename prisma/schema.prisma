@@ -12,6 +12,7 @@ enum AppModule {
   CERTIFICADOS
   FINANCEIRO
   USUARIOS
+  CADASTRO_EMPRESA
 }
 
 enum UsageSource {
@@ -227,4 +228,56 @@ model MonitoringCost {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+enum IpMonitorType {
+  HTTP
+  TCP
+  PING
+}
+
+enum IpMonitorStatus {
+  PENDING
+  UP
+  DOWN
+}
+
+model IpMonitorGroup {
+  id        String      @id @default(cuid())
+  name      String
+  sortOrder Int         @default(0)
+  createdAt DateTime    @default(now())
+  monitors  IpMonitor[]
+}
+
+model IpMonitor {
+  id          String           @id @default(cuid())
+  name        String
+  host        String
+  port        Int?
+  type        IpMonitorType    @default(HTTP)
+  groupId     String?
+  group       IpMonitorGroup?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  active      Boolean          @default(true)
+  interval    Int              @default(60)
+  lastStatus  IpMonitorStatus  @default(PENDING)
+  lastChecked DateTime?
+  lastPing    Int?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  events      IpMonitorEvent[]
+
+  @@index([groupId])
+}
+
+model IpMonitorEvent {
+  id        String          @id @default(cuid())
+  monitorId String
+  monitor   IpMonitor       @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  status    IpMonitorStatus
+  ping      Int?
+  message   String?
+  createdAt DateTime        @default(now())
+
+  @@index([monitorId, createdAt])
 }

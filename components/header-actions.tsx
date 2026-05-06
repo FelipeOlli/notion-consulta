@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 
 type Props = {
-  /** Só exibe ações (ex.: Sair) quando há sessão. Na home não há link para o gerencial. */
   isAuthenticated: boolean;
 };
 
@@ -24,7 +23,11 @@ export function HeaderActions({ isAuthenticated }: Props) {
     <button
       type="button"
       onClick={handleLogout}
-      className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-slate-400 hover:text-white"
+      className="rounded-lg px-4 py-2 text-sm font-medium transition text-[#6b8aaa] hover:text-white"
+      style={{
+        background: "rgba(8,15,26,0.5)",
+        border: "1px solid rgba(29,127,229,0.15)",
+      }}
     >
       Sair
     </button>
