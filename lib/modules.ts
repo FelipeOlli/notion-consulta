@@ -1,6 +1,6 @@
 import type { AppModule as PrismaAppModule } from "@prisma/client";
 
-export const appModules = ["senha", "certificados", "financeiro", "usuarios", "cadastro_empresa"] as const;
+export const appModules = ["senha", "certificados", "financeiro", "usuarios", "cadastro_empresa", "nucleo_ti"] as const;
 
 export type AppModule = (typeof appModules)[number];
 
@@ -11,6 +11,7 @@ export const ALL_MODULES_FOR_MASTER: AppModule[] = [
   "financeiro",
   "usuarios",
   "cadastro_empresa",
+  "nucleo_ti",
 ];
 
 export const moduleLabels: Record<AppModule, string> = {
@@ -19,6 +20,7 @@ export const moduleLabels: Record<AppModule, string> = {
   financeiro: "Financeiro",
   usuarios: "E-mails cadastrados",
   cadastro_empresa: "Cadastro de empresa",
+  nucleo_ti: "Núcleo TI",
 };
 
 export function normalizeModule(value: string): AppModule | null {
@@ -39,6 +41,8 @@ export function toPrismaModule(moduleKey: AppModule): PrismaAppModule {
       return "USUARIOS";
     case "cadastro_empresa":
       return "CADASTRO_EMPRESA";
+    case "nucleo_ti":
+      throw new Error("nucleo_ti não existe no banco de dados");
   }
 }
 

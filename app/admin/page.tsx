@@ -58,6 +58,13 @@ export default async function AdminPage() {
       description: "Sistema externo de cadastro e gestão de empresas.",
     });
   }
+  if (modules.includes("nucleo_ti")) {
+    cards.push({
+      href: "/admin/nucleo-ti",
+      title: "Núcleo TI",
+      description: "Matriz RACI, carga por pessoa, backlog de tarefas e pipeline de automações do setor.",
+    });
+  }
 
   return (
     <main className="relative z-10 min-h-screen">

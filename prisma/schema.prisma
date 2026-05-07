@@ -281,3 +281,29 @@ model IpMonitorEvent {
 
   @@index([monitorId, createdAt])
 }
+
+enum TiTaskStatus {
+  TODO
+  DOING
+  DONE
+}
+
+enum TiTaskType {
+  MANUAL
+  AUTOMACAO
+  DELEGACAO
+}
+
+model TiTask {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  title       String
+  description String?
+  responsible String
+  status      TiTaskStatus @default(TODO)
+  taskType    TiTaskType   @default(MANUAL)
+  raciRef     String?
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}

@@ -68,6 +68,11 @@ export function AdminNav({ modules }: Props) {
             Cadastro de empresa
           </Link>
         ) : null}
+        {can("nucleo_ti") ? (
+          <Link href="/admin/nucleo-ti" className={itemClass(pathname === "/admin/nucleo-ti")} style={itemStyle(pathname === "/admin/nucleo-ti")}>
+            Núcleo TI
+          </Link>
+        ) : null}
       </div>
       <button
         type="button"
