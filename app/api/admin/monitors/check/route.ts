@@ -103,10 +103,13 @@ async function runCheck(monitorId: string): Promise<{
       select: { status: true },
     });
     const recentDowns = recentEvents.filter((e) => e.status === "DOWN").length;
-    const flapping = recentDowns >= 3;
+    const recentUps = recentEvents.filter((e) => e.status === "UP").length;
+    const downCapped = newStatus === "DOWN" && recentDowns >= 3;
+    const upCapped = newStatus === "UP" && recentUps >= 3;
+    const flapping = recentDowns >= 3 || recentUps >= 3;
 
-    if (newStatus === "DOWN" && flapping) {
-      // pausa: 3+ quedas recentes, não registra para não encher o banco
+    if (downCapped || upCapped) {
+      // pausa: 3+ do mesmo tipo na janela, não registra para não encher o banco
     } else {
       await prisma.ipMonitorEvent.create({
         data: {
