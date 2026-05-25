@@ -15,7 +15,7 @@ export async function ensureCompaniesForServer(
   names: string[]
 ): Promise<Map<string, string>> {
   const unique = Array.from(
-    new Set(names.map((n) => n.trim()).filter((n) => n && n !== "Sem unidade"))
+    new Set(names.map((n) => n.trim()).filter((n) => n && n !== "Sem unidade" && n !== "Sem departamento"))
   );
   if (unique.length === 0) return new Map();
 

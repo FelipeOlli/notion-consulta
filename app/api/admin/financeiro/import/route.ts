@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         sortOrder: i,
         email: null,
         displayName: r.displayName,
-        companyLabel: "",
+        companyLabel: r.companyLabel,
         status: null,
         detail: r.detail || null,
         meta: r.meta,
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
       const sortBase = (manualAgg._max.sortOrder ?? -1) + 1;
 
       const companyMap =
-        source === "GOOGLE_CSV"
+        source === "GOOGLE_CSV" || source === "TIM_CSV"
           ? await ensureCompaniesForServer(tx, server.id, lineInputs.map((l) => l.companyLabel))
           : new Map<string, string>();
 
