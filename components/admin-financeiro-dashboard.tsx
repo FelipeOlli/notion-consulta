@@ -847,8 +847,9 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
         <section className="rounded-2xl border border-[rgba(29,127,229,0.15)] bg-[rgba(8,15,26,0.7)] p-5 shadow-sm sm:p-6">
           <h2 className="text-lg font-semibold text-white">Importar dados mensais</h2>
           <p className="mt-1 text-sm text-[#6b8aaa]">
-            Envie o export do Google Workspace (JSON) para CF .COM e .COM.BR, ou o CSV de colaboradores do Time Is
-            Money. A competencia define o mes do snapshot (substitui se ja existir).
+            Envie o export do Google Workspace (CSV) para CF .COM e .COM.BR, ou o CSV de colaboradores do Time Is
+            Money. Baixe a planilha modelo se precisar do layout exato. A competencia define o mes do snapshot
+            (substitui se ja existir).
           </p>
           <form onSubmit={onImport} className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <label className="flex flex-col gap-1 text-sm text-[#6b8aaa]">
@@ -880,6 +881,17 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 className="h-11 rounded-xl border border-[rgba(29,127,229,0.18)] bg-[rgba(8,15,26,0.7)] px-3 py-2 text-sm text-white file:mr-3 file:rounded-lg file:border-0 file:bg-[rgba(29,127,229,0.08)] file:px-2 file:py-1"
               />
+              <a
+                href={
+                  serviceKey === "time-is-money"
+                    ? "/templates/time-is-money-template.csv"
+                    : "/templates/google-workspace-template.csv"
+                }
+                download
+                className="link-accent mt-1 w-fit text-xs"
+              >
+                ↓ Baixar planilha modelo
+              </a>
             </label>
             <div className="md:col-span-2 lg:col-span-4">
               <button
