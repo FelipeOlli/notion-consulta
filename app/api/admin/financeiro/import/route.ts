@@ -4,6 +4,7 @@ import { ensureModuleAccess, financeiroMutationGuard } from "@/lib/admin-auth";
 import {
   competenceFromYearMonth,
   parseGoogleWorkspaceUsersJsonRows,
+  parseGoogleWorkspaceCsvRows,
   parseTimeIsMoneyCollaboratorsCsvRows,
 } from "@/lib/financeiro-import";
 import { ensureFinanceiroEmailServer } from "@/lib/financeiro-ensure-server";
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
     const text = await file.text();
     let totalUsers: number;
     let activeUsers: number | null;
-    let source: "GOOGLE_JSON" | "TIM_CSV";
+    let source: "GOOGLE_JSON" | "GOOGLE_CSV" | "TIM_CSV";
     type LineInput = {
       sortOrder: number;
       email: string | null;
@@ -68,19 +69,36 @@ export async function POST(request: NextRequest) {
         meta: r.meta,
       }));
     } else {
-      const parsed = parseGoogleWorkspaceUsersJsonRows(text);
-      totalUsers = parsed.totalUsers;
-      activeUsers = parsed.activeUsers;
-      source = "GOOGLE_JSON";
-      lineInputs = parsed.rows.map((r, i) => ({
-        sortOrder: i,
-        email: r.email || null,
-        displayName: r.displayName,
-        companyLabel: "",
-        status: r.status || null,
-        detail: r.detail || null,
-        meta: null,
-      }));
+      const isCsv = file.name.toLowerCase().endsWith(".csv") || !text.trimStart().startsWith("{");
+      if (isCsv) {
+        const parsed = parseGoogleWorkspaceCsvRows(text);
+        totalUsers = parsed.totalUsers;
+        activeUsers = parsed.activeUsers;
+        source = "GOOGLE_CSV";
+        lineInputs = parsed.rows.map((r, i) => ({
+          sortOrder: i,
+          email: r.email || null,
+          displayName: r.displayName,
+          companyLabel: r.companyLabel,
+          status: r.status || null,
+          detail: r.detail || null,
+          meta: null,
+        }));
+      } else {
+        const parsed = parseGoogleWorkspaceUsersJsonRows(text);
+        totalUsers = parsed.totalUsers;
+        activeUsers = parsed.activeUsers;
+        source = "GOOGLE_JSON";
+        lineInputs = parsed.rows.map((r, i) => ({
+          sortOrder: i,
+          email: r.email || null,
+          displayName: r.displayName,
+          companyLabel: "",
+          status: r.status || null,
+          detail: r.detail || null,
+          meta: null,
+        }));
+      }
     }
 
     const snapshot = await prisma.$transaction(async (tx) => {

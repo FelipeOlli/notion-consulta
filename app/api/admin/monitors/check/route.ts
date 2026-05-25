@@ -84,6 +84,7 @@ async function runCheck(monitorId: string): Promise<{
 
   const newStatus = result.status;
   const changed = monitor.lastStatus !== newStatus && monitor.lastStatus !== "PENDING";
+  const isTransition = monitor.lastStatus !== newStatus;
 
   const updated = await prisma.ipMonitor.update({
     where: { id: monitorId },
@@ -94,14 +95,16 @@ async function runCheck(monitorId: string): Promise<{
     },
   });
 
-  await prisma.ipMonitorEvent.create({
-    data: {
-      monitorId,
-      status: newStatus,
-      ping: result.ping,
-      message: result.message,
-    },
-  });
+  if (isTransition) {
+    await prisma.ipMonitorEvent.create({
+      data: {
+        monitorId,
+        status: newStatus,
+        ping: result.ping,
+        message: result.message,
+      },
+    });
+  }
 
   return {
     id: monitorId,

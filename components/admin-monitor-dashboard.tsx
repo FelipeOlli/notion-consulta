@@ -17,6 +17,14 @@ type Monitor = {
   lastPing: number | null;
 };
 
+type MonitorEvent = {
+  id: string;
+  status: MonitorStatus;
+  ping: number | null;
+  message: string | null;
+  createdAt: string;
+};
+
 type FormState = {
   name: string;
   host: string;
@@ -73,6 +81,10 @@ export function AdminMonitorDashboard() {
   const [checkingId, setCheckingId] = useState<string | null>(null);
   const [checkingAll, setCheckingAll] = useState(false);
   const [notifGranted, setNotifGranted] = useState(false);
+
+  const [historyMonitor, setHistoryMonitor] = useState<Monitor | null>(null);
+  const [historyEvents, setHistoryEvents] = useState<MonitorEvent[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const prevStatusRef = useRef<Record<string, MonitorStatus>>({});
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -218,6 +230,36 @@ export function AdminMonitorDashboard() {
     });
     const json = await res.json();
     if (res.ok) setMonitors((prev) => prev.map((x) => (x.id === m.id ? { ...x, active: json.data.active } : x)));
+  }
+
+  async function openHistory(m: Monitor) {
+    setHistoryMonitor(m);
+    setHistoryEvents([]);
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(`/api/admin/monitors/${m.id}/events?limit=50`);
+      const json = await res.json();
+      setHistoryEvents(json.data ?? []);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  function closeHistory() {
+    setHistoryMonitor(null);
+    setHistoryEvents([]);
+  }
+
+  function calcDowntime(events: MonitorEvent[], downEvent: MonitorEvent): string {
+    const downTime = new Date(downEvent.createdAt).getTime();
+    const nextUp = events.find(
+      (e) => e.status === "UP" && new Date(e.createdAt).getTime() > downTime
+    );
+    if (!nextUp) return "em aberto";
+    const diff = Math.floor((new Date(nextUp.createdAt).getTime() - downTime) / 1000);
+    if (diff < 60) return `${diff}s`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ${diff % 60}s`;
+    return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
   }
 
   const upCount = monitors.filter((m) => m.lastStatus === "UP").length;
@@ -395,6 +437,14 @@ export function AdminMonitorDashboard() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => void openHistory(m)}
+                  className="rounded-lg px-2.5 py-1 text-xs font-medium transition hover:bg-[rgba(107,138,170,0.12)]"
+                  style={{ background: "rgba(107,138,170,0.07)", border: "1px solid rgba(107,138,170,0.2)", color: "#6b8aaa" }}
+                >
+                  Log
+                </button>
+                <button
+                  type="button"
                   onClick={() => void toggleActive(m)}
                   className="rounded-lg px-2.5 py-1 text-xs font-medium transition"
                   style={m.active
@@ -414,6 +464,83 @@ export function AdminMonitorDashboard() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {historyMonitor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(3,8,15,0.75)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) closeHistory(); }}
+        >
+          <div
+            className="glass-panel w-full max-w-lg rounded-2xl p-6 flex flex-col gap-4"
+            style={{ maxHeight: "80vh", border: "1px solid rgba(29,127,229,0.2)" }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="section-label">Log de quedas</p>
+                <h3 className="mt-0.5 text-base font-bold text-white">{historyMonitor.name}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeHistory}
+                className="rounded-lg px-2.5 py-1 text-xs font-medium text-[#6b8aaa] transition hover:bg-[rgba(107,138,170,0.12)]"
+                style={{ border: "1px solid rgba(107,138,170,0.2)" }}
+              >
+                ✕ Fechar
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 space-y-2 pr-1">
+              {historyLoading ? (
+                <p className="text-sm text-[#6b8aaa]">Carregando...</p>
+              ) : historyEvents.length === 0 ? (
+                <p className="text-sm text-[#6b8aaa]">Nenhum evento registrado ainda.</p>
+              ) : (
+                historyEvents.map((ev) => {
+                  const downtime = ev.status === "DOWN" ? calcDowntime(
+                    [...historyEvents].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+                    ev
+                  ) : null;
+                  return (
+                    <div
+                      key={ev.id}
+                      className="flex items-start gap-3 rounded-xl px-3 py-2.5 text-xs"
+                      style={{
+                        background: ev.status === "DOWN" ? "rgba(255,69,58,0.07)" : "rgba(0,204,102,0.06)",
+                        border: ev.status === "DOWN" ? "1px solid rgba(255,69,58,0.2)" : "1px solid rgba(0,204,102,0.18)",
+                      }}
+                    >
+                      <span className="mt-0.5 shrink-0">{dot(ev.status)}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-semibold" style={{ color: ev.status === "DOWN" ? "#ff453a" : "#00cc66" }}>
+                            {STATUS_LABEL[ev.status]}
+                          </span>
+                          <span style={{ color: "var(--onity-dark-text-muted)" }}>
+                            {new Date(ev.createdAt).toLocaleString("pt-BR")}
+                          </span>
+                        </div>
+                        {ev.message && (
+                          <p className="mt-0.5 truncate" style={{ color: "var(--onity-dark-text-muted)" }}>
+                            {ev.message}
+                          </p>
+                        )}
+                        {ev.status === "UP" && ev.ping !== null && (
+                          <p className="mt-0.5" style={{ color: "var(--onity-dark-text-muted)" }}>{ev.ping}ms</p>
+                        )}
+                        {downtime && (
+                          <p className="mt-0.5 font-medium" style={{ color: "#ffaa00" }}>
+                            Duração: {downtime}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </div>
       )}
     </section>

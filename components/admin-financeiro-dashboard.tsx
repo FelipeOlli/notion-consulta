@@ -867,8 +867,8 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                 onChange={(e) => setServiceKey(e.target.value)}
                 className="h-11 rounded-xl border border-[rgba(29,127,229,0.18)] bg-[rgba(8,15,26,0.7)] px-3 text-white"
               >
-                <option value="cf-com">CFCONTABILIDADE.COM (JSON Google)</option>
-                <option value="cf-com-br">CFCONTABILIDADE.COM.BR (JSON Google)</option>
+                <option value="cf-com">CFCONTABILIDADE.COM (Google)</option>
+                <option value="cf-com-br">CFCONTABILIDADE.COM.BR (Google)</option>
                 <option value="time-is-money">Time Is Money (CSV)</option>
               </select>
             </label>
@@ -876,7 +876,7 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
               Arquivo
               <input
                 type="file"
-                accept={serviceKey === "time-is-money" ? ".csv,text/csv" : ".json,application/json"}
+                accept={serviceKey === "time-is-money" ? ".csv,text/csv" : ".csv,.json,text/csv,application/json"}
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 className="h-11 rounded-xl border border-[rgba(29,127,229,0.18)] bg-[rgba(8,15,26,0.7)] px-3 py-2 text-sm text-white file:mr-3 file:rounded-lg file:border-0 file:bg-[rgba(29,127,229,0.08)] file:px-2 file:py-1"
               />

@@ -221,6 +221,69 @@ export function parseTimeIsMoneyCollaboratorsCsvRows(text: string): { rows: TimI
   return { rows, totalUsers: rows.length };
 }
 
+export type GoogleCsvImportRow = {
+  email: string;
+  displayName: string;
+  status: string;
+  companyLabel: string;
+  detail: string;
+};
+
+/**
+ * Parse do CSV export do Google Admin Console.
+ * Usa "Org Unit Path [Required]" (sem a "/" inicial) como categoria da linha.
+ */
+export function parseGoogleWorkspaceCsvRows(text: string): {
+  rows: GoogleCsvImportRow[];
+  totalUsers: number;
+  activeUsers: number;
+} {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (lines.length < 2) throw new Error("CSV vazio ou sem dados.");
+
+  const header = parseCsvLine(lines[0] ?? "");
+  const col = {
+    firstName: header.findIndex((h) => h.trim() === "First Name [Required]"),
+    lastName: header.findIndex((h) => h.trim() === "Last Name [Required]"),
+    email: header.findIndex((h) => h.trim() === "Email Address [Required]"),
+    orgUnit: header.findIndex((h) => h.trim() === "Org Unit Path [Required]"),
+    status: header.findIndex((h) => h.trim() === "Status [READ ONLY]"),
+    emailUsage: header.findIndex((h) => h.trim() === "Email Usage [READ ONLY]"),
+  };
+
+  if (col.email === -1 || col.orgUnit === -1) {
+    throw new Error(
+      'CSV invalido: colunas "Email Address [Required]" e "Org Unit Path [Required]" sao obrigatorias.'
+    );
+  }
+
+  const rows: GoogleCsvImportRow[] = [];
+  let activeUsers = 0;
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCsvLine(lines[i] ?? "");
+    const email = (cols[col.email] ?? "").trim().toLowerCase();
+    if (!email) continue;
+
+    const first = col.firstName >= 0 ? (cols[col.firstName] ?? "").trim() : "";
+    const last = col.lastName >= 0 ? (cols[col.lastName] ?? "").trim() : "";
+    const displayName = `${first} ${last}`.trim() || email;
+
+    const status = col.status >= 0 ? (cols[col.status] ?? "").trim() : "";
+    if (status.toLowerCase() === "active") activeUsers += 1;
+
+    const orgUnit = col.orgUnit >= 0 ? (cols[col.orgUnit] ?? "").trim() : "";
+    const companyLabel = orgUnit.replace(/^\//, "").trim() || "Sem unidade";
+
+    const usage = col.emailUsage >= 0 ? (cols[col.emailUsage] ?? "").trim() : "";
+
+    rows.push({ email, displayName, status, companyLabel, detail: usage ? `E-mail: ${usage}` : "" });
+  }
+
+  if (rows.length === 0) throw new Error("Nenhum usuario encontrado no CSV.");
+  return { rows, totalUsers: rows.length, activeUsers };
+}
+
 /** Competência: primeiro dia do mês em UTC (YYYY-MM). */
 export function competenceFromYearMonth(yearMonth: string): Date {
   const m = /^(\d{4})-(\d{2})$/.exec(yearMonth.trim());

@@ -23,6 +23,7 @@ enum UsageSource {
 /** Origem do arquivo na importação do dashboard financeiro. */
 enum SnapshotImportSource {
   GOOGLE_JSON
+  GOOGLE_CSV
   TIM_CSV
 }
 
