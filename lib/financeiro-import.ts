@@ -110,12 +110,10 @@ function normalizeHeaderCell(s: string): string {
     .replace(/\p{M}/gu, "");
 }
 
-/** Se a primeira linha for cabeçalho, mapeia nomes -> indice. */
+/** Se a primeira linha for cabeçalho, mapeia nomes -> indice. ID é opcional. */
 function timHeaderIndices(headerCols: string[]): Record<string, number> | null {
   const joined = headerCols.map(normalizeHeaderCell).join("|");
-  if (!joined.includes("nome") || !/^id\b/i.test((headerCols[0] ?? "").trim())) {
-    return null;
-  }
+  if (!joined.includes("nome")) return null;
   const map: Record<string, number> = {};
   headerCols.forEach((raw, i) => {
     const h = normalizeHeaderCell(raw);
@@ -128,7 +126,7 @@ function timHeaderIndices(headerCols: string[]): Record<string, number> | null {
     else if (h.includes("departamento")) map.departamento = i;
     else if (h.includes("criado")) map.criadoEm = i;
   });
-  return map.id !== undefined && map.nome !== undefined ? map : null;
+  return map.nome !== undefined ? map : null;
 }
 
 function pick(cols: string[], idx: number | undefined): string {
@@ -159,12 +157,11 @@ export function parseTimeIsMoneyCollaboratorsCsvRows(text: string): { rows: TimI
   }
 
   const rows: TimImportRow[] = [];
+  let autoId = 1;
   for (const line of dataLines) {
     const cols = parseCsvLine(line);
     const first = (cols[0] ?? "").trim();
     if (!first) continue;
-    if (first.toUpperCase() === "ID") continue;
-    if (!/^\d+$/.test(first)) continue;
 
     let id: string;
     let displayName: string;
@@ -176,8 +173,10 @@ export function parseTimeIsMoneyCollaboratorsCsvRows(text: string): { rows: TimI
     let created: string;
 
     if (headerMap) {
-      id = pick(cols, headerMap.id);
+      // com cabeçalho: ID é opcional — usa o da coluna ou gera sequencial
       displayName = pick(cols, headerMap.nome) || "(sem nome)";
+      if (!displayName || displayName === "(sem nome)") continue;
+      id = headerMap.id !== undefined ? pick(cols, headerMap.id) || String(autoId++) : String(autoId++);
       version = pick(cols, headerMap.versaoApp);
       device = pick(cols, headerMap.dispositivo);
       phone = pick(cols, headerMap.telefone);
@@ -185,6 +184,9 @@ export function parseTimeIsMoneyCollaboratorsCsvRows(text: string): { rows: TimI
       department = pick(cols, headerMap.departamento);
       created = pick(cols, headerMap.criadoEm);
     } else {
+      // sem cabeçalho: mantém comportamento original (primeira coluna = ID numérico)
+      if (first.toUpperCase() === "ID") continue;
+      if (!/^\d+$/.test(first)) continue;
       id = first;
       displayName = (cols[1] ?? "").trim() || "(sem nome)";
       version = (cols[2] ?? "").trim();
@@ -194,8 +196,6 @@ export function parseTimeIsMoneyCollaboratorsCsvRows(text: string): { rows: TimI
       department = (cols[6] ?? "").trim();
       created = (cols[7] ?? "").trim();
     }
-
-    if (!/^\d+$/.test(id)) continue;
 
     const companyLabel = department || "Sem departamento";
     const detail = [phone && `Tel: ${phone}`, device && `PC: ${device}`].filter(Boolean).join(" · ");
