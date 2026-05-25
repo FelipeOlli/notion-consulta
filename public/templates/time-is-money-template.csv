@@ -1,4 +1,4 @@
-ID,Nome,Versão App,Dispositivo,Telefone,Última atividade,Departamento,Criado
-1001,Joao Silva,2.4.1,Windows,21999990001,2026-05-20 09:00,Comercial,2024-01-15
-1002,Maria Santos,2.4.1,Mac,21999990002,2026-05-21 14:30,Suporte,2024-03-10
-1003,Pedro Oliveira,2.3.0,Linux,21999990003,2026-05-22 08:15,TI,2024-06-01
+ID,Nome,Departamento
+1001,Joao Silva,Comercial
+1002,Maria Santos,Suporte
+1003,Pedro Oliveira,TI
