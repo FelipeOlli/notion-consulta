@@ -96,14 +96,30 @@ async function runCheck(monitorId: string): Promise<{
   });
 
   if (isTransition) {
-    await prisma.ipMonitorEvent.create({
-      data: {
-        monitorId,
-        status: newStatus,
-        ping: result.ping,
-        message: result.message,
-      },
+    const recentEvents = await prisma.ipMonitorEvent.findMany({
+      where: { monitorId },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      select: { status: true },
     });
+    const recentDowns = recentEvents.filter((e) => e.status === "DOWN").length;
+    const flapping = recentDowns >= 3;
+
+    if (newStatus === "DOWN" && flapping) {
+      // pausa: 3+ quedas recentes, não registra para não encher o banco
+    } else {
+      await prisma.ipMonitorEvent.create({
+        data: {
+          monitorId,
+          status: newStatus,
+          ping: result.ping,
+          message:
+            newStatus === "UP" && flapping
+              ? "Conexão restaurada após múltiplas quedas"
+              : result.message,
+        },
+      });
+    }
   }
 
   return {

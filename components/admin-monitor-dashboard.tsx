@@ -497,7 +497,17 @@ export function AdminMonitorDashboard() {
               ) : historyEvents.length === 0 ? (
                 <p className="text-sm text-[#6b8aaa]">Nenhum evento registrado ainda.</p>
               ) : (
-                historyEvents.map((ev) => {
+                <>
+                  {historyEvents.slice(0, 6).filter((e) => e.status === "DOWN").length >= 3 &&
+                    historyMonitor?.lastStatus === "DOWN" && (
+                      <div
+                        className="rounded-xl px-3 py-2.5 text-xs font-medium"
+                        style={{ background: "rgba(255,170,0,0.08)", border: "1px solid rgba(255,170,0,0.3)", color: "#ffaa00" }}
+                      >
+                        ⚠ Registro pausado — 3 quedas detectadas. Voltará a registrar quando a conexão estabilizar.
+                      </div>
+                    )}
+                {historyEvents.map((ev) => {
                   const downtime = ev.status === "DOWN" ? calcDowntime(
                     [...historyEvents].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
                     ev
@@ -537,7 +547,8 @@ export function AdminMonitorDashboard() {
                       </div>
                     </div>
                   );
-                })
+                })}
+                </>
               )}
             </div>
           </div>

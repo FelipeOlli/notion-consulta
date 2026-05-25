@@ -8,6 +8,7 @@ import {
   parseTimeIsMoneyCollaboratorsCsvRows,
 } from "@/lib/financeiro-import";
 import { ensureFinanceiroEmailServer } from "@/lib/financeiro-ensure-server";
+import { ensureCompaniesForServer } from "@/lib/financeiro-company-line";
 import { recalcSnapshotLineAggregates } from "@/lib/financeiro-snapshot-aggregates";
 import { serviceKeyFromForm } from "@/lib/financeiro-services";
 import { logFinanceiroActivity } from "@/lib/financeiro-activity-log";
@@ -133,6 +134,11 @@ export async function POST(request: NextRequest) {
       });
       const sortBase = (manualAgg._max.sortOrder ?? -1) + 1;
 
+      const companyMap =
+        source === "GOOGLE_CSV"
+          ? await ensureCompaniesForServer(tx, server.id, lineInputs.map((l) => l.companyLabel))
+          : new Map<string, string>();
+
       const chunk = 500;
       for (let i = 0; i < lineInputs.length; i += chunk) {
         const part = lineInputs.slice(i, i + chunk);
@@ -144,7 +150,7 @@ export async function POST(request: NextRequest) {
             displayName: row.displayName,
             companyLabel: row.companyLabel,
             companyLabelOverride: null,
-            financeiroServerCompanyId: null,
+            financeiroServerCompanyId: companyMap.get(row.companyLabel) ?? null,
             status: row.status,
             detail: row.detail,
             meta: row.meta ?? undefined,
