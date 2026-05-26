@@ -8,7 +8,7 @@ export async function GET() {
 
   const monitors = await prisma.ipMonitor.findMany({
     include: { group: true },
-    orderBy: [{ active: "desc" }, { group: { sortOrder: "asc" } }, { createdAt: "asc" }],
+    orderBy: [{ active: "desc" }, { name: "asc" }],
   });
 
   return NextResponse.json({ data: monitors });
