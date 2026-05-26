@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
-import { Barlow, JetBrains_Mono } from "next/font/google";
+import { Outfit, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const barlow = Barlow({
-  variable: "--font-barlow",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  weight: ["300", "400", "600", "800"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -39,7 +45,7 @@ export default function RootLayout({
       </head>
       <body
         suppressHydrationWarning
-        className={`${barlow.variable} ${jetbrainsMono.variable} antialiased bg-grid`}
+        className={`${outfit.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased bg-grid`}
       >
         <div className="ambient-glow" aria-hidden="true" />
         <div className="ambient-glow-2" aria-hidden="true" />
