@@ -6,11 +6,13 @@
 - Auth: cookie de sessão via `lib/session.ts` (`getAdminSession`)
 - Deploy: Docker + EasyPanel em `painel.onith.com.br`
 
-## Design System (Contabhub)
-- Tema escuro obsidian: `#03080f` (bg), `#0d1829` (surface), `#1d7fe5` (accent)
-- Fontes: Barlow (UI) + JetBrains Mono (código)
+## Design System (System Design)
+- Tema escuro slate: `#0f172a` (bg), `#1e293b` (surface), `#3b82f6` (accent), `#8b5cf6` (accent-secondary)
+- Fontes: **Outfit** (headings) + **Inter** (UI) + JetBrains Mono (código/labels)
+- Ambient glow: azul top-right + roxo bottom-left (opostos ao layout anterior)
+- Gradiente padrão: `#3b82f6` → `#8b5cf6` (btn-primary, section-label, títulos)
 - Glass morphism: `.glass-card`, `.glass-panel`, `.ambient-glow`, `.bg-grid`
-- Tokens CSS: `--onity-dark-text-muted`, `--onity-*` no `app/globals.css`
+- Tokens CSS: `--onity-dark-text-muted` (`#94a3b8`), `--onity-*` no `app/globals.css`
 - `data-theme="dark"` no `<html>` em `app/layout.tsx`
 - Classes utilitárias: `.btn-primary`, `.ds-input`, `.section-label`, `.link-accent`, `.link-muted`
 - **Nunca usar event handlers inline em Server Components** — usar classes CSS para hover
@@ -46,6 +48,9 @@
 - Log de quedas: `IpMonitorEvent` grava apenas em transições de status (UP↔DOWN)
 - Anti-flapping simétrico: após 3 eventos do mesmo tipo na janela de 6, novos registros são suprimidos (vale para DOWN e UP)
 - Botão "Log" em cada card abre drawer com histórico, duração de cada queda e banner de pausa quando ativo
+- Botão "Protocolo" em cada card: registra protocolo de atendimento (número + OS opcional, data/hora automática); model `IpMonitorProtocol`
+- API protocolos: `GET/POST /api/admin/monitors/[id]/protocols`, `DELETE /api/admin/monitors/protocols/[id]`, `GET /api/admin/monitors/protocols/export` (xlsx, filtros: monitorId, from, to)
+- Ordenação dos cards: ativas A→Z primeiro, inativas A→Z depois
 
 ## Financeiro
 - Serviços: `CFCONTABILIDADE.COM`, `CFCONTABILIDADE.COM.BR`, `Time Is Money`
@@ -67,6 +72,6 @@
 - Criação/exclusão de tarefas só para `master`; edição liberada para todos
 
 ## Sessões recentes
+- **2026-05-26** — Protocolos de atendimento no monitoramento (registro + exportação xlsx com filtros), redesign para System Design (slate + azul/roxo, Outfit+Inter), ordenação alfabética de conexões ativas/inativas
 - **2026-05-25** — Log de quedas (monitoramento), anti-flapping UP↔DOWN, importação CSV Google com auto-alocação por Org Unit Path, auto-alocação TIM por Departamento, templates de importação para download
 - **2026-05-07** — Módulo Núcleo TI: controle interativo de demandas com matriz RACI embutida, kanban/tabela, migração de responsáveis, tipos (Manual/Automação/Delegação), seed automático
-- **2026-05-06** — Redesign completo (Contabhub DS), módulo Cadastro de empresa, formulários colapsáveis, bloqueio de usuários, melhorias no Financeiro, módulo de monitoramento de IPs (HTTP/TCP/PING), redesign dos cards de monitor
