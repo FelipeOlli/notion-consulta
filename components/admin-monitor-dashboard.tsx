@@ -103,6 +103,7 @@ export function AdminMonitorDashboard() {
   const [exportOpen, setExportOpen] = useState(false);
   const [exportFrom, setExportFrom] = useState("");
   const [exportTo, setExportTo] = useState("");
+  const [exportMonitorId, setExportMonitorId] = useState("");
   const [exportingExcel, setExportingExcel] = useState(false);
 
   const prevStatusRef = useRef<Record<string, MonitorStatus>>({});
@@ -324,6 +325,7 @@ export function AdminMonitorDashboard() {
     setExportingExcel(true);
     try {
       const params = new URLSearchParams();
+      if (exportMonitorId) params.set("monitorId", exportMonitorId);
       if (exportFrom) params.set("from", exportFrom);
       if (exportTo) params.set("to", exportTo);
       const res = await fetch(`/api/admin/monitors/protocols/export?${params.toString()}`);
@@ -668,7 +670,7 @@ export function AdminMonitorDashboard() {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "rgba(3,8,15,0.75)", backdropFilter: "blur(4px)" }}
-          onClick={(e) => { if (e.target === e.currentTarget) setExportOpen(false); }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setExportOpen(false); setExportMonitorId(""); } }}
         >
           <div
             className="glass-panel w-full max-w-sm rounded-2xl p-6 flex flex-col gap-4"
@@ -681,15 +683,28 @@ export function AdminMonitorDashboard() {
               </div>
               <button
                 type="button"
-                onClick={() => setExportOpen(false)}
-                className="rounded-lg px-2.5 py-1 text-xs font-medium text-[#6b8aaa] transition hover:bg-[rgba(107,138,170,0.12)]"
-                style={{ border: "1px solid rgba(107,138,170,0.2)" }}
+                onClick={() => { setExportOpen(false); setExportMonitorId(""); }}
+                className="rounded-lg px-2.5 py-1 text-xs font-medium text-[#94a3b8] transition hover:bg-[rgba(148,163,184,0.12)]"
+                style={{ border: "1px solid rgba(148,163,184,0.2)" }}
               >
                 ✕
               </button>
             </div>
             <div className="grid gap-3">
-              <label className="flex flex-col gap-1 text-xs text-[#6b8aaa]">
+              <label className="flex flex-col gap-1 text-xs text-[#94a3b8]">
+                Conexão
+                <select
+                  value={exportMonitorId}
+                  onChange={(e) => setExportMonitorId(e.target.value)}
+                  className="ds-input"
+                >
+                  <option value="">Todas as conexões</option>
+                  {monitors.map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-[#94a3b8]">
                 De
                 <input
                   type="date"
@@ -698,7 +713,7 @@ export function AdminMonitorDashboard() {
                   className="ds-input"
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-[#6b8aaa]">
+              <label className="flex flex-col gap-1 text-xs text-[#94a3b8]">
                 Até
                 <input
                   type="date"

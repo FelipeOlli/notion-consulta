@@ -11,8 +11,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const from = searchParams.get("from");
     const to = searchParams.get("to");
+    const monitorId = searchParams.get("monitorId");
 
-    const where: { createdAt?: { gte?: Date; lte?: Date } } = {};
+    const where: { monitorId?: string; createdAt?: { gte?: Date; lte?: Date } } = {};
+    if (monitorId) where.monitorId = monitorId;
     if (from || to) {
       where.createdAt = {};
       if (from) where.createdAt.gte = new Date(from);
@@ -42,7 +44,10 @@ export async function GET(request: NextRequest) {
     XLSX.utils.book_append_sheet(wb, ws, "Protocolos");
 
     const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
-    const filename = `protocolos_atendimento${from || to ? `_${from ?? ""}${to ? `_ate_${to}` : ""}` : ""}.xlsx`;
+    const monitorName = monitorId && records[0]
+      ? records[0].monitor.name.replace(/[^\p{L}\p{N}\-_]+/gu, "_").slice(0, 40)
+      : null;
+    const filename = `protocolos${monitorName ? `_${monitorName}` : ""}${from || to ? `_${from ?? ""}${to ? `_ate_${to}` : ""}` : ""}.xlsx`;
 
     return new NextResponse(new Uint8Array(buf), {
       status: 200,
