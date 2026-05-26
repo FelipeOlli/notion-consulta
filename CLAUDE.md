@@ -40,15 +40,21 @@
 ## Monitoramento de IPs (`/admin` — seção Início)
 - Modelos: `IpMonitor`, `IpMonitorGroup`, `IpMonitorEvent`
 - Tipos: `HTTP`, `TCP`, `PING` (ICMP via `child_process` ping do SO)
-- API: `/api/admin/monitors/` (CRUD) e `/api/admin/monitors/check` (POST)
+- API: `/api/admin/monitors/` (CRUD), `/api/admin/monitors/check` (POST), `/api/admin/monitors/[id]/events` (GET)
 - Auto-poll a cada 30s no cliente; notificações via browser Notification API
 - Cards em grid `auto-fill minmax(220px)` usando `.glass-card`
+- Log de quedas: `IpMonitorEvent` grava apenas em transições de status (UP↔DOWN)
+- Anti-flapping simétrico: após 3 eventos do mesmo tipo na janela de 6, novos registros são suprimidos (vale para DOWN e UP)
+- Botão "Log" em cada card abre drawer com histórico, duração de cada queda e banner de pausa quando ativo
 
 ## Financeiro
 - Serviços: `CFCONTABILIDADE.COM`, `CFCONTABILIDADE.COM.BR`, `Time Is Money`
 - Importação colapsável (só admin principal); botão "Limpar dados" por serviço com confirmação
 - Modal de planilha: fecha ao clicar fora; lista de empresas removida (só campo de adicionar)
 - Seção "Usuários por serviço ao longo do tempo" removida
+- Importação Google: aceita CSV (`GOOGLE_CSV`) com auto-detecção; `Org Unit Path [Required]` (sem `/`) vira `Empresa Alocada` via `ensureCompaniesForServer` (`lib/financeiro-company-line.ts`)
+- Importação TIM: coluna `Departamento` vira `Empresa Alocada`; ID opcional (gerado sequencialmente); cabeçalho detectado pela coluna `Nome`
+- Templates modelo em `public/templates/`: `google-workspace-template.csv` e `time-is-money-template.csv`; link muda conforme serviço selecionado
 
 ## Núcleo TI (`/admin/nucleo-ti`)
 - Model: `TiTask` com `TiTaskStatus` (TODO/DOING/DONE) e `TiTaskType` (MANUAL/AUTOMACAO/DELEGACAO)
@@ -61,5 +67,6 @@
 - Criação/exclusão de tarefas só para `master`; edição liberada para todos
 
 ## Sessões recentes
+- **2026-05-25** — Log de quedas (monitoramento), anti-flapping UP↔DOWN, importação CSV Google com auto-alocação por Org Unit Path, auto-alocação TIM por Departamento, templates de importação para download
 - **2026-05-07** — Módulo Núcleo TI: controle interativo de demandas com matriz RACI embutida, kanban/tabela, migração de responsáveis, tipos (Manual/Automação/Delegação), seed automático
 - **2026-05-06** — Redesign completo (Contabhub DS), módulo Cadastro de empresa, formulários colapsáveis, bloqueio de usuários, melhorias no Financeiro, módulo de monitoramento de IPs (HTTP/TCP/PING), redesign dos cards de monitor
