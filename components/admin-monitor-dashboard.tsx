@@ -100,6 +100,8 @@ export function AdminMonitorDashboard() {
   const [protocolSaving, setProtocolSaving] = useState(false);
   const [protocolError, setProtocolError] = useState("");
 
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   const [exportOpen, setExportOpen] = useState(false);
   const [exportFrom, setExportFrom] = useState("");
   const [exportTo, setExportTo] = useState("");
@@ -492,93 +494,107 @@ export function AdminMonitorDashboard() {
         </div>
       ) : (
         <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
-          {monitors.map((m) => (
-            <div
-              key={m.id}
-              className="glass-card rounded-2xl p-4 flex flex-col gap-3 transition-opacity"
-              style={{ opacity: m.active ? 1 : 0.45 }}
-            >
-              {/* Status + nome */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  {dot(m.lastStatus)}
-                  <span className="text-sm font-semibold text-white truncate">{m.name}</span>
-                </div>
-                <span
-                  className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-wide"
-                  style={STATUS_COLOR[m.lastStatus]}
+          {monitors.map((m) => {
+            const isExpanded = expandedId === m.id;
+            return (
+              <div
+                key={m.id}
+                className="glass-card rounded-2xl flex flex-col transition-opacity"
+                style={{ opacity: m.active ? 1 : 0.45 }}
+              >
+                {/* Cabeçalho clicável */}
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(isExpanded ? null : m.id)}
+                  className="flex items-center justify-between gap-2 p-4 w-full text-left"
                 >
-                  {STATUS_LABEL[m.lastStatus]}
-                </span>
-              </div>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {dot(m.lastStatus)}
+                    <span className="text-sm font-semibold text-white truncate">{m.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span
+                      className="rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-wide"
+                      style={STATUS_COLOR[m.lastStatus]}
+                    >
+                      {STATUS_LABEL[m.lastStatus]}
+                    </span>
+                    <span className="text-[9px]" style={{ color: "var(--onity-dark-text-muted)" }}>
+                      {isExpanded ? "▲" : "▼"}
+                    </span>
+                  </div>
+                </button>
 
-              {/* Metadados */}
-              <div className="space-y-0.5">
-                <p className="text-xs truncate" style={{ color: "var(--onity-dark-text-muted)" }}>
-                  {m.host}{m.port ? `:${m.port}` : ""}
-                </p>
-                <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
-                  {m.type}{m.lastPing !== null ? ` · ${m.lastPing}ms` : ""}{m.lastChecked ? ` · ${ago(m.lastChecked)}` : ""}
-                </p>
+                {/* Detalhes expandíveis */}
+                {isExpanded && (
+                  <div className="flex flex-col gap-3 px-4 pb-4 border-t" style={{ borderColor: "rgba(29,127,229,0.1)" }}>
+                    <div className="space-y-0.5 pt-3">
+                      <p className="text-xs truncate" style={{ color: "var(--onity-dark-text-muted)" }}>
+                        {m.host}{m.port ? `:${m.port}` : ""}
+                      </p>
+                      <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
+                        {m.type}{m.lastPing !== null ? ` · ${m.lastPing}ms` : ""}{m.lastChecked ? ` · ${ago(m.lastChecked)}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => void checkOne(m.id)}
+                        disabled={checkingId === m.id || !m.active}
+                        title="Verificar agora"
+                        className="rounded-lg px-2.5 py-1 text-xs font-medium text-[#4da3ff] transition hover:bg-[rgba(29,127,229,0.12)] disabled:opacity-40"
+                        style={{ background: "rgba(29,127,229,0.07)", border: "1px solid rgba(29,127,229,0.18)" }}
+                      >
+                        {checkingId === m.id ? "…" : "↻"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => startEdit(m)}
+                        className="rounded-lg px-2.5 py-1 text-xs font-medium text-white transition hover:bg-[rgba(29,127,229,0.12)]"
+                        style={{ background: "rgba(29,127,229,0.07)", border: "1px solid rgba(29,127,229,0.18)" }}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void openHistory(m)}
+                        className="rounded-lg px-2.5 py-1 text-xs font-medium transition hover:bg-[rgba(107,138,170,0.12)]"
+                        style={{ background: "rgba(107,138,170,0.07)", border: "1px solid rgba(107,138,170,0.2)", color: "#6b8aaa" }}
+                      >
+                        Log
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void openProtocols(m)}
+                        className="rounded-lg px-2.5 py-1 text-xs font-medium transition hover:bg-[rgba(29,127,229,0.12)]"
+                        style={{ background: "rgba(29,127,229,0.07)", border: "1px solid rgba(29,127,229,0.18)", color: "#4da3ff" }}
+                      >
+                        Protocolo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void toggleActive(m)}
+                        className="rounded-lg px-2.5 py-1 text-xs font-medium transition"
+                        style={m.active
+                          ? { background: "rgba(255,170,0,0.07)", border: "1px solid rgba(255,170,0,0.25)", color: "#ffaa00" }
+                          : { background: "rgba(0,204,102,0.07)", border: "1px solid rgba(0,204,102,0.25)", color: "#00cc66" }}
+                      >
+                        {m.active ? "Pausar" : "Ativar"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void deleteMonitor(m.id, m.name)}
+                        className="rounded-lg px-2.5 py-1 text-xs font-medium text-[#ff453a] transition hover:bg-[rgba(255,69,58,0.1)]"
+                        style={{ background: "rgba(255,69,58,0.05)", border: "1px solid rgba(255,69,58,0.2)" }}
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-
-              {/* Ações */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => void checkOne(m.id)}
-                  disabled={checkingId === m.id || !m.active}
-                  title="Verificar agora"
-                  className="rounded-lg px-2.5 py-1 text-xs font-medium text-[#4da3ff] transition hover:bg-[rgba(29,127,229,0.12)] disabled:opacity-40"
-                  style={{ background: "rgba(29,127,229,0.07)", border: "1px solid rgba(29,127,229,0.18)" }}
-                >
-                  {checkingId === m.id ? "…" : "↻"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => startEdit(m)}
-                  className="rounded-lg px-2.5 py-1 text-xs font-medium text-white transition hover:bg-[rgba(29,127,229,0.12)]"
-                  style={{ background: "rgba(29,127,229,0.07)", border: "1px solid rgba(29,127,229,0.18)" }}
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void openHistory(m)}
-                  className="rounded-lg px-2.5 py-1 text-xs font-medium transition hover:bg-[rgba(107,138,170,0.12)]"
-                  style={{ background: "rgba(107,138,170,0.07)", border: "1px solid rgba(107,138,170,0.2)", color: "#6b8aaa" }}
-                >
-                  Log
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void openProtocols(m)}
-                  className="rounded-lg px-2.5 py-1 text-xs font-medium transition hover:bg-[rgba(29,127,229,0.12)]"
-                  style={{ background: "rgba(29,127,229,0.07)", border: "1px solid rgba(29,127,229,0.18)", color: "#4da3ff" }}
-                >
-                  Protocolo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void toggleActive(m)}
-                  className="rounded-lg px-2.5 py-1 text-xs font-medium transition"
-                  style={m.active
-                    ? { background: "rgba(255,170,0,0.07)", border: "1px solid rgba(255,170,0,0.25)", color: "#ffaa00" }
-                    : { background: "rgba(0,204,102,0.07)", border: "1px solid rgba(0,204,102,0.25)", color: "#00cc66" }}
-                >
-                  {m.active ? "Pausar" : "Ativar"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void deleteMonitor(m.id, m.name)}
-                  className="rounded-lg px-2.5 py-1 text-xs font-medium text-[#ff453a] transition hover:bg-[rgba(255,69,58,0.1)]"
-                  style={{ background: "rgba(255,69,58,0.05)", border: "1px solid rgba(255,69,58,0.2)" }}
-                >
-                  Excluir
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {protocolMonitor && (

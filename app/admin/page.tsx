@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AdminNav } from "@/components/admin-nav";
 import { AdminMonitorDashboard } from "@/components/admin-monitor-dashboard";
+import { PortalHeader } from "@/components/portal-header";
 import { getAdminSession } from "@/lib/session";
 import { ALL_MODULES_FOR_MASTER, type AppModule } from "@/lib/modules";
 
@@ -69,22 +69,23 @@ export default async function AdminPage() {
   return (
     <main className="relative z-10 min-h-screen">
       <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <AdminNav modules={modules} />
-
-        <header className="mb-8">
-          <p className="section-label">Gerencial</p>
-          <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">Central da empresa</h1>
-          <p className="mt-2 max-w-2xl text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
-            Informações operacionais, acessos, certificados e indicadores financeiros em um só lugar.
-            Escolha abaixo o módulo autorizado para o seu usuário.
-          </p>
-        </header>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <header>
+            <p className="section-label">Gerencial</p>
+            <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">Central da empresa</h1>
+            <p className="mt-2 max-w-2xl text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
+              Informações operacionais, acessos, certificados e indicadores financeiros em um só lugar.
+              Escolha abaixo o módulo autorizado para o seu usuário.
+            </p>
+          </header>
+          <PortalHeader />
+        </div>
 
         <div className="mb-10">
           <AdminMonitorDashboard />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {cards.map((card) => (
             <Link key={card.href} href={card.href} className="glass-card group rounded-2xl p-6">
               <h2 className="text-lg font-semibold text-white transition-colors group-hover:text-[#4da3ff]">
