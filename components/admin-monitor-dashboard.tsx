@@ -293,8 +293,8 @@ export function AdminMonitorDashboard() {
   async function submitProtocol(e: React.FormEvent) {
     e.preventDefault();
     if (!protocolMonitor) return;
-    if (!protocolForm.protocol.trim() || !protocolForm.serviceOrder.trim()) {
-      setProtocolError("Preencha todos os campos.");
+    if (!protocolForm.protocol.trim()) {
+      setProtocolError("Número do protocolo é obrigatório.");
       return;
     }
     setProtocolSaving(true);
@@ -643,7 +643,7 @@ export function AdminMonitorDashboard() {
                   >
                     <div className="flex-1 min-w-0 space-y-0.5">
                       <p className="font-semibold text-white">Protocolo: {p.protocol}</p>
-                      <p style={{ color: "var(--onity-dark-text-muted)" }}>OS: {p.serviceOrder}</p>
+                      {p.serviceOrder && <p style={{ color: "var(--onity-dark-text-muted)" }}>OS: {p.serviceOrder}</p>}
                       <p style={{ color: "var(--onity-dark-text-muted)" }}>
                         {new Date(p.createdAt).toLocaleString("pt-BR")}
                       </p>

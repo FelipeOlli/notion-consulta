@@ -27,12 +27,12 @@ export async function POST(request: NextRequest, { params }: Params) {
     const body = await request.json();
     const { protocol, serviceOrder } = body as { protocol: string; serviceOrder: string };
 
-    if (!protocol?.trim() || !serviceOrder?.trim()) {
-      return NextResponse.json({ message: "Protocolo e Ordem de Serviço são obrigatórios." }, { status: 400 });
+    if (!protocol?.trim()) {
+      return NextResponse.json({ message: "Número do protocolo é obrigatório." }, { status: 400 });
     }
 
     const record = await prisma.ipMonitorProtocol.create({
-      data: { monitorId: id, protocol: protocol.trim(), serviceOrder: serviceOrder.trim() },
+      data: { monitorId: id, protocol: protocol.trim(), serviceOrder: serviceOrder?.trim() ?? "" },
     });
 
     return NextResponse.json({ data: record }, { status: 201 });
