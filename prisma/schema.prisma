@@ -267,6 +267,7 @@ model IpMonitor {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   events      IpMonitorEvent[]
+  protocols   IpMonitorProtocol[]
 
   @@index([groupId])
 }
@@ -279,6 +280,17 @@ model IpMonitorEvent {
   ping      Int?
   message   String?
   createdAt DateTime        @default(now())
+
+  @@index([monitorId, createdAt])
+}
+
+model IpMonitorProtocol {
+  id           String    @id @default(cuid())
+  monitorId    String
+  monitor      IpMonitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  protocol     String
+  serviceOrder String
+  createdAt    DateTime  @default(now())
 
   @@index([monitorId, createdAt])
 }

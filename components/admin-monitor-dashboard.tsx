@@ -25,6 +25,13 @@ type MonitorEvent = {
   createdAt: string;
 };
 
+type Protocol = {
+  id: string;
+  protocol: string;
+  serviceOrder: string;
+  createdAt: string;
+};
+
 type FormState = {
   name: string;
   host: string;
@@ -85,6 +92,18 @@ export function AdminMonitorDashboard() {
   const [historyMonitor, setHistoryMonitor] = useState<Monitor | null>(null);
   const [historyEvents, setHistoryEvents] = useState<MonitorEvent[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  const [protocolMonitor, setProtocolMonitor] = useState<Monitor | null>(null);
+  const [protocols, setProtocols] = useState<Protocol[]>([]);
+  const [protocolsLoading, setProtocolsLoading] = useState(false);
+  const [protocolForm, setProtocolForm] = useState({ protocol: "", serviceOrder: "" });
+  const [protocolSaving, setProtocolSaving] = useState(false);
+  const [protocolError, setProtocolError] = useState("");
+
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportFrom, setExportFrom] = useState("");
+  const [exportTo, setExportTo] = useState("");
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   const prevStatusRef = useRef<Record<string, MonitorStatus>>({});
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -250,6 +269,84 @@ export function AdminMonitorDashboard() {
     setHistoryEvents([]);
   }
 
+  async function openProtocols(m: Monitor) {
+    setProtocolMonitor(m);
+    setProtocols([]);
+    setProtocolForm({ protocol: "", serviceOrder: "" });
+    setProtocolError("");
+    setProtocolsLoading(true);
+    try {
+      const res = await fetch(`/api/admin/monitors/${m.id}/protocols`);
+      const json = await res.json();
+      setProtocols(json.data ?? []);
+    } finally {
+      setProtocolsLoading(false);
+    }
+  }
+
+  function closeProtocols() {
+    setProtocolMonitor(null);
+    setProtocols([]);
+    setProtocolError("");
+  }
+
+  async function submitProtocol(e: React.FormEvent) {
+    e.preventDefault();
+    if (!protocolMonitor) return;
+    if (!protocolForm.protocol.trim() || !protocolForm.serviceOrder.trim()) {
+      setProtocolError("Preencha todos os campos.");
+      return;
+    }
+    setProtocolSaving(true);
+    setProtocolError("");
+    try {
+      const res = await fetch(`/api/admin/monitors/${protocolMonitor.id}/protocols`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(protocolForm),
+      });
+      const json = await res.json();
+      if (!res.ok) { setProtocolError(json.message || "Erro ao registrar."); return; }
+      setProtocols((prev) => [json.data, ...prev]);
+      setProtocolForm({ protocol: "", serviceOrder: "" });
+    } finally {
+      setProtocolSaving(false);
+    }
+  }
+
+  async function deleteProtocol(id: string) {
+    if (!window.confirm("Excluir este protocolo?")) return;
+    await fetch(`/api/admin/monitors/protocols/${id}`, { method: "DELETE" });
+    setProtocols((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  async function exportProtocols() {
+    setExportingExcel(true);
+    try {
+      const params = new URLSearchParams();
+      if (exportFrom) params.set("from", exportFrom);
+      if (exportTo) params.set("to", exportTo);
+      const res = await fetch(`/api/admin/monitors/protocols/export?${params.toString()}`);
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const cd = res.headers.get("Content-Disposition");
+      let filename = "protocolos_atendimento.xlsx";
+      const star = cd?.match(/filename\*=UTF-8''([^;\s]+)/i);
+      const quoted = cd?.match(/filename="([^"]+)"/i);
+      if (star?.[1]) { try { filename = decodeURIComponent(star[1]); } catch { filename = star[1]; } }
+      else if (quoted?.[1]) { filename = quoted[1]; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      setExportOpen(false);
+    } finally {
+      setExportingExcel(false);
+    }
+  }
+
   function calcDowntime(events: MonitorEvent[], downEvent: MonitorEvent): string {
     const downTime = new Date(downEvent.createdAt).getTime();
     const nextUp = events.find(
@@ -313,6 +410,14 @@ export function AdminMonitorDashboard() {
             style={{ background: "rgba(29,127,229,0.1)", border: "1px solid rgba(29,127,229,0.3)" }}
           >
             {checkingAll ? "Verificando..." : "↻ Verificar todos"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setExportOpen(true)}
+            className="rounded-xl px-4 py-2 text-sm font-medium transition"
+            style={{ background: "rgba(0,204,102,0.07)", border: "1px solid rgba(0,204,102,0.25)", color: "#00cc66" }}
+          >
+            ↓ Exportar protocolos
           </button>
           <button
             type="button"
@@ -445,6 +550,14 @@ export function AdminMonitorDashboard() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => void openProtocols(m)}
+                  className="rounded-lg px-2.5 py-1 text-xs font-medium transition hover:bg-[rgba(29,127,229,0.12)]"
+                  style={{ background: "rgba(29,127,229,0.07)", border: "1px solid rgba(29,127,229,0.18)", color: "#4da3ff" }}
+                >
+                  Protocolo
+                </button>
+                <button
+                  type="button"
                   onClick={() => void toggleActive(m)}
                   className="rounded-lg px-2.5 py-1 text-xs font-medium transition"
                   style={m.active
@@ -466,6 +579,147 @@ export function AdminMonitorDashboard() {
           ))}
         </div>
       )}
+      {protocolMonitor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(3,8,15,0.75)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) closeProtocols(); }}
+        >
+          <div
+            className="glass-panel w-full max-w-lg rounded-2xl p-6 flex flex-col gap-4"
+            style={{ maxHeight: "80vh", border: "1px solid rgba(29,127,229,0.2)" }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="section-label">Protocolos de atendimento</p>
+                <h3 className="mt-0.5 text-base font-bold text-white">{protocolMonitor.name}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeProtocols}
+                className="rounded-lg px-2.5 py-1 text-xs font-medium text-[#6b8aaa] transition hover:bg-[rgba(107,138,170,0.12)]"
+                style={{ border: "1px solid rgba(107,138,170,0.2)" }}
+              >
+                ✕ Fechar
+              </button>
+            </div>
+
+            <form onSubmit={(e) => void submitProtocol(e)} className="grid gap-2 sm:grid-cols-2">
+              <input
+                value={protocolForm.protocol}
+                onChange={(e) => setProtocolForm((p) => ({ ...p, protocol: e.target.value }))}
+                placeholder="Número do protocolo"
+                className="ds-input"
+              />
+              <input
+                value={protocolForm.serviceOrder}
+                onChange={(e) => setProtocolForm((p) => ({ ...p, serviceOrder: e.target.value }))}
+                placeholder="Ordem de serviço"
+                className="ds-input"
+              />
+              <div className="sm:col-span-2 flex items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={protocolSaving}
+                  className="btn-primary rounded-xl px-5 py-2 text-sm font-semibold disabled:opacity-60"
+                >
+                  {protocolSaving ? "Registrando..." : "Registrar"}
+                </button>
+                {protocolError && <p className="text-sm text-[#ff453a]">{protocolError}</p>}
+              </div>
+            </form>
+
+            <div className="overflow-y-auto flex-1 space-y-2 pr-1">
+              {protocolsLoading ? (
+                <p className="text-sm text-[#6b8aaa]">Carregando...</p>
+              ) : protocols.length === 0 ? (
+                <p className="text-sm text-[#6b8aaa]">Nenhum protocolo registrado ainda.</p>
+              ) : (
+                protocols.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-xs"
+                    style={{ background: "rgba(29,127,229,0.06)", border: "1px solid rgba(29,127,229,0.15)" }}
+                  >
+                    <div className="flex-1 min-w-0 space-y-0.5">
+                      <p className="font-semibold text-white">Protocolo: {p.protocol}</p>
+                      <p style={{ color: "var(--onity-dark-text-muted)" }}>OS: {p.serviceOrder}</p>
+                      <p style={{ color: "var(--onity-dark-text-muted)" }}>
+                        {new Date(p.createdAt).toLocaleString("pt-BR")}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void deleteProtocol(p.id)}
+                      className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium text-[#ff453a] transition hover:bg-[rgba(255,69,58,0.1)]"
+                      style={{ border: "1px solid rgba(255,69,58,0.2)" }}
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {exportOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(3,8,15,0.75)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setExportOpen(false); }}
+        >
+          <div
+            className="glass-panel w-full max-w-sm rounded-2xl p-6 flex flex-col gap-4"
+            style={{ border: "1px solid rgba(29,127,229,0.2)" }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="section-label">Exportar protocolos</p>
+                <h3 className="mt-0.5 text-base font-bold text-white">Período (opcional)</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setExportOpen(false)}
+                className="rounded-lg px-2.5 py-1 text-xs font-medium text-[#6b8aaa] transition hover:bg-[rgba(107,138,170,0.12)]"
+                style={{ border: "1px solid rgba(107,138,170,0.2)" }}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="grid gap-3">
+              <label className="flex flex-col gap-1 text-xs text-[#6b8aaa]">
+                De
+                <input
+                  type="date"
+                  value={exportFrom}
+                  onChange={(e) => setExportFrom(e.target.value)}
+                  className="ds-input"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-[#6b8aaa]">
+                Até
+                <input
+                  type="date"
+                  value={exportTo}
+                  onChange={(e) => setExportTo(e.target.value)}
+                  className="ds-input"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => void exportProtocols()}
+                disabled={exportingExcel}
+                className="btn-primary rounded-xl px-5 py-2 text-sm font-semibold disabled:opacity-60"
+              >
+                {exportingExcel ? "Gerando..." : "↓ Baixar Excel"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {historyMonitor && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
