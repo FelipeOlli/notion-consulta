@@ -438,7 +438,7 @@ export function AlterdataDashboard({ isMaster }: Props) {
                 <button type="button" onClick={fecharForm} className="link-muted text-sm px-4 py-2">
                   Cancelar
                 </button>
-                <button type="submit" disabled={salvando} className="btn-primary text-sm disabled:opacity-50">
+                <button type="submit" disabled={salvando} className="text-sm px-3 py-2 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors disabled:opacity-50">
                   {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Criar cliente"}
                 </button>
               </div>
@@ -500,7 +500,7 @@ export function AlterdataDashboard({ isMaster }: Props) {
               <button
                 onClick={importar}
                 disabled={!importFile || importando}
-                className="btn-primary text-sm disabled:opacity-50"
+                className="text-sm px-3 py-2 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors disabled:opacity-50"
               >
                 {importando ? "Importando..." : "Importar"}
               </button>
