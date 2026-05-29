@@ -3,10 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { ensureMaster } from "@/lib/admin-auth";
 import type { AlterdataClienteStatus } from "@prisma/client";
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const isMaster = await ensureMaster();
   if (!isMaster) return NextResponse.json({ message: "Nao autorizado." }, { status: 403 });
 
+  const { id } = await params;
   const body = await request.json();
   const { codPessoa, nome, status, qtdLicencas, qtdUsuarios, licencasOciosas, acessosFranqueado, acessosBackoffice, observacao } = body;
 
@@ -21,15 +22,16 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (acessosBackoffice !== undefined) data.acessosBackoffice = Number(acessosBackoffice);
   if (observacao !== undefined) data.observacao = observacao ? String(observacao).trim() : null;
 
-  const cliente = await prisma.alterdataCliente.update({ where: { id: params.id }, data });
+  const cliente = await prisma.alterdataCliente.update({ where: { id }, data });
   return NextResponse.json(cliente);
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const isMaster = await ensureMaster();
   if (!isMaster) return NextResponse.json({ message: "Nao autorizado." }, { status: 403 });
 
-  await prisma.alterdataCliente.delete({ where: { id: params.id } });
+  const { id } = await params;
+  await prisma.alterdataCliente.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }
 
