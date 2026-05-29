@@ -18,6 +18,7 @@ enum AppModule {
 
 enum AlterdataClienteStatus {
   ATIVO
+  EM_ANDAMENTO
   INATIVO
   INADIMPLENTE
   CONGELADO

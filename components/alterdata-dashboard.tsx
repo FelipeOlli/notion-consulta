@@ -5,6 +5,7 @@ import type { AlterdataCliente, AlterdataClienteStatus } from "@prisma/client";
 
 const STATUS_LABELS: Record<AlterdataClienteStatus, string> = {
   ATIVO: "Ativo",
+  EM_ANDAMENTO: "Em Andamento",
   INATIVO: "Inativo",
   INADIMPLENTE: "Inadimplente",
   CONGELADO: "Congelado",
@@ -13,6 +14,7 @@ const STATUS_LABELS: Record<AlterdataClienteStatus, string> = {
 
 const STATUS_COLORS: Record<AlterdataClienteStatus, string> = {
   ATIVO: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+  EM_ANDAMENTO: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   INATIVO: "bg-slate-500/20 text-slate-400 border-slate-500/30",
   INADIMPLENTE: "bg-red-500/20 text-red-400 border-red-500/30",
   CONGELADO: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -21,6 +23,7 @@ const STATUS_COLORS: Record<AlterdataClienteStatus, string> = {
 
 const STATUS_DOT: Record<AlterdataClienteStatus, string> = {
   ATIVO: "bg-emerald-400",
+  EM_ANDAMENTO: "bg-yellow-400",
   INATIVO: "bg-slate-400",
   INADIMPLENTE: "bg-red-400",
   CONGELADO: "bg-blue-400",
@@ -29,13 +32,14 @@ const STATUS_DOT: Record<AlterdataClienteStatus, string> = {
 
 const CARD_ACCENT: Record<AlterdataClienteStatus, string> = {
   ATIVO: "border-emerald-500/40",
+  EM_ANDAMENTO: "border-yellow-500/40",
   INATIVO: "border-slate-500/40",
   INADIMPLENTE: "border-red-500/40",
   CONGELADO: "border-blue-500/40",
   DISTRATADO: "border-orange-500/40",
 };
 
-const ALL_STATUS: AlterdataClienteStatus[] = ["ATIVO", "INATIVO", "INADIMPLENTE", "CONGELADO", "DISTRATADO"];
+const ALL_STATUS: AlterdataClienteStatus[] = ["ATIVO", "EM_ANDAMENTO", "INATIVO", "INADIMPLENTE", "CONGELADO", "DISTRATADO"];
 
 const EMPTY_FORM = {
   codPessoa: "",
@@ -188,7 +192,7 @@ export function AlterdataDashboard({ isMaster }: Props) {
   return (
     <div className="space-y-8">
       {/* Cards de status */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {ALL_STATUS.map((s) => (
           <button
             key={s}
