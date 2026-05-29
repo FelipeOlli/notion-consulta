@@ -91,7 +91,8 @@ export function AlterdataDashboard({ isMaster }: Props) {
 
   const clientesFiltrados = clientes.filter((c) => {
     const matchStatus = filtroStatus === "TODOS" || c.status === filtroStatus;
-    const matchBusca = busca === "" || c.nome.toLowerCase().includes(busca.toLowerCase()) || c.codPessoa.includes(busca);
+    const buscaLower = busca.toLowerCase();
+    const matchBusca = busca === "" || c.nome.toLowerCase().includes(buscaLower) || c.codPessoa.includes(busca) || (c.unidade ?? "").toLowerCase().includes(buscaLower);
     return matchStatus && matchBusca;
   });
 
