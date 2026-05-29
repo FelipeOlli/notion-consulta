@@ -73,6 +73,11 @@ export function AdminNav({ modules }: Props) {
             Núcleo TI
           </Link>
         ) : null}
+        {can("alterdata") ? (
+          <Link href="/admin/alterdata" className={itemClass(pathname === "/admin/alterdata")} style={itemStyle(pathname === "/admin/alterdata")}>
+            Alterdata
+          </Link>
+        ) : null}
       </div>
       <button
         type="button"

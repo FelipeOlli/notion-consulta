@@ -71,7 +71,14 @@
 - Ciclo rápido de status na visão tabela (clique no badge sem abrir modal)
 - Criação/exclusão de tarefas só para `master`; edição liberada para todos
 
+## Padrões de UI — Home (`/admin`)
+- `AdminNav` removido da home; acesso aos módulos só pelos cards
+- Botão "Sair" (`PortalHeader`) no canto superior direito do cabeçalho
+- Grid de módulos: `sm:grid-cols-2 lg:grid-cols-3`
+- Cards de monitor colapsáveis: clique no cabeçalho (nome + status) expande metadados e ações; `expandedId` state em `admin-monitor-dashboard.tsx`
+- Inner pages (links, certificados, etc.) mantêm `AdminNav` para navegação entre módulos
+
 ## Sessões recentes
+- **2026-05-26** — Remove nav header da home; cards de monitor colapsáveis (clique para expandir detalhes/ações); grid de módulos em 3 colunas
 - **2026-05-26** — Protocolos de atendimento no monitoramento (registro + exportação xlsx com filtros), redesign para System Design (slate + azul/roxo, Outfit+Inter), ordenação alfabética de conexões ativas/inativas
 - **2026-05-25** — Log de quedas (monitoramento), anti-flapping UP↔DOWN, importação CSV Google com auto-alocação por Org Unit Path, auto-alocação TIM por Departamento, templates de importação para download
-- **2026-05-07** — Módulo Núcleo TI: controle interativo de demandas com matriz RACI embutida, kanban/tabela, migração de responsáveis, tipos (Manual/Automação/Delegação), seed automático

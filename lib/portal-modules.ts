@@ -15,6 +15,7 @@ const descriptions: Record<AppModule, string> = {
   usuarios: "Criar e editar usuários do gerencial e módulos por e-mail.",
   cadastro_empresa: "Sistema externo de cadastro e gestão de empresas.",
   nucleo_ti: "Matriz RACI, carga por pessoa, backlog de tarefas e pipeline de automações do setor.",
+  alterdata: "Controle de clientes ativos, inativos, inadimplentes, congelados e distratados na plataforma Alterdata.",
 };
 
 const hrefs: Record<AppModule, string> = {
@@ -24,6 +25,7 @@ const hrefs: Record<AppModule, string> = {
   usuarios: "/admin/usuarios",
   cadastro_empresa: "/admin/cadastro-empresa",
   nucleo_ti: "/admin/nucleo-ti",
+  alterdata: "/admin/alterdata",
 };
 
 export function getPortalCardsForModules(modules: AppModule[]): PortalModuleCard[] {

@@ -65,6 +65,13 @@ export default async function AdminPage() {
       description: "Matriz RACI, carga por pessoa, backlog de tarefas e pipeline de automações do setor.",
     });
   }
+  if (modules.includes("alterdata")) {
+    cards.push({
+      href: "/admin/alterdata",
+      title: "Alterdata",
+      description: "Controle de clientes ativos, inativos, inadimplentes, congelados e distratados na plataforma Alterdata.",
+    });
+  }
 
   return (
     <main className="relative z-10 min-h-screen">
