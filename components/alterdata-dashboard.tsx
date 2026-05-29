@@ -246,7 +246,10 @@ export function AlterdataDashboard({ isMaster }: Props) {
             >
               Importar xlsx
             </button>
-            <button onClick={abrirNovo} className="btn-primary text-sm whitespace-nowrap">
+            <button
+              onClick={abrirNovo}
+              className="text-sm px-3 py-2 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors whitespace-nowrap"
+            >
               + Novo cliente
             </button>
           </div>
