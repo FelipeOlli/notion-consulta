@@ -40,8 +40,10 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
+    const rawUnidade = row["Unidade"] ?? row["Unidades"] ?? row["unidade"];
     const data = {
       nome,
+      unidade: rawUnidade ? String(rawUnidade).trim() : null,
       status: parseStatus(row["Status"]),
       qtdLicencas: Number(row["Qtd. Licenças"] ?? row["Quantidade de Licenças"] ?? 1) || 1,
       qtdUsuarios: Number(row["Qtd. Usuários"] ?? row["Quantidade de Usuários Cadastrados"] ?? 0) || 0,

@@ -10,6 +10,7 @@ export async function GET() {
     {
       "Cód. Pessoa": "874796",
       "Nome": "EXEMPLO CONTABILIDADE LTDA",
+      "Unidade": "CF EXEMPLO",
       "Status": "ATIVO",
       "Qtd. Licenças": 1,
       "Qtd. Usuários": 1,
@@ -23,9 +24,8 @@ export async function GET() {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(rows);
 
-  // Largura das colunas
   ws["!cols"] = [
-    { wch: 14 }, { wch: 50 }, { wch: 14 }, { wch: 14 },
+    { wch: 14 }, { wch: 50 }, { wch: 20 }, { wch: 14 }, { wch: 14 },
     { wch: 16 }, { wch: 18 }, { wch: 20 }, { wch: 20 }, { wch: 30 },
   ];
 

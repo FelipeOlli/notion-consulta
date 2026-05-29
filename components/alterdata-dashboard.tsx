@@ -40,6 +40,7 @@ const ALL_STATUS: AlterdataClienteStatus[] = ["ATIVO", "INATIVO", "INADIMPLENTE"
 const EMPTY_FORM = {
   codPessoa: "",
   nome: "",
+  unidade: "",
   status: "ATIVO" as AlterdataClienteStatus,
   qtdLicencas: 1,
   qtdUsuarios: 0,
@@ -106,6 +107,7 @@ export function AlterdataDashboard({ isMaster }: Props) {
     setForm({
       codPessoa: c.codPessoa,
       nome: c.nome,
+      unidade: c.unidade ?? "",
       status: c.status,
       qtdLicencas: c.qtdLicencas,
       qtdUsuarios: c.qtdUsuarios,
@@ -267,6 +269,7 @@ export function AlterdataDashboard({ isMaster }: Props) {
                 <tr className="border-b border-white/10 text-left">
                   <th className="px-4 py-3 text-xs font-medium" style={{ color: "var(--onity-dark-text-muted)" }}>Código</th>
                   <th className="px-4 py-3 text-xs font-medium" style={{ color: "var(--onity-dark-text-muted)" }}>Nome</th>
+                  <th className="px-4 py-3 text-xs font-medium" style={{ color: "var(--onity-dark-text-muted)" }}>Unidade</th>
                   <th className="px-4 py-3 text-xs font-medium" style={{ color: "var(--onity-dark-text-muted)" }}>Status</th>
                   <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>Licenças</th>
                   <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>Usuários</th>
@@ -280,6 +283,7 @@ export function AlterdataDashboard({ isMaster }: Props) {
                   <tr key={c.id} className="hover:bg-white/5 transition-colors">
                     <td className="px-4 py-3 text-white/50 font-mono text-xs">{c.codPessoa}</td>
                     <td className="px-4 py-3 text-white font-medium max-w-[260px] truncate">{c.nome}</td>
+                    <td className="px-4 py-3 text-white/60 text-xs max-w-[160px] truncate">{c.unidade ?? "—"}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border ${STATUS_COLORS[c.status]}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[c.status]}`} />
@@ -369,6 +373,16 @@ export function AlterdataDashboard({ isMaster }: Props) {
                   onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
                   required
                   placeholder="RAZÃO SOCIAL LTDA"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs mb-1" style={{ color: "var(--onity-dark-text-muted)" }}>Unidade</label>
+                <input
+                  className="ds-input w-full"
+                  value={form.unidade}
+                  onChange={(e) => setForm((f) => ({ ...f, unidade: e.target.value }))}
+                  placeholder="CF EXEMPLO"
                 />
               </div>
 

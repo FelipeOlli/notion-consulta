@@ -308,6 +308,7 @@ model AlterdataCliente {
   id                String                 @id @default(cuid())
   codPessoa         String                 @unique
   nome              String
+  unidade           String?
   status            AlterdataClienteStatus @default(ATIVO)
   qtdLicencas       Int                    @default(1)
   qtdUsuarios       Int                    @default(0)
