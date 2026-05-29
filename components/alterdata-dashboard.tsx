@@ -207,43 +207,43 @@ export function AlterdataDashboard({ isMaster }: Props) {
       </div>
 
       {/* Barra de ações */}
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          type="text"
-          placeholder="Buscar por nome ou código..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="ds-input flex-1 min-w-[200px]"
-        />
-        {filtroStatus !== "TODOS" && (
-          <button
-            onClick={() => setFiltroStatus("TODOS")}
-            className="text-sm px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors"
-          >
-            × Limpar filtro
-          </button>
-        )}
-        <div className="flex gap-2 ml-auto">
-          {isMaster && (
-            <>
-              <a
-                href="/api/admin/alterdata/clientes/template"
-                className="text-sm px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors"
-              >
-                Baixar template
-              </a>
-              <button
-                onClick={() => { setImportAberto(true); setImportResultado(null); }}
-                className="text-sm px-3 py-2 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors"
-              >
-                Importar xlsx
-              </button>
-              <button onClick={abrirNovo} className="btn-primary text-sm">
-                + Novo cliente
-              </button>
-            </>
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            placeholder="Buscar por nome ou código..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="ds-input flex-1"
+          />
+          {filtroStatus !== "TODOS" && (
+            <button
+              onClick={() => setFiltroStatus("TODOS")}
+              className="shrink-0 text-sm px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors"
+            >
+              × Limpar filtro
+            </button>
           )}
         </div>
+        {isMaster && (
+          <div className="flex items-center justify-end gap-2">
+            <a
+              href="/api/admin/alterdata/clientes/template"
+              className="text-sm px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors whitespace-nowrap"
+            >
+              Baixar template
+            </a>
+            <button
+              onClick={() => { setImportAberto(true); setImportResultado(null); }}
+              className="text-sm px-3 py-2 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors whitespace-nowrap"
+            >
+              Importar xlsx
+            </button>
+            <button onClick={abrirNovo} className="btn-primary text-sm whitespace-nowrap">
+              + Novo cliente
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Totalizador filtrado */}
