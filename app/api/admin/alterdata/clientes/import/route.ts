@@ -47,7 +47,6 @@ export async function POST(request: NextRequest) {
       status: parseStatus(row["Status"]),
       qtdLicencas: Number(row["Qtd. Licenças"] ?? row["Quantidade de Licenças"] ?? 1) || 1,
       qtdUsuarios: Number(row["Qtd. Usuários"] ?? row["Quantidade de Usuários Cadastrados"] ?? 0) || 0,
-      licencasOciosas: Number(row["Licenças Ociosas"] ?? row["Licencas_Ociosas"] ?? 0) || 0,
       acessosFranqueado: Number(row["Acessos Franqueado"] ?? row["Acessos_Franqueado"] ?? 0) || 0,
       acessosBackoffice: Number(row["Acessos Backoffice"] ?? row["Acessos_Backoffice"] ?? 0) || 0,
       observacao: row["Observação"] ? String(row["Observação"]).trim() : null,

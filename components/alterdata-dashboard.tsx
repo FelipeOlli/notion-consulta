@@ -41,6 +41,9 @@ const CARD_ACCENT: Record<AlterdataClienteStatus, string> = {
 
 const ALL_STATUS: AlterdataClienteStatus[] = ["ATIVO", "EM_ANDAMENTO", "INATIVO", "INADIMPLENTE", "CONGELADO", "DISTRATADO"];
 
+const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const formatBRL = (n: number) => BRL.format(n);
+
 const EMPTY_FORM = {
   codPessoa: "",
   nome: "",
@@ -48,7 +51,6 @@ const EMPTY_FORM = {
   status: "ATIVO" as AlterdataClienteStatus,
   qtdLicencas: 1,
   qtdUsuarios: 0,
-  licencasOciosas: 0,
   acessosFranqueado: 0,
   acessosBackoffice: 0,
   observacao: "",
@@ -116,7 +118,6 @@ export function AlterdataDashboard({ isMaster }: Props) {
       status: c.status,
       qtdLicencas: c.qtdLicencas,
       qtdUsuarios: c.qtdUsuarios,
-      licencasOciosas: c.licencasOciosas,
       acessosFranqueado: c.acessosFranqueado,
       acessosBackoffice: c.acessosBackoffice,
       observacao: c.observacao ?? "",
@@ -149,7 +150,6 @@ export function AlterdataDashboard({ isMaster }: Props) {
         ...form,
         qtdLicencas: Number(form.qtdLicencas),
         qtdUsuarios: Number(form.qtdUsuarios),
-        licencasOciosas: Number(form.licencasOciosas),
         acessosFranqueado: Number(form.acessosFranqueado),
         acessosBackoffice: Number(form.acessosBackoffice),
         observacao: form.observacao || null,
@@ -281,14 +281,16 @@ export function AlterdataDashboard({ isMaster }: Props) {
                   <th className="px-4 py-3 text-xs font-medium" style={{ color: "var(--onity-dark-text-muted)" }}>Status</th>
                   <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>Licenças</th>
                   <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>Usuários</th>
-                  <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>Ociosas</th>
-                  <th className="px-4 py-3 text-xs font-medium" style={{ color: "var(--onity-dark-text-muted)" }}>Observação</th>
+                  <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>Ac. Franqueado</th>
+                  <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>Ac. Backoffice</th>
+                  <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>V. Franqueado</th>
+                  <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>V. Backoffice</th>
                   {isMaster && <th className="px-4 py-3" />}
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {clientesFiltrados.map((c) => (
-                  <tr key={c.id} className="hover:bg-white/5 transition-colors">
+                  <tr key={c.id} onClick={() => abrirEditar(c)} className="hover:bg-white/5 transition-colors cursor-pointer">
                     <td className="px-4 py-3 text-white/50 font-mono text-xs">{c.codPessoa}</td>
                     <td className="px-4 py-3 text-white font-medium max-w-[260px] truncate">{c.nome}</td>
                     <td className="px-4 py-3 text-white/60 text-xs max-w-[160px] truncate">{c.unidade ?? "—"}</td>
@@ -300,27 +302,21 @@ export function AlterdataDashboard({ isMaster }: Props) {
                     </td>
                     <td className="px-4 py-3 text-center text-white/70">{c.qtdLicencas}</td>
                     <td className="px-4 py-3 text-center text-white/70">{c.qtdUsuarios}</td>
-                    <td className="px-4 py-3 text-center">
-                      {c.licencasOciosas > 0 ? (
-                        <span className="text-amber-400">{c.licencasOciosas}</span>
-                      ) : (
-                        <span className="text-white/30">0</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-white/50 text-xs max-w-[200px] truncate">
-                      {c.observacao ?? "—"}
-                    </td>
+                    <td className="px-4 py-3 text-center text-white/70">{c.acessosFranqueado}</td>
+                    <td className="px-4 py-3 text-center text-white/70">{c.acessosBackoffice}</td>
+                    <td className="px-4 py-3 text-center text-white/70">{formatBRL(c.acessosFranqueado * 160)}</td>
+                    <td className="px-4 py-3 text-center text-white/70">{formatBRL(c.acessosBackoffice * 120)}</td>
                     {isMaster && (
                       <td className="px-4 py-3">
                         <div className="flex gap-2 justify-end">
                           <button
-                            onClick={() => abrirEditar(c)}
+                            onClick={(e) => e.stopPropagation()}
                             className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
                           >
                             Editar
                           </button>
                           <button
-                            onClick={() => excluir(c.id)}
+                            onClick={(e) => { e.stopPropagation(); excluir(c.id); }}
                             disabled={excluindo === c.id}
                             className="text-xs text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
                           >
@@ -394,7 +390,7 @@ export function AlterdataDashboard({ isMaster }: Props) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs mb-1" style={{ color: "var(--onity-dark-text-muted)" }}>Licenças</label>
                   <input type="number" min={0} className="ds-input w-full" value={form.qtdLicencas}
@@ -404,11 +400,6 @@ export function AlterdataDashboard({ isMaster }: Props) {
                   <label className="block text-xs mb-1" style={{ color: "var(--onity-dark-text-muted)" }}>Usuários</label>
                   <input type="number" min={0} className="ds-input w-full" value={form.qtdUsuarios}
                     onChange={(e) => setForm((f) => ({ ...f, qtdUsuarios: Number(e.target.value) }))} />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: "var(--onity-dark-text-muted)" }}>Ociosas</label>
-                  <input type="number" min={0} className="ds-input w-full" value={form.licencasOciosas}
-                    onChange={(e) => setForm((f) => ({ ...f, licencasOciosas: Number(e.target.value) }))} />
                 </div>
                 <div>
                   <label className="block text-xs mb-1" style={{ color: "var(--onity-dark-text-muted)" }}>Ac. Franqueado</label>

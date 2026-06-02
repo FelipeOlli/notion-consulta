@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   if (!isMaster) return NextResponse.json({ message: "Nao autorizado." }, { status: 403 });
 
   const body = await request.json();
-  const { codPessoa, nome, unidade, status, qtdLicencas, qtdUsuarios, licencasOciosas, acessosFranqueado, acessosBackoffice, observacao } = body;
+  const { codPessoa, nome, unidade, status, qtdLicencas, qtdUsuarios, acessosFranqueado, acessosBackoffice, observacao } = body;
 
   if (!codPessoa || !nome) {
     return NextResponse.json({ message: "Código e nome são obrigatórios." }, { status: 400 });
@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
       status: (status as AlterdataClienteStatus) ?? "ATIVO",
       qtdLicencas: Number(qtdLicencas) || 1,
       qtdUsuarios: Number(qtdUsuarios) || 0,
-      licencasOciosas: Number(licencasOciosas) || 0,
       acessosFranqueado: Number(acessosFranqueado) || 0,
       acessosBackoffice: Number(acessosBackoffice) || 0,
       observacao: observacao ? String(observacao).trim() : null,

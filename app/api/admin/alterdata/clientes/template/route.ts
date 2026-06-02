@@ -14,7 +14,6 @@ export async function GET() {
       "Status": "ATIVO",
       "Qtd. Licenças": 1,
       "Qtd. Usuários": 1,
-      "Licenças Ociosas": 0,
       "Acessos Franqueado": 0,
       "Acessos Backoffice": 1,
       "Observação": "",
@@ -26,7 +25,7 @@ export async function GET() {
 
   ws["!cols"] = [
     { wch: 14 }, { wch: 50 }, { wch: 20 }, { wch: 14 }, { wch: 14 },
-    { wch: 16 }, { wch: 18 }, { wch: 20 }, { wch: 20 }, { wch: 30 },
+    { wch: 16 }, { wch: 20 }, { wch: 20 }, { wch: 30 },
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, "Clientes");
