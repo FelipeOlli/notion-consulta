@@ -310,6 +310,7 @@ model AlterdataCliente {
   codPessoa         String                 @unique
   nome              String
   unidade           String?
+  cnpj              String?
   status            AlterdataClienteStatus @default(ATIVO)
   qtdLicencas       Int                    @default(1)
   qtdUsuarios       Int                    @default(0)

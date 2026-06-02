@@ -9,12 +9,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const { id } = await params;
   const body = await request.json();
-  const { codPessoa, nome, unidade, status, qtdLicencas, qtdUsuarios, acessosFranqueado, acessosBackoffice, observacao } = body;
+  const { codPessoa, nome, unidade, cnpj, status, qtdLicencas, qtdUsuarios, acessosFranqueado, acessosBackoffice, observacao } = body;
 
   const data: Record<string, unknown> = {};
   if (codPessoa !== undefined) data.codPessoa = String(codPessoa).trim();
   if (nome !== undefined) data.nome = String(nome).trim();
   if (unidade !== undefined) data.unidade = unidade ? String(unidade).trim() : null;
+  if (cnpj !== undefined) data.cnpj = cnpj ? String(cnpj).replace(/\D/g, "") || null : null;
   if (status !== undefined) data.status = status as AlterdataClienteStatus;
   if (qtdLicencas !== undefined) data.qtdLicencas = Number(qtdLicencas);
   if (qtdUsuarios !== undefined) data.qtdUsuarios = Number(qtdUsuarios);

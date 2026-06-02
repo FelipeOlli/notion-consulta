@@ -44,11 +44,21 @@ const ALL_STATUS: AlterdataClienteStatus[] = ["ATIVO", "EM_ANDAMENTO", "INATIVO"
 const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const formatBRL = (n: number) => BRL.format(n);
 
+function maskCNPJ(v: string) {
+  const d = v.replace(/\D/g, "").slice(0, 14);
+  return d
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
+}
+
 const EMPTY_FORM = {
   codPessoa: "",
   nome: "",
   unidade: "",
   status: "ATIVO" as AlterdataClienteStatus,
+  cnpj: "",
   qtdLicencas: 1,
   qtdUsuarios: 0,
   acessosFranqueado: 0,
@@ -115,6 +125,7 @@ export function AlterdataDashboard({ isMaster }: Props) {
       codPessoa: c.codPessoa,
       nome: c.nome,
       unidade: c.unidade ?? "",
+      cnpj: c.cnpj ? maskCNPJ(c.cnpj) : "",
       status: c.status,
       qtdLicencas: c.qtdLicencas,
       qtdUsuarios: c.qtdUsuarios,
@@ -148,6 +159,7 @@ export function AlterdataDashboard({ isMaster }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
+        cnpj: form.cnpj.replace(/\D/g, "") || null,
         qtdLicencas: Number(form.qtdLicencas),
         qtdUsuarios: Number(form.qtdUsuarios),
         acessosFranqueado: Number(form.acessosFranqueado),
@@ -387,6 +399,17 @@ export function AlterdataDashboard({ isMaster }: Props) {
                   value={form.unidade}
                   onChange={(e) => setForm((f) => ({ ...f, unidade: e.target.value }))}
                   placeholder="CF EXEMPLO"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs mb-1" style={{ color: "var(--onity-dark-text-muted)" }}>CNPJ</label>
+                <input
+                  className="ds-input w-full"
+                  value={form.cnpj}
+                  onChange={(e) => setForm((f) => ({ ...f, cnpj: maskCNPJ(e.target.value) }))}
+                  maxLength={18}
+                  placeholder="00.000.000/0000-00"
                 />
               </div>
 

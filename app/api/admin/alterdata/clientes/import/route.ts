@@ -41,9 +41,11 @@ export async function POST(request: NextRequest) {
     }
 
     const rawUnidade = row["Unidade"] ?? row["Unidades"] ?? row["unidade"];
+    const rawCnpj = row["CNPJ"] ?? row["Cnpj"] ?? row["cnpj"];
     const data = {
       nome,
       unidade: rawUnidade ? String(rawUnidade).trim() : null,
+      cnpj: rawCnpj ? String(rawCnpj).replace(/\D/g, "") || null : null,
       status: parseStatus(row["Status"]),
       qtdLicencas: Number(row["Qtd. Licenças"] ?? row["Quantidade de Licenças"] ?? 1) || 1,
       qtdUsuarios: Number(row["Qtd. Usuários"] ?? row["Quantidade de Usuários Cadastrados"] ?? 0) || 0,
