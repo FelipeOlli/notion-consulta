@@ -22,7 +22,7 @@ function AutoResizeTextarea({ value, onChange, placeholder, className, onKeyDown
       ref={ref}
       rows={3}
       className={className}
-      style={{ resize: "none", overflow: "hidden", minHeight: "80px" }}
+      style={{ resize: "none", overflow: "hidden", minHeight: "80px", paddingTop: "12px" }}
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}

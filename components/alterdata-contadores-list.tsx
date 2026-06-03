@@ -64,7 +64,7 @@ export function AlterdataContadoresList({ clienteId }: Props) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold text-white/80">eContador</p>
+      <p className="text-xs font-semibold text-red-400">eContador</p>
 
       {/* Form adicionar */}
       <div className="grid grid-cols-2 gap-2">
