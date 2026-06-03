@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { formatBRL as _formatBRL, BACKOFFICE_UNIT_PRICE, FRANQUEADO_UNIT_PRICE } from "@/lib/alterdata-pricing";
 import { AlterdataCostDashboard } from "@/components/alterdata-cost-dashboard";
+import { AlterdataObservacoesList } from "@/components/alterdata-observacoes-list";
+import { AlterdataContadoresList } from "@/components/alterdata-contadores-list";
 import type { AlterdataCliente, AlterdataClienteStatus } from "@prisma/client";
 
 const STATUS_LABELS: Record<AlterdataClienteStatus, string> = {
@@ -69,9 +71,10 @@ const EMPTY_FORM = {
 
 interface Props {
   isMaster: boolean;
+  currentEmail: string;
 }
 
-export function AlterdataDashboard({ isMaster }: Props) {
+export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
   const [clientes, setClientes] = useState<AlterdataCliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState<AlterdataClienteStatus | "TODOS">("TODOS");
@@ -355,10 +358,12 @@ export function AlterdataDashboard({ isMaster }: Props) {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={(e) => { if (e.target === e.currentTarget) fecharForm(); }}
         >
-          <div className="glass-panel w-full max-w-lg rounded-2xl p-6 space-y-5">
-            <h2 className="text-lg font-bold text-white">
+          <div className="glass-panel w-full max-w-4xl rounded-2xl p-6">
+            <h2 className="text-lg font-bold text-white mb-5">
               {editando ? "Editar cliente" : "Novo cliente"}
             </h2>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Coluna esquerda — campos do cliente */}
             <form onSubmit={salvar} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -440,15 +445,12 @@ export function AlterdataDashboard({ isMaster }: Props) {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs mb-1" style={{ color: "var(--onity-dark-text-muted)" }}>Observação</label>
-                <input
-                  className="ds-input w-full"
-                  value={form.observacao}
-                  onChange={(e) => setForm((f) => ({ ...f, observacao: e.target.value }))}
-                  placeholder="Opcional"
-                />
-              </div>
+              {/* Bloco Contador — só para clientes já existentes */}
+              {editando && (
+                <div className="border-t border-white/10 pt-4">
+                  <AlterdataContadoresList clienteId={editando.id} />
+                </div>
+              )}
 
               {erro && <p className="text-sm text-red-400">{erro}</p>}
 
@@ -461,6 +463,20 @@ export function AlterdataDashboard({ isMaster }: Props) {
                 </button>
               </div>
             </form>
+
+            {/* Coluna direita — observações */}
+            <div className="border-t border-white/10 pt-4 lg:border-t-0 lg:border-l lg:pl-6 lg:pt-0">
+              {editando ? (
+                <AlterdataObservacoesList clienteId={editando.id} currentEmail={currentEmail} />
+              ) : (
+                <div className="flex h-full items-center justify-center">
+                  <p className="text-xs text-center" style={{ color: "var(--onity-dark-text-muted)" }}>
+                    Salve o cliente para registrar<br />observações e contadores.
+                  </p>
+                </div>
+              )}
+            </div>
+            </div>
           </div>
         </div>
       )}

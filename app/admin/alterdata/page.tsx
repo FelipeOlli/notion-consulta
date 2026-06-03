@@ -25,7 +25,7 @@ export default async function AlterdataPage() {
           </p>
         </header>
 
-        <AlterdataDashboard isMaster={isMaster} />
+        <AlterdataDashboard isMaster={isMaster} currentEmail={session.email} />
       </div>
     </main>
   );

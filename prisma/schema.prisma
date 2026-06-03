@@ -306,21 +306,48 @@ model IpMonitorProtocol {
 }
 
 model AlterdataCliente {
-  id                String                 @id @default(cuid())
-  codPessoa         String                 @unique
+  id                String                        @id @default(cuid())
+  codPessoa         String                        @unique
   nome              String
   unidade           String?
   cnpj              String?
-  status            AlterdataClienteStatus @default(ATIVO)
-  qtdLicencas       Int                    @default(1)
-  qtdUsuarios       Int                    @default(0)
-  acessosFranqueado Int                    @default(0)
-  acessosBackoffice Int                    @default(0)
+  status            AlterdataClienteStatus        @default(ATIVO)
+  qtdLicencas       Int                           @default(1)
+  qtdUsuarios       Int                           @default(0)
+  acessosFranqueado Int                           @default(0)
+  acessosBackoffice Int                           @default(0)
   observacao        String?
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
+  createdAt         DateTime                      @default(now())
+  updatedAt         DateTime                      @updatedAt
+  observacoes       AlterdataClienteObservacao[]
+  contadores        AlterdataClienteContador[]
 
   @@index([status])
+}
+
+model AlterdataClienteObservacao {
+  id          String           @id @default(cuid())
+  clienteId   String
+  cliente     AlterdataCliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  texto       String
+  authorEmail String
+  editedAt    DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([clienteId, createdAt])
+}
+
+model AlterdataClienteContador {
+  id        String           @id @default(cuid())
+  clienteId String
+  cliente   AlterdataCliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  login     String
+  senha     String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([clienteId])
 }
 
 enum TiTaskStatus {
