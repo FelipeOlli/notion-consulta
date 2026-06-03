@@ -52,9 +52,6 @@ export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
   const [loading, setLoading] = useState(true);
   const [novoTexto, setNovoTexto] = useState("");
   const [salvando, setSalvando] = useState(false);
-  const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [editTexto, setEditTexto] = useState("");
-  const [salvandoEdit, setSalvandoEdit] = useState(false);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
@@ -79,29 +76,11 @@ export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
     setSalvando(false);
   }
 
-  async function salvarEdicao(id: string) {
-    if (!editTexto.trim()) return;
-    setSalvandoEdit(true);
-    await fetch(`/api/admin/alterdata/observacoes/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ texto: editTexto }),
-    });
-    setEditandoId(null);
-    await carregar();
-    setSalvandoEdit(false);
-  }
-
   async function excluir(id: string) {
     setExcluindoId(id);
     await fetch(`/api/admin/alterdata/observacoes/${id}`, { method: "DELETE" });
     await carregar();
     setExcluindoId(null);
-  }
-
-  function iniciarEdicao(o: Observacao) {
-    setEditandoId(o.id);
-    setEditTexto(o.texto);
   }
 
   return (
@@ -136,64 +115,35 @@ export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
           <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Nenhuma observação ainda.</p>
         ) : (
           obs.map((o) => (
-            <div key={o.id} className="glass-card p-3 space-y-2 rounded-xl">
-              {editandoId === o.id ? (
-                <div className="space-y-2">
-                  <AutoResizeTextarea
-                    className="ds-input w-full text-sm"
-                    value={editTexto}
-                    onChange={setEditTexto}
-                    autoFocus
-                  />
-                  <div className="flex gap-2 justify-end">
-                    <button
-                      onClick={() => setEditandoId(null)}
-                      className="text-xs px-2 py-1 rounded text-white/50 hover:text-white/80 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={() => salvarEdicao(o.id)}
-                      disabled={salvandoEdit || !editTexto.trim()}
-                      className="text-xs px-3 py-1 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 disabled:opacity-40 transition-colors"
-                    >
-                      {salvandoEdit ? "..." : "Salvar"}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-white/85 whitespace-pre-wrap break-words">{o.texto}</p>
-              )}
-
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-xs truncate" style={{ color: "var(--onity-dark-text-muted)" }}>
-                    {o.authorEmail}
-                  </span>
-                  <span className="text-xs shrink-0" style={{ color: "var(--onity-dark-text-muted)" }}>
-                    · {fmt.format(new Date(o.createdAt))}
-                  </span>
-                  {o.editedAt && (
-                    <span className="text-xs shrink-0 text-white/30 italic">editado</span>
-                  )}
-                </div>
-
-                {o.authorEmail === currentEmail && editandoId !== o.id && (
-                  <div className="flex gap-2 shrink-0">
-                    <button
-                      onClick={() => iniciarEdicao(o)}
-                      className="text-xs text-blue-400/70 hover:text-blue-400 transition-colors"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => excluir(o.id)}
-                      disabled={excluindoId === o.id}
-                      className="text-xs text-red-400/70 hover:text-red-400 transition-colors disabled:opacity-40"
-                    >
-                      {excluindoId === o.id ? "..." : "Excluir"}
-                    </button>
-                  </div>
+            <div key={o.id} className="glass-card p-3 rounded-xl">
+              <div className="flex items-start gap-2">
+                <p className="flex-1 text-sm text-white/85 whitespace-pre-wrap break-words">{o.texto}</p>
+                {o.authorEmail === currentEmail && (
+                  <button
+                    onClick={() => excluir(o.id)}
+                    disabled={excluindoId === o.id}
+                    className="shrink-0 text-red-400/50 hover:text-red-400 transition-colors disabled:opacity-40 mt-0.5"
+                    title="Excluir observação"
+                  >
+                    {excluindoId === o.id ? (
+                      <span className="text-xs">...</span>
+                    ) : (
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    )}
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 mt-2 min-w-0">
+                <span className="text-xs truncate" style={{ color: "var(--onity-dark-text-muted)" }}>
+                  {o.authorEmail}
+                </span>
+                <span className="text-xs shrink-0" style={{ color: "var(--onity-dark-text-muted)" }}>
+                  · {fmt.format(new Date(o.createdAt))}
+                </span>
+                {o.editedAt && (
+                  <span className="text-xs shrink-0 text-white/30 italic">editado</span>
                 )}
               </div>
             </div>
