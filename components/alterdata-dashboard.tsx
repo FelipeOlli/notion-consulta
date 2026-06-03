@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { formatBRL as _formatBRL, BACKOFFICE_UNIT_PRICE, FRANQUEADO_UNIT_PRICE } from "@/lib/alterdata-pricing";
+import { AlterdataCostDashboard } from "@/components/alterdata-cost-dashboard";
 import type { AlterdataCliente, AlterdataClienteStatus } from "@prisma/client";
 
 const STATUS_LABELS: Record<AlterdataClienteStatus, string> = {
@@ -41,8 +43,7 @@ const CARD_ACCENT: Record<AlterdataClienteStatus, string> = {
 
 const ALL_STATUS: AlterdataClienteStatus[] = ["ATIVO", "EM_ANDAMENTO", "INATIVO", "INADIMPLENTE", "CONGELADO", "DISTRATADO"];
 
-const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const formatBRL = (n: number) => BRL.format(n);
+const formatBRL = _formatBRL;
 
 function maskCNPJ(v: string) {
   const d = v.replace(/\D/g, "").slice(0, 14);
@@ -203,6 +204,9 @@ export function AlterdataDashboard({ isMaster }: Props) {
 
   return (
     <div className="space-y-8">
+      {/* Dashboard de custos */}
+      <AlterdataCostDashboard clientes={clientes} />
+
       {/* Cards de status */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {ALL_STATUS.map((s) => (
@@ -316,8 +320,8 @@ export function AlterdataDashboard({ isMaster }: Props) {
                     <td className="px-4 py-3 text-center text-white/70">{c.qtdUsuarios}</td>
                     <td className="px-4 py-3 text-center text-white/70">{c.acessosFranqueado}</td>
                     <td className="px-4 py-3 text-center text-white/70">{c.acessosBackoffice}</td>
-                    <td className="px-4 py-3 text-center text-white/70">{formatBRL(c.acessosFranqueado * 160)}</td>
-                    <td className="px-4 py-3 text-center text-white/70">{formatBRL(c.acessosBackoffice * 120)}</td>
+                    <td className="px-4 py-3 text-center text-white/70">{formatBRL(c.acessosFranqueado * FRANQUEADO_UNIT_PRICE)}</td>
+                    <td className="px-4 py-3 text-center text-white/70">{formatBRL(c.acessosBackoffice * BACKOFFICE_UNIT_PRICE)}</td>
                     {isMaster && (
                       <td className="px-4 py-3">
                         <div className="flex gap-2 justify-end">
