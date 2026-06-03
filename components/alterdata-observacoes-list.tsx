@@ -1,6 +1,36 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+
+function AutoResizeTextarea({ value, onChange, placeholder, className, onKeyDown, autoFocus }: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  className?: string;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  autoFocus?: boolean;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.style.height = "auto";
+      ref.current.style.height = `${ref.current.scrollHeight}px`;
+    }
+  }, [value]);
+  return (
+    <textarea
+      ref={ref}
+      rows={3}
+      className={className}
+      style={{ resize: "none", overflow: "hidden", minHeight: "80px" }}
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={onKeyDown}
+      autoFocus={autoFocus}
+    />
+  );
+}
 
 interface Observacao {
   id: string;
@@ -80,12 +110,11 @@ export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
 
       {/* Form nova observação */}
       <div className="space-y-2">
-        <textarea
-          rows={3}
-          className="ds-input w-full resize-none text-sm"
+        <AutoResizeTextarea
+          className="ds-input w-full text-sm"
           placeholder="Registrar observação..."
           value={novoTexto}
-          onChange={(e) => setNovoTexto(e.target.value)}
+          onChange={setNovoTexto}
           onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) adicionar(); }}
         />
         <div className="flex justify-end">
@@ -110,11 +139,10 @@ export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
             <div key={o.id} className="glass-card p-3 space-y-2 rounded-xl">
               {editandoId === o.id ? (
                 <div className="space-y-2">
-                  <textarea
-                    rows={3}
-                    className="ds-input w-full resize-none text-sm"
+                  <AutoResizeTextarea
+                    className="ds-input w-full text-sm"
                     value={editTexto}
-                    onChange={(e) => setEditTexto(e.target.value)}
+                    onChange={setEditTexto}
                     autoFocus
                   />
                   <div className="flex gap-2 justify-end">
