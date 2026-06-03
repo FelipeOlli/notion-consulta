@@ -64,7 +64,7 @@ export function AlterdataContadoresList({ clienteId }: Props) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold text-white/80">Contador</p>
+      <p className="text-xs font-semibold text-white/80">eContador</p>
 
       {/* Form adicionar */}
       <div className="grid grid-cols-2 gap-2">
@@ -96,7 +96,7 @@ export function AlterdataContadoresList({ clienteId }: Props) {
       {loading ? (
         <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Carregando...</p>
       ) : contadores.length === 0 ? (
-        <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Nenhum contador cadastrado.</p>
+        <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Nenhum eContador cadastrado.</p>
       ) : (
         <div className="space-y-1.5">
           {contadores.map((c) => (

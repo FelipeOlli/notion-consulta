@@ -471,7 +471,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
               ) : (
                 <div className="flex h-full items-center justify-center">
                   <p className="text-xs text-center" style={{ color: "var(--onity-dark-text-muted)" }}>
-                    Salve o cliente para registrar<br />observações e contadores.
+                    Salve o cliente para registrar<br />observações e eContadores.
                   </p>
                 </div>
               )}
