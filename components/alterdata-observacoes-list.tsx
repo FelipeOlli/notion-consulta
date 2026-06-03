@@ -105,7 +105,7 @@ export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
   }
 
   return (
-    <div className="flex flex-col h-full space-y-3">
+    <div className="flex flex-col space-y-3">
       <p className="text-xs font-semibold text-white/80">Observações</p>
 
       {/* Form nova observação */}

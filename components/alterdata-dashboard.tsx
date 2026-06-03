@@ -362,9 +362,9 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
             <h2 className="text-lg font-bold text-white mb-5">
               {editando ? "Editar cliente" : "Novo cliente"}
             </h2>
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
             {/* Coluna esquerda — campos do cliente */}
-            <form onSubmit={salvar} className="space-y-4">
+            <form onSubmit={salvar} className="space-y-4 m-0">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs mb-1" style={{ color: "var(--onity-dark-text-muted)" }}>Código*</label>
