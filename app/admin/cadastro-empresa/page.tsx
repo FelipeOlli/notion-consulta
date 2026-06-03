@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/session";
 import { AdminNav } from "@/components/admin-nav";
 import { ALL_MODULES_FOR_MASTER, type AppModule } from "@/lib/modules";
+import { CadastroEmpresaIframe } from "@/components/cadastro-empresa-iframe";
 
 export default async function CadastroEmpresaPage() {
   const session = await getAdminSession();
@@ -26,13 +27,7 @@ export default async function CadastroEmpresaPage() {
           className="overflow-hidden rounded-2xl"
           style={{ border: "1px solid rgba(29,127,229,0.18)", height: "calc(100vh - 220px)", minHeight: "600px" }}
         >
-          <iframe
-            src="https://dashboard-tarefa-six.vercel.app/"
-            className="h-full w-full"
-            style={{ border: "none" }}
-            title="Cadastro de empresa"
-            allow="clipboard-write"
-          />
+          <CadastroEmpresaIframe />
         </div>
       </div>
     </main>
