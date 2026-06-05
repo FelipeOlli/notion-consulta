@@ -19,7 +19,7 @@ const descriptions: Record<AppModule, string> = {
   chips: "Gerencie os chips de telefone corporativos, operadoras e datas de recarga.",
 };
 
-const hrefs: Record<AppModule, string> = {
+export const moduleHrefs: Record<AppModule, string> = {
   senha: "/admin/links",
   certificados: "/admin/certificados",
   financeiro: "/admin/financeiro",
@@ -33,7 +33,7 @@ const hrefs: Record<AppModule, string> = {
 export function getPortalCardsForModules(modules: AppModule[]): PortalModuleCard[] {
   return modules.map((module) => ({
     module,
-    href: hrefs[module],
+    href: moduleHrefs[module],
     title: moduleLabels[module],
     description: descriptions[module],
   }));
