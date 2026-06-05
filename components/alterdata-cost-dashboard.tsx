@@ -28,7 +28,7 @@ const STATUS_COLORS: Record<AlterdataClienteStatus, string> = {
   DISTRATADO: "bg-orange-500",
 };
 
-const ACTIVE_STATUSES: AlterdataClienteStatus[] = ["ATIVO", "EM_ANDAMENTO", "INADIMPLENTE", "CONGELADO"];
+const ACTIVE_STATUSES: AlterdataClienteStatus[] = ["ATIVO"];
 const ALL_STATUSES: AlterdataClienteStatus[] = ["ATIVO", "EM_ANDAMENTO", "INATIVO", "INADIMPLENTE", "CONGELADO", "DISTRATADO"];
 
 interface Props {
@@ -98,7 +98,7 @@ export function AlterdataCostDashboard({ clientes }: Props) {
             {formatBRL(stats.mensalBackoffice)}
           </p>
           <p className="text-xs mt-1" style={{ color: "var(--onity-dark-text-muted)" }}>
-            backoffice · status ativos/em andamento/inadimplente/congelado
+            apenas clientes com status Ativo
           </p>
         </div>
 
