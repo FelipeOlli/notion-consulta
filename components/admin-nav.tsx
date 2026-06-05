@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import type { AppModule } from "@/lib/modules";
+import { PortalHeader } from "@/components/portal-header";
 
 type Props = {
   modules: AppModule[];
@@ -28,14 +29,7 @@ function itemStyle(active: boolean): React.CSSProperties {
 
 export function AdminNav({ modules }: Props) {
   const pathname = usePathname();
-  const router = useRouter();
   const can = (moduleKey: AppModule) => modules.includes(moduleKey);
-
-  async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/");
-    router.refresh();
-  }
 
   return (
     <nav className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -78,23 +72,13 @@ export function AdminNav({ modules }: Props) {
             Alterdata
           </Link>
         ) : null}
+        {can("chips") ? (
+          <Link href="/admin/chips" className={itemClass(pathname === "/admin/chips")} style={itemStyle(pathname === "/admin/chips")}>
+            Chips
+          </Link>
+        ) : null}
       </div>
-      <button
-        type="button"
-        onClick={handleLogout}
-        className="rounded-lg px-3 py-2 text-sm font-medium transition text-[#6b8aaa] hover:text-[#ff453a]"
-        style={{ background: "rgba(8,15,26,0.5)", border: "1px solid rgba(29,127,229,0.1)" }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "rgba(255,69,58,0.08)";
-          e.currentTarget.style.borderColor = "rgba(255,69,58,0.3)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "rgba(8,15,26,0.5)";
-          e.currentTarget.style.borderColor = "rgba(29,127,229,0.1)";
-        }}
-      >
-        Sair
-      </button>
+      <PortalHeader />
     </nav>
   );
 }

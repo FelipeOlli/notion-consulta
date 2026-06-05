@@ -72,6 +72,13 @@ export default async function AdminPage() {
       description: "Controle de clientes ativos, inativos, inadimplentes, congelados e distratados na plataforma Alterdata.",
     });
   }
+  if (modules.includes("chips")) {
+    cards.push({
+      href: "/admin/chips",
+      title: "Chips",
+      description: "Controle de chips de telefone: empresas, operadoras, recargas e vencimentos.",
+    });
+  }
 
   return (
     <main className="relative z-10 min-h-screen">

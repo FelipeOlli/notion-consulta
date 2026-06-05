@@ -14,6 +14,14 @@ enum AppModule {
   USUARIOS
   CADASTRO_EMPRESA
   ALTERDATA
+  CHIPS
+}
+
+enum ChipOperadora {
+  CLARO
+  TIM
+  VIVO
+  OI
 }
 
 enum AlterdataClienteStatus {
@@ -348,6 +356,28 @@ model AlterdataClienteContador {
   updatedAt DateTime         @updatedAt
 
   @@index([clienteId])
+}
+
+model ChipEmpresa {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  chips     Chip[]
+}
+
+model Chip {
+  id            String        @id @default(cuid())
+  numero        String
+  operadora     ChipOperadora
+  empresaId     String
+  empresa       ChipEmpresa   @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  ultimaRecarga DateTime
+  duracaoDias   Int
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([empresaId])
+  @@index([ultimaRecarga])
 }
 
 enum TiTaskStatus {
