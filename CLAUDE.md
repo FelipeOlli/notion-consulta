@@ -79,6 +79,6 @@
 - Inner pages (links, certificados, etc.) mantêm `AdminNav` para navegação entre módulos
 
 ## Sessões recentes
+- **2026-06-05** — Módulo Chips (controle de chips de telefone: empresas, operadoras CLARO/TIM/VIVO/OI, recargas); sininho de notificações no header (vencidos + próximos 3 dias); nav responsivo com overflow "Mais ▾" conforme largura da tela
 - **2026-05-26** — Remove nav header da home; cards de monitor colapsáveis (clique para expandir detalhes/ações); grid de módulos em 3 colunas
 - **2026-05-26** — Protocolos de atendimento no monitoramento (registro + exportação xlsx com filtros), redesign para System Design (slate + azul/roxo, Outfit+Inter), ordenação alfabética de conexões ativas/inativas
-- **2026-05-25** — Log de quedas (monitoramento), anti-flapping UP↔DOWN, importação CSV Google com auto-alocação por Org Unit Path, auto-alocação TIM por Departamento, templates de importação para download

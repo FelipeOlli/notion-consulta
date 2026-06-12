@@ -63,7 +63,7 @@ const EMPTY_MODAL: ModalState = {
   operadora: "CLARO",
   empresaId: "",
   ultimaRecarga: new Date().toISOString().slice(0, 10),
-  duracaoDias: "30",
+  duracaoDias: "90",
 };
 
 interface Props {
