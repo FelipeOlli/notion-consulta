@@ -15,6 +15,7 @@ type Monitor = {
   lastStatus: MonitorStatus;
   lastChecked: string | null;
   lastPing: number | null;
+  lastDownAt: string | null;
 };
 
 type MonitorEvent = {
@@ -63,6 +64,11 @@ function dot(status: MonitorStatus) {
       style={{ background: STATUS_DOT[status], boxShadow: status === "UP" ? `0 0 6px ${STATUS_DOT[status]}` : undefined }}
     />
   );
+}
+
+function daysSince(iso: string | null): number | null {
+  if (!iso) return null;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
 }
 
 function ago(iso: string | null) {
@@ -510,7 +516,21 @@ export function AdminMonitorDashboard() {
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     {dot(m.lastStatus)}
-                    <span className="text-sm font-semibold text-white truncate">{m.name}</span>
+                    <div className="min-w-0">
+                      <span className="text-sm font-semibold text-white truncate block">{m.name}</span>
+                      {(() => {
+                        const days = daysSince(m.lastDownAt);
+                        if (days === null) return (
+                          <span className="text-[10px]" style={{ color: "var(--onity-dark-text-muted)" }}>sem quedas registradas</span>
+                        );
+                        if (days === 0) return (
+                          <span className="text-[10px] text-[#ff453a]">queda hoje</span>
+                        );
+                        return (
+                          <span className="text-[10px] text-[#00cc66]">{days}d sem quedas</span>
+                        );
+                      })()}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span

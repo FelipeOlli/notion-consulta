@@ -7,11 +7,24 @@ export async function GET() {
   if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
 
   const monitors = await prisma.ipMonitor.findMany({
-    include: { group: true },
+    include: {
+      group: true,
+      events: {
+        where: { status: "DOWN" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { createdAt: true },
+      },
+    },
     orderBy: [{ active: "desc" }, { name: "asc" }],
   });
 
-  return NextResponse.json({ data: monitors });
+  const data = monitors.map(({ events, ...m }) => ({
+    ...m,
+    lastDownAt: events[0]?.createdAt ?? null,
+  }));
+
+  return NextResponse.json({ data });
 }
 
 export async function POST(request: NextRequest) {
