@@ -259,6 +259,12 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
             >
               Baixar template
             </a>
+            <a
+              href="/api/admin/alterdata/clientes/export"
+              className="text-sm px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors whitespace-nowrap"
+            >
+              Exportar xlsx
+            </a>
             <button
               onClick={() => { setImportAberto(true); setImportResultado(null); }}
               className="text-sm px-3 py-2 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors whitespace-nowrap"
