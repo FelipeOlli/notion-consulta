@@ -460,9 +460,9 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
               {/* Credenciais — só para clientes já existentes */}
               {editando && (
                 <div className="border-t border-white/10 pt-4 space-y-5">
-                  <AlterdataContadoresList clienteId={editando.id} tipo="ECONTADOR" titulo="eContador" />
                   <AlterdataContadoresList clienteId={editando.id} tipo="NUVEM" titulo="Alterdata Nuvem" />
                   <AlterdataContadoresList clienteId={editando.id} tipo="PACK" titulo="Alterdata Pack" />
+                  <AlterdataContadoresList clienteId={editando.id} tipo="ECONTADOR" titulo="eContador" />
                 </div>
               )}
 
