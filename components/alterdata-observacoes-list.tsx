@@ -62,6 +62,7 @@ function AnexoPreview({ anexo, canDelete, onDelete }: { anexo: Anexo; canDelete:
   const url = `/api/admin/alterdata/observacoes/anexos/${anexo.id}`;
   const isImage = anexo.mimeType.startsWith("image/");
   const isVideo = anexo.mimeType.startsWith("video/");
+  const isAudio = anexo.mimeType.startsWith("audio/");
 
   if (isImage) {
     return (
@@ -100,6 +101,35 @@ function AnexoPreview({ anexo, canDelete, onDelete }: { anexo: Anexo; canDelete:
           className="rounded-lg"
           style={{ maxHeight: "120px", border: "1px solid rgba(255,255,255,0.08)" }}
         />
+        {canDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="absolute top-1 right-1 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{ background: "rgba(239,68,68,0.8)" }}
+            title="Excluir anexo"
+          >
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (isAudio) {
+    return (
+      <div className="relative group" style={{ maxWidth: "260px" }}>
+        <audio
+          src={url}
+          controls
+          className="rounded-lg w-full"
+          style={{ height: "40px" }}
+        />
+        <p className="text-xs mt-0.5 truncate" style={{ color: "var(--onity-dark-text-muted)" }}>
+          {anexo.fileName}
+        </p>
         {canDelete && (
           <button
             type="button"
@@ -278,7 +308,7 @@ export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
             ref={fileInputRef}
             type="file"
             multiple
-            accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx"
+            accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx"
             className="hidden"
             onChange={(e) => addFiles(e.target.files)}
             onClick={(e) => { (e.currentTarget as HTMLInputElement).value = ""; }}

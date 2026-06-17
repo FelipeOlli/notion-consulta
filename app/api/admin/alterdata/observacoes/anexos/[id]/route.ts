@@ -18,7 +18,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   try {
     const content = await fs.readFile(path.join(process.cwd(), anexo.filePath));
-    const isInline = anexo.mimeType.startsWith("image/") || anexo.mimeType.startsWith("video/");
+    const isInline = anexo.mimeType.startsWith("image/") || anexo.mimeType.startsWith("video/") || anexo.mimeType.startsWith("audio/");
     return new NextResponse(content, {
       status: 200,
       headers: {

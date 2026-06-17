@@ -9,7 +9,7 @@ import { ensureModuleAccess } from "@/lib/admin-auth";
 const ANEXOS_DIR = path.join(process.cwd(), "data", "anexos");
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
-const ALLOWED_MIME_PREFIXES = ["image/", "video/"];
+const ALLOWED_MIME_PREFIXES = ["image/", "video/", "audio/"];
 const ALLOWED_MIME_EXACT = [
   "application/pdf",
   "application/msword",
