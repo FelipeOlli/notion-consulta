@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Props = {
   open: boolean;
@@ -14,6 +14,12 @@ export function MinhaContaModal({ open, onClose }: Props) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(handleClose, 1500);
+    return () => clearTimeout(timer);
+  }, [success]);
 
   if (!open) return null;
 
@@ -44,7 +50,7 @@ export function MinhaContaModal({ open, onClose }: Props) {
       const res = await fetch("/api/auth/me/password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
+        body: JSON.stringify({ currentPassword, newPassword }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -52,7 +58,6 @@ export function MinhaContaModal({ open, onClose }: Props) {
         return;
       }
       setSuccess(true);
-      setTimeout(handleClose, 1500);
     } catch {
       setError("Não foi possível conectar ao servidor.");
     } finally {
@@ -62,7 +67,7 @@ export function MinhaContaModal({ open, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.6)" }}
       onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
     >
@@ -70,17 +75,18 @@ export function MinhaContaModal({ open, onClose }: Props) {
         className="w-full max-w-sm rounded-2xl p-6 space-y-4"
         style={{ background: "var(--onity-dark-surface)", border: "1px solid rgba(59,130,246,0.2)" }}
       >
-        <p className="text-base font-semibold text-white">Troca de Senha</p>
+        <h2 className="text-base font-semibold text-white">Troca de Senha</h2>
 
         {success ? (
           <p className="text-sm text-green-400">Senha atualizada com sucesso!</p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="block text-xs mb-1.5" style={{ color: "var(--onity-dark-text-muted)" }}>
+              <label htmlFor="current-password" className="block text-xs mb-1.5" style={{ color: "var(--onity-dark-text-muted)" }}>
                 Senha atual
               </label>
               <input
+                id="current-password"
                 type="password"
                 className="ds-input w-full text-sm"
                 value={currentPassword}
@@ -90,10 +96,11 @@ export function MinhaContaModal({ open, onClose }: Props) {
               />
             </div>
             <div>
-              <label className="block text-xs mb-1.5" style={{ color: "var(--onity-dark-text-muted)" }}>
+              <label htmlFor="new-password" className="block text-xs mb-1.5" style={{ color: "var(--onity-dark-text-muted)" }}>
                 Nova senha
               </label>
               <input
+                id="new-password"
                 type="password"
                 className="ds-input w-full text-sm"
                 value={newPassword}
@@ -103,10 +110,11 @@ export function MinhaContaModal({ open, onClose }: Props) {
               />
             </div>
             <div>
-              <label className="block text-xs mb-1.5" style={{ color: "var(--onity-dark-text-muted)" }}>
+              <label htmlFor="confirm-password" className="block text-xs mb-1.5" style={{ color: "var(--onity-dark-text-muted)" }}>
                 Confirmar nova senha
               </label>
               <input
+                id="confirm-password"
                 type="password"
                 className="ds-input w-full text-sm"
                 value={confirmPassword}
