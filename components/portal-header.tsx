@@ -17,8 +17,15 @@ export function PortalHeader() {
         setDropdownOpen(false);
       }
     }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setDropdownOpen(false);
+    }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   async function handleLogout() {
@@ -52,6 +59,7 @@ export function PortalHeader() {
 
           {dropdownOpen && (
             <div
+              role="menu"
               className="absolute right-0 mt-1 w-44 rounded-xl py-1 z-40"
               style={{
                 background: "var(--onity-dark-surface)",
@@ -61,6 +69,7 @@ export function PortalHeader() {
             >
               <button
                 type="button"
+                role="menuitem"
                 onClick={handleOpenModal}
                 className="w-full text-left px-4 py-2 text-sm transition text-[#6b8aaa] hover:text-white hover:bg-white/5"
               >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 type Props = {
   open: boolean;
@@ -15,22 +15,22 @@ export function MinhaContaModal({ open, onClose }: Props) {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!success) return;
-    const timer = setTimeout(handleClose, 1500);
-    return () => clearTimeout(timer);
-  }, [success]);
-
-  if (!open) return null;
-
-  function handleClose() {
+  const handleClose = useCallback(() => {
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
     setError("");
     setSuccess(false);
     onClose();
-  }
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(handleClose, 1500);
+    return () => clearTimeout(timer);
+  }, [success, handleClose]);
+
+  if (!open) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
