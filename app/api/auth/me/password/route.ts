@@ -18,9 +18,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const currentPassword = String(body?.currentPassword ?? "").trim();
-    const newPassword = String(body?.newPassword ?? "").trim();
-    const confirmPassword = String(body?.confirmPassword ?? "").trim();
+    const currentPassword = String(body?.currentPassword ?? "");
+    const newPassword = String(body?.newPassword ?? "");
+    const confirmPassword = String(body?.confirmPassword ?? "");
 
     if (!currentPassword || !newPassword || !confirmPassword) {
       return NextResponse.json({ message: "Todos os campos são obrigatórios." }, { status: 400 });
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     const valid = await verifyPassword(currentPassword, user.passwordHash);
     if (!valid) {
-      return NextResponse.json({ message: "Senha atual incorreta." }, { status: 400 });
+      return NextResponse.json({ message: "Senha atual incorreta." }, { status: 401 });
     }
 
     await prisma.user.update({
