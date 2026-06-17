@@ -346,16 +346,30 @@ model AlterdataCliente {
 }
 
 model AlterdataClienteObservacao {
-  id          String           @id @default(cuid())
+  id          String                       @id @default(cuid())
   clienteId   String
-  cliente     AlterdataCliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  cliente     AlterdataCliente             @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   texto       String
   authorEmail String
   editedAt    DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  createdAt   DateTime                     @default(now())
+  updatedAt   DateTime                     @updatedAt
+  anexos      AlterdataObservacaoAnexo[]
 
   @@index([clienteId, createdAt])
+}
+
+model AlterdataObservacaoAnexo {
+  id           String                     @id @default(cuid())
+  observacaoId String
+  observacao   AlterdataClienteObservacao @relation(fields: [observacaoId], references: [id], onDelete: Cascade)
+  filePath     String
+  fileName     String
+  fileSize     Int
+  mimeType     String
+  createdAt    DateTime                   @default(now())
+
+  @@index([observacaoId])
 }
 
 model AlterdataClienteContador {

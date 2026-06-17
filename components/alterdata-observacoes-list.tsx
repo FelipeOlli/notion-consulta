@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 function AutoResizeTextarea({ value, onChange, placeholder, className, onKeyDown, autoFocus }: {
   value: string;
@@ -32,15 +33,130 @@ function AutoResizeTextarea({ value, onChange, placeholder, className, onKeyDown
   );
 }
 
+interface Anexo {
+  id: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  createdAt: string;
+}
+
 interface Observacao {
   id: string;
   texto: string;
   authorEmail: string;
   editedAt: string | null;
   createdAt: string;
+  anexos: Anexo[];
 }
 
 const fmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function AnexoPreview({ anexo, canDelete, onDelete }: { anexo: Anexo; canDelete: boolean; onDelete: () => void }) {
+  const url = `/api/admin/alterdata/observacoes/anexos/${anexo.id}`;
+  const isImage = anexo.mimeType.startsWith("image/");
+  const isVideo = anexo.mimeType.startsWith("video/");
+
+  if (isImage) {
+    return (
+      <div className="relative group">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={url}
+          alt={anexo.fileName}
+          className="rounded-lg object-cover cursor-pointer"
+          style={{ height: "80px", maxWidth: "120px", border: "1px solid rgba(255,255,255,0.08)" }}
+          onClick={() => window.open(url, "_blank")}
+        />
+        {canDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="absolute top-1 right-1 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{ background: "rgba(239,68,68,0.8)" }}
+            title="Excluir anexo"
+          >
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (isVideo) {
+    return (
+      <div className="relative group" style={{ maxWidth: "240px" }}>
+        <video
+          src={url}
+          controls
+          className="rounded-lg"
+          style={{ maxHeight: "120px", border: "1px solid rgba(255,255,255,0.08)" }}
+        />
+        {canDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="absolute top-1 right-1 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{ background: "rgba(239,68,68,0.8)" }}
+            title="Excluir anexo"
+          >
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // Documento genérico
+  return (
+    <div
+      className="flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+      style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}
+    >
+      <svg className="w-4 h-4 shrink-0" style={{ color: "#60a5fa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+          d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+      <div className="min-w-0">
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-xs text-blue-400 hover:text-blue-300 truncate transition-colors"
+          style={{ maxWidth: "140px" }}
+        >
+          {anexo.fileName}
+        </a>
+        <span className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
+          {formatBytes(anexo.fileSize)}
+        </span>
+      </div>
+      {canDelete && (
+        <button
+          type="button"
+          onClick={onDelete}
+          className="shrink-0 text-red-400/50 hover:text-red-400 transition-colors ml-1"
+          title="Excluir anexo"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   clienteId: string;
@@ -51,8 +167,11 @@ export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
   const [obs, setObs] = useState<Observacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [novoTexto, setNovoTexto] = useState("");
+  const [novoArquivos, setNovoArquivos] = useState<File[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [confirmar, setConfirmar] = useState<{ acao: () => void; mensagem: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const carregar = useCallback(async () => {
     const res = await fetch(`/api/admin/alterdata/clientes/${clienteId}/observacoes`);
@@ -63,16 +182,37 @@ export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  async function adicionar() {
-    if (!novoTexto.trim()) return;
-    setSalvando(true);
-    await fetch(`/api/admin/alterdata/clientes/${clienteId}/observacoes`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ texto: novoTexto }),
+  function addFiles(files: FileList | null) {
+    if (!files) return;
+    setNovoArquivos((prev) => {
+      const existingNames = new Set(prev.map((f) => f.name));
+      const novos = Array.from(files).filter((f) => !existingNames.has(f.name));
+      return [...prev, ...novos];
     });
-    setNovoTexto("");
-    await carregar();
+  }
+
+  function removeFile(name: string) {
+    setNovoArquivos((prev) => prev.filter((f) => f.name !== name));
+  }
+
+  async function adicionar() {
+    if (!novoTexto.trim() && novoArquivos.length === 0) return;
+    setSalvando(true);
+    const fd = new FormData();
+    fd.append("texto", novoTexto);
+    novoArquivos.forEach((f) => fd.append("file", f));
+    const res = await fetch(`/api/admin/alterdata/clientes/${clienteId}/observacoes`, {
+      method: "POST",
+      body: fd,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Erro ao salvar." }));
+      alert(err.message ?? "Erro ao salvar.");
+    } else {
+      setNovoTexto("");
+      setNovoArquivos([]);
+      await carregar();
+    }
     setSalvando(false);
   }
 
@@ -81,6 +221,11 @@ export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
     await fetch(`/api/admin/alterdata/observacoes/${id}`, { method: "DELETE" });
     await carregar();
     setExcluindoId(null);
+  }
+
+  async function excluirAnexo(anexoId: string) {
+    await fetch(`/api/admin/alterdata/observacoes/anexos/${anexoId}`, { method: "DELETE" });
+    await carregar();
   }
 
   return (
@@ -96,10 +241,52 @@ export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
           onChange={setNovoTexto}
           onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) adicionar(); }}
         />
-        <div className="flex justify-end">
+
+        {/* Arquivos selecionados */}
+        {novoArquivos.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {novoArquivos.map((f) => (
+              <div
+                key={f.name}
+                className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs"
+                style={{ border: "1px solid rgba(59,130,246,0.25)", background: "rgba(59,130,246,0.08)", color: "#93c5fd" }}
+              >
+                <span className="max-w-[120px] truncate">{f.name}</span>
+                <span className="text-white/30">({formatBytes(f.size)})</span>
+                <button
+                  type="button"
+                  onClick={() => removeFile(f.name)}
+                  className="text-white/40 hover:text-red-400 transition-colors ml-0.5"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between">
           <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+            style={{ borderColor: "rgba(139,92,246,0.3)", color: "#a78bfa" }}
+          >
+            📎 Anexar
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx"
+            className="hidden"
+            onChange={(e) => addFiles(e.target.files)}
+            onClick={(e) => { (e.currentTarget as HTMLInputElement).value = ""; }}
+          />
+          <button
+            type="button"
             onClick={adicionar}
-            disabled={salvando || !novoTexto.trim()}
+            disabled={salvando || (!novoTexto.trim() && novoArquivos.length === 0)}
             className="text-xs px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors disabled:opacity-40"
           >
             {salvando ? "Salvando..." : "Adicionar"}
@@ -117,10 +304,13 @@ export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
           obs.map((o) => (
             <div key={o.id} className="glass-card p-3 rounded-xl">
               <div className="flex items-start gap-2">
-                <p className="flex-1 text-sm text-white/85 whitespace-pre-wrap break-words">{o.texto}</p>
+                {o.texto && (
+                  <p className="flex-1 text-sm text-white/85 whitespace-pre-wrap break-words">{o.texto}</p>
+                )}
                 {o.authorEmail === currentEmail && (
                   <button
-                    onClick={() => excluir(o.id)}
+                    type="button"
+                    onClick={() => setConfirmar({ acao: () => excluir(o.id), mensagem: "Excluir esta observação?" })}
                     disabled={excluindoId === o.id}
                     className="shrink-0 text-red-400/50 hover:text-red-400 transition-colors disabled:opacity-40 mt-0.5"
                     title="Excluir observação"
@@ -129,12 +319,31 @@ export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
                       <span className="text-xs">...</span>
                     ) : (
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     )}
                   </button>
                 )}
               </div>
+
+              {/* Anexos da observação */}
+              {o.anexos.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {o.anexos.map((a) => (
+                    <AnexoPreview
+                      key={a.id}
+                      anexo={a}
+                      canDelete={o.authorEmail === currentEmail}
+                      onDelete={() => setConfirmar({
+                        acao: () => excluirAnexo(a.id),
+                        mensagem: `Excluir o arquivo "${a.fileName}"?`,
+                      })}
+                    />
+                  ))}
+                </div>
+              )}
+
               <div className="flex items-center gap-1.5 mt-2 min-w-0">
                 <span className="text-xs truncate" style={{ color: "var(--onity-dark-text-muted)" }}>
                   {o.authorEmail}
@@ -150,6 +359,14 @@ export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
           ))
         )}
       </div>
+
+      {confirmar && (
+        <ConfirmModal
+          mensagem={confirmar.mensagem}
+          onConfirm={() => { confirmar.acao(); setConfirmar(null); }}
+          onCancel={() => setConfirmar(null)}
+        />
+      )}
     </div>
   );
 }

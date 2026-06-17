@@ -1,3 +1,5 @@
+import { promises as fs } from "fs";
+import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/session";
@@ -28,12 +30,21 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const session = await getAdminSession();
   if (!session) return NextResponse.json({ message: "Acesso negado." }, { status: 403 });
 
-  const obs = await prisma.alterdataClienteObservacao.findUnique({ where: { id } });
+  const obs = await prisma.alterdataClienteObservacao.findUnique({
+    where: { id },
+    include: { anexos: true },
+  });
   if (!obs) return NextResponse.json({ message: "Não encontrado." }, { status: 404 });
   if (obs.authorEmail !== session.email) {
     return NextResponse.json({ message: "Só o autor pode excluir." }, { status: 403 });
   }
 
   await prisma.alterdataClienteObservacao.delete({ where: { id } });
+
+  // Remove arquivos do disco (cascade já removeu os registros)
+  for (const anexo of obs.anexos) {
+    await fs.unlink(path.join(process.cwd(), anexo.filePath)).catch(() => null);
+  }
+
   return new NextResponse(null, { status: 204 });
 }
