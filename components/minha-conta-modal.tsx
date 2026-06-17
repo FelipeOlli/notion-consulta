@@ -30,6 +30,15 @@ export function MinhaContaModal({ open, onClose }: Props) {
     return () => clearTimeout(timer);
   }, [success, handleClose]);
 
+  useEffect(() => {
+    if (!open) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") handleClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, handleClose]);
+
   if (!open) return null;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -50,7 +59,7 @@ export function MinhaContaModal({ open, onClose }: Props) {
       const res = await fetch("/api/auth/me/password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword, newPassword }),
+        body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -93,6 +102,7 @@ export function MinhaContaModal({ open, onClose }: Props) {
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 required
                 autoComplete="current-password"
+                autoFocus
               />
             </div>
             <div>

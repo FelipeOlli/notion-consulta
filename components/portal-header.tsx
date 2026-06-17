@@ -47,6 +47,8 @@ export function PortalHeader() {
         <div className="relative" ref={dropdownRef}>
           <button
             type="button"
+            aria-haspopup="menu"
+            aria-expanded={dropdownOpen}
             onClick={() => setDropdownOpen((v) => !v)}
             className="rounded-lg px-4 py-2 text-sm font-medium transition text-[#6b8aaa] hover:text-white"
             style={{
