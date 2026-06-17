@@ -8,11 +8,15 @@ interface Contador {
   senha: string;
 }
 
+type CredencialTipo = "ECONTADOR" | "NUVEM" | "PACK";
+
 interface Props {
   clienteId: string;
+  tipo: CredencialTipo;
+  titulo: string;
 }
 
-export function AlterdataContadoresList({ clienteId }: Props) {
+export function AlterdataContadoresList({ clienteId, tipo, titulo }: Props) {
   const [contadores, setContadores] = useState<Contador[]>([]);
   const [loading, setLoading] = useState(true);
   const [login, setLogin] = useState("");
@@ -23,11 +27,11 @@ export function AlterdataContadoresList({ clienteId }: Props) {
   const [copiado, setCopiado] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
-    const res = await fetch(`/api/admin/alterdata/clientes/${clienteId}/contadores`);
+    const res = await fetch(`/api/admin/alterdata/clientes/${clienteId}/contadores?tipo=${tipo}`);
     const data = await res.json();
     setContadores(Array.isArray(data) ? data : []);
     setLoading(false);
-  }, [clienteId]);
+  }, [clienteId, tipo]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
@@ -37,7 +41,7 @@ export function AlterdataContadoresList({ clienteId }: Props) {
     await fetch(`/api/admin/alterdata/clientes/${clienteId}/contadores`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ login, senha }),
+      body: JSON.stringify({ login, senha, tipo }),
     });
     setLogin("");
     setSenha("");
@@ -64,7 +68,7 @@ export function AlterdataContadoresList({ clienteId }: Props) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold text-red-400">eContador</p>
+      <p className="text-xs font-semibold text-red-400">{titulo}</p>
 
       {/* Form adicionar */}
       <div className="grid grid-cols-2 gap-2">
@@ -96,7 +100,7 @@ export function AlterdataContadoresList({ clienteId }: Props) {
       {loading ? (
         <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Carregando...</p>
       ) : contadores.length === 0 ? (
-        <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Nenhum eContador cadastrado.</p>
+        <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Nenhum {titulo} cadastrado.</p>
       ) : (
         <div className="space-y-1.5">
           {contadores.map((c) => (

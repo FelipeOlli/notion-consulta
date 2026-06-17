@@ -15,6 +15,12 @@ enum AppModule {
   CADASTRO_EMPRESA
   ALTERDATA
   CHIPS
+  DOMINIO
+}
+
+enum DominioSscStatus {
+  ABERTA
+  RESOLVIDA
 }
 
 enum ChipOperadora {
@@ -31,6 +37,12 @@ enum AlterdataClienteStatus {
   INADIMPLENTE
   CONGELADO
   DISTRATADO
+}
+
+enum AlterdataCredencialTipo {
+  ECONTADOR
+  NUVEM
+  PACK
 }
 
 enum UsageSource {
@@ -347,15 +359,16 @@ model AlterdataClienteObservacao {
 }
 
 model AlterdataClienteContador {
-  id        String           @id @default(cuid())
+  id        String                   @id @default(cuid())
   clienteId String
-  cliente   AlterdataCliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  cliente   AlterdataCliente         @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  tipo      AlterdataCredencialTipo  @default(ECONTADOR)
   login     String
   senha     String
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  createdAt DateTime                 @default(now())
+  updatedAt DateTime                 @updatedAt
 
-  @@index([clienteId])
+  @@index([clienteId, tipo])
 }
 
 model ChipEmpresa {
@@ -378,6 +391,36 @@ model Chip {
 
   @@index([empresaId])
   @@index([ultimaRecarga])
+}
+
+model DominioSsc {
+  id            String             @id @default(cuid())
+  numero        String             @unique
+  assunto       String?
+  status        DominioSscStatus   @default(ABERTA)
+  criadoPor     String?
+  lastCheckedAt DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  updates       DominioSscUpdate[]
+
+  @@index([status])
+}
+
+model DominioSscUpdate {
+  id             String     @id @default(cuid())
+  sscId          String
+  ssc            DominioSsc @relation(fields: [sscId], references: [id], onDelete: Cascade)
+  gmailMessageId String
+  remetente      String?
+  assunto        String?
+  snippet        String?
+  receivedAt     DateTime?
+  visto          Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+
+  @@unique([sscId, gmailMessageId])
+  @@index([sscId, createdAt])
 }
 
 enum TiTaskStatus {
