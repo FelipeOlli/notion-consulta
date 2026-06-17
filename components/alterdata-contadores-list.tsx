@@ -88,6 +88,7 @@ export function AlterdataContadoresList({ clienteId, tipo, titulo }: Props) {
       </div>
       <div className="flex justify-end">
         <button
+          type="button"
           onClick={adicionar}
           disabled={salvando || !login.trim() || !senha.trim()}
           className="text-xs px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors disabled:opacity-40"
@@ -111,6 +112,7 @@ export function AlterdataContadoresList({ clienteId, tipo, titulo }: Props) {
                   <div className="flex items-center gap-1.5">
                     <span className="text-white/80 truncate text-xs font-mono">{c.login}</span>
                     <button
+                      type="button"
                       onClick={() => copiar(c.login, `login-${c.id}`)}
                       className="text-white/30 hover:text-white/70 transition-colors shrink-0"
                       title="Copiar login"
@@ -130,6 +132,7 @@ export function AlterdataContadoresList({ clienteId, tipo, titulo }: Props) {
                       {visiveis[c.id] ? c.senha : "••••••••"}
                     </span>
                     <button
+                      type="button"
                       onClick={() => toggleVisivel(c.id)}
                       className="text-white/30 hover:text-white/70 transition-colors shrink-0"
                       title={visiveis[c.id] ? "Ocultar" : "Mostrar"}
@@ -141,6 +144,7 @@ export function AlterdataContadoresList({ clienteId, tipo, titulo }: Props) {
                       )}
                     </button>
                     <button
+                      type="button"
                       onClick={() => copiar(c.senha, `senha-${c.id}`)}
                       className="text-white/30 hover:text-white/70 transition-colors shrink-0"
                       title="Copiar senha"
@@ -155,6 +159,7 @@ export function AlterdataContadoresList({ clienteId, tipo, titulo }: Props) {
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => excluir(c.id)}
                 disabled={excluindo === c.id}
                 className="text-red-400/60 hover:text-red-400 transition-colors shrink-0 disabled:opacity-40"
