@@ -27,11 +27,20 @@ type MonitorEvent = {
   createdAt: string;
 };
 
+type Anexo = {
+  id: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  createdAt: string;
+};
+
 type Protocol = {
   id: string;
   protocol: string;
   serviceOrder: string;
   observacao: string | null;
+  anexos: Anexo[];
   createdAt: string;
 };
 
@@ -58,6 +67,142 @@ const STATUS_DOT: Record<MonitorStatus, string> = {
 };
 
 const STATUS_LABEL: Record<MonitorStatus, string> = { UP: "Online", DOWN: "Offline", PENDING: "Aguardando" };
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function AnexoPreview({
+  anexo,
+  onDelete,
+}: {
+  anexo: Anexo;
+  onDelete: () => void;
+}) {
+  const url = `/api/admin/monitors/protocols/anexos/${anexo.id}`;
+  const isImage = anexo.mimeType.startsWith("image/");
+  const isVideo = anexo.mimeType.startsWith("video/");
+  const isAudio = anexo.mimeType.startsWith("audio/");
+
+  if (isImage) {
+    return (
+      <div className="relative group">
+        <img
+          src={url}
+          alt={anexo.fileName}
+          className="rounded-lg object-cover cursor-pointer"
+          style={{ height: "80px", maxWidth: "120px", border: "1px solid rgba(255,255,255,0.08)" }}
+          onClick={() => window.open(url, "_blank")}
+        />
+        <button
+          type="button"
+          onClick={onDelete}
+          className="absolute top-1 right-1 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ background: "rgba(239,68,68,0.8)" }}
+          title="Excluir anexo"
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" className="text-white">
+            <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+  if (isVideo) {
+    return (
+      <div className="relative group" style={{ maxWidth: "240px" }}>
+        <video
+          src={url}
+          controls
+          className="rounded-lg"
+          style={{ maxHeight: "120px", border: "1px solid rgba(255,255,255,0.08)" }}
+        />
+        <button
+          type="button"
+          onClick={onDelete}
+          className="absolute top-1 right-1 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ background: "rgba(239,68,68,0.8)" }}
+          title="Excluir anexo"
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" className="text-white">
+            <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+  if (isAudio) {
+    return (
+      <div className="relative group" style={{ maxWidth: "260px" }}>
+        <audio src={url} controls className="rounded-lg w-full" style={{ height: "40px" }} />
+        <p className="text-xs mt-0.5 truncate" style={{ color: "var(--onity-dark-text-muted)" }}>
+          {anexo.fileName}
+        </p>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="absolute top-0 right-0 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ background: "rgba(239,68,68,0.8)" }}
+          title="Excluir anexo"
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" className="text-white">
+            <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+  // Documento genérico
+  return (
+    <div
+      className="flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+      style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 text-[#6b8aaa]">
+        <path
+          d="M4 2h5.5L13 5.5V14H4V2z"
+          stroke="currentColor"
+          strokeWidth="1.2"
+          strokeLinejoin="round"
+        />
+        <path d="M9 2v4h4" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+      </svg>
+      <div className="min-w-0">
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-xs text-blue-400 hover:text-blue-300 truncate transition-colors"
+          style={{ maxWidth: "140px" }}
+        >
+          {anexo.fileName}
+        </a>
+        <span className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
+          {formatBytes(anexo.fileSize)}
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={onDelete}
+        className="shrink-0 rounded p-0.5 transition-colors hover:bg-[rgba(255,69,58,0.15)]"
+        style={{ color: "#ff453a" }}
+        title="Excluir anexo"
+      >
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path
+            d="M2 3h8M5 3V2h2v1M4.5 3v6.5h3V3"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+    </div>
+  );
+}
 
 function dot(status: MonitorStatus) {
   return (
@@ -105,8 +250,10 @@ export function AdminMonitorDashboard() {
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [protocolsLoading, setProtocolsLoading] = useState(false);
   const [protocolForm, setProtocolForm] = useState({ protocol: "", serviceOrder: "", observacao: "" });
+  const [protocolFiles, setProtocolFiles] = useState<File[]>([]);
   const [protocolSaving, setProtocolSaving] = useState(false);
   const [protocolError, setProtocolError] = useState("");
+  const protocolFileInputRef = useRef<HTMLInputElement>(null);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -284,6 +431,7 @@ export function AdminMonitorDashboard() {
     setProtocolMonitor(m);
     setProtocols([]);
     setProtocolForm({ protocol: "", serviceOrder: "", observacao: "" });
+    setProtocolFiles([]);
     setProtocolError("");
     setProtocolsLoading(true);
     try {
@@ -301,6 +449,19 @@ export function AdminMonitorDashboard() {
     setProtocolError("");
   }
 
+  function addProtocolFiles(files: FileList | null) {
+    if (!files) return;
+    setProtocolFiles((prev) => {
+      const existing = new Set(prev.map((f) => f.name));
+      const novos = Array.from(files).filter((f) => !existing.has(f.name));
+      return [...prev, ...novos];
+    });
+  }
+
+  function removeProtocolFile(name: string) {
+    setProtocolFiles((prev) => prev.filter((f) => f.name !== name));
+  }
+
   async function submitProtocol(e: React.FormEvent) {
     e.preventDefault();
     if (!protocolMonitor) return;
@@ -311,15 +472,20 @@ export function AdminMonitorDashboard() {
     setProtocolSaving(true);
     setProtocolError("");
     try {
+      const fd = new FormData();
+      fd.append("protocol", protocolForm.protocol);
+      fd.append("serviceOrder", protocolForm.serviceOrder);
+      fd.append("observacao", protocolForm.observacao);
+      protocolFiles.forEach((f) => fd.append("file", f));
       const res = await fetch(`/api/admin/monitors/${protocolMonitor.id}/protocols`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(protocolForm),
+        body: fd,
       });
       const json = await res.json();
       if (!res.ok) { setProtocolError(json.message || "Erro ao registrar."); return; }
       setProtocols((prev) => [json.data, ...prev]);
       setProtocolForm({ protocol: "", serviceOrder: "", observacao: "" });
+      setProtocolFiles([]);
     } finally {
       setProtocolSaving(false);
     }
@@ -328,6 +494,15 @@ export function AdminMonitorDashboard() {
   async function deleteProtocol(id: string) {
     await fetch(`/api/admin/monitors/protocols/${id}`, { method: "DELETE" });
     setProtocols((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  async function deleteProtocolAnexo(protocolId: string, anexoId: string) {
+    await fetch(`/api/admin/monitors/protocols/anexos/${anexoId}`, { method: "DELETE" });
+    setProtocols((prev) =>
+      prev.map((p) =>
+        p.id === protocolId ? { ...p, anexos: p.anexos.filter((a) => a.id !== anexoId) } : p
+      )
+    );
   }
 
   async function exportProtocols() {
@@ -664,7 +839,27 @@ export function AdminMonitorDashboard() {
                 className="ds-input sm:col-span-2"
                 style={{ resize: "none", height: "auto", minHeight: "76px", paddingTop: "10px", paddingBottom: "10px" }}
               />
-              <div className="sm:col-span-2 flex items-center gap-2">
+              {protocolFiles.length > 0 && (
+                <div className="sm:col-span-2 flex flex-wrap gap-1.5">
+                  {protocolFiles.map((f) => (
+                    <span
+                      key={f.name}
+                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs"
+                      style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.25)", color: "#93c5fd" }}
+                    >
+                      {f.name}
+                      <button
+                        type="button"
+                        onClick={() => removeProtocolFile(f.name)}
+                        className="ml-0.5 opacity-70 hover:opacity-100 transition-opacity"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="sm:col-span-2 flex items-center gap-2 flex-wrap">
                 <button
                   type="submit"
                   disabled={protocolSaving}
@@ -672,6 +867,23 @@ export function AdminMonitorDashboard() {
                 >
                   {protocolSaving ? "Registrando..." : "Registrar"}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => protocolFileInputRef.current?.click()}
+                  className="rounded-xl px-3 py-2 text-sm font-medium transition-colors"
+                  style={{ border: "1px solid rgba(139,92,246,0.3)", color: "#a78bfa", background: "rgba(139,92,246,0.06)" }}
+                >
+                  📎 Anexar
+                </button>
+                <input
+                  ref={protocolFileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx"
+                  className="hidden"
+                  onChange={(e) => addProtocolFiles(e.target.files)}
+                  onClick={(e) => { (e.currentTarget as HTMLInputElement).value = ""; }}
+                />
                 {protocolError && <p className="text-sm text-[#ff453a]">{protocolError}</p>}
               </div>
             </form>
@@ -699,6 +911,22 @@ export function AdminMonitorDashboard() {
                       <p style={{ color: "var(--onity-dark-text-muted)" }}>
                         {new Date(p.createdAt).toLocaleString("pt-BR")}
                       </p>
+                      {p.anexos?.length > 0 && (
+                        <div className="mt-1.5 flex flex-wrap gap-2">
+                          {p.anexos.map((a) => (
+                            <AnexoPreview
+                              key={a.id}
+                              anexo={a}
+                              onDelete={() =>
+                                setConfirmar({
+                                  acao: () => void deleteProtocolAnexo(p.id, a.id),
+                                  mensagem: `Excluir o arquivo "${a.fileName}"?`,
+                                })
+                              }
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <button
                       type="button"

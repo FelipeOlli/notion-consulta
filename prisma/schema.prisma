@@ -315,15 +315,29 @@ model IpMonitorEvent {
 }
 
 model IpMonitorProtocol {
-  id           String    @id @default(cuid())
+  id           String                   @id @default(cuid())
   monitorId    String
-  monitor      IpMonitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  monitor      IpMonitor                @relation(fields: [monitorId], references: [id], onDelete: Cascade)
   protocol     String
   serviceOrder String
   observacao   String?
-  createdAt    DateTime  @default(now())
+  anexos       IpMonitorProtocolAnexo[]
+  createdAt    DateTime                 @default(now())
 
   @@index([monitorId, createdAt])
+}
+
+model IpMonitorProtocolAnexo {
+  id         String            @id @default(cuid())
+  protocolId String
+  protocol   IpMonitorProtocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+  filePath   String
+  fileName   String
+  fileSize   Int
+  mimeType   String
+  createdAt  DateTime          @default(now())
+
+  @@index([protocolId])
 }
 
 model AlterdataCliente {
