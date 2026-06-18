@@ -5,7 +5,8 @@ import { formatBRL as _formatBRL, BACKOFFICE_UNIT_PRICE, FRANQUEADO_UNIT_PRICE }
 import { AlterdataCostDashboard } from "@/components/alterdata-cost-dashboard";
 import { AlterdataObservacoesList } from "@/components/alterdata-observacoes-list";
 import { AlterdataContadoresList } from "@/components/alterdata-contadores-list";
-import type { AlterdataCliente, AlterdataClienteStatus } from "@prisma/client";
+import { ConfirmModal } from "@/components/confirm-modal";
+import type { AlterdataCliente, AlterdataClienteStatus, AlterdataTelemetria } from "@prisma/client";
 
 const STATUS_LABELS: Record<AlterdataClienteStatus, string> = {
   ATIVO: "Ativo",
@@ -45,6 +46,21 @@ const CARD_ACCENT: Record<AlterdataClienteStatus, string> = {
 
 const ALL_STATUS: AlterdataClienteStatus[] = ["ATIVO", "EM_ANDAMENTO", "INATIVO", "INADIMPLENTE", "CONGELADO", "DISTRATADO"];
 
+const TELEMETRIA_LABELS: Record<AlterdataTelemetria, string> = {
+  ATIVO: "Ativo",
+  INATIVO: "Inativo",
+};
+
+const TELEMETRIA_COLORS: Record<AlterdataTelemetria, string> = {
+  ATIVO: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+  INATIVO: "bg-red-500/20 text-red-400 border-red-500/30",
+};
+
+const TELEMETRIA_DOT: Record<AlterdataTelemetria, string> = {
+  ATIVO: "bg-emerald-400",
+  INATIVO: "bg-red-400",
+};
+
 const formatBRL = _formatBRL;
 
 function maskCNPJ(v: string) {
@@ -61,6 +77,7 @@ const EMPTY_FORM = {
   nome: "",
   unidade: "",
   status: "ATIVO" as AlterdataClienteStatus,
+  telemetria: null as AlterdataTelemetria | null,
   cnpj: "",
   qtdLicencas: 1,
   qtdUsuarios: 0,
@@ -93,6 +110,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [excluindo, setExcluindo] = useState<string | null>(null);
+  const [confirmar, setConfirmar] = useState<{ acao: () => void; mensagem: string } | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -131,6 +149,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
       unidade: c.unidade ?? "",
       cnpj: c.cnpj ? maskCNPJ(c.cnpj) : "",
       status: c.status,
+      telemetria: c.telemetria ?? null,
       qtdLicencas: c.qtdLicencas,
       qtdUsuarios: c.qtdUsuarios,
       acessosFranqueado: c.acessosFranqueado,
@@ -183,7 +202,6 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
   }
 
   async function excluir(id: string) {
-    if (!confirm("Excluir este cliente?")) return;
     setExcluindo(id);
     await fetch(`/api/admin/alterdata/clientes/${id}`, { method: "DELETE" });
     await carregar();
@@ -304,6 +322,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
                   <th className="px-4 py-3 text-xs font-medium" style={{ color: "var(--onity-dark-text-muted)" }}>Nome</th>
                   <th className="px-4 py-3 text-xs font-medium" style={{ color: "var(--onity-dark-text-muted)" }}>Unidade</th>
                   <th className="px-4 py-3 text-xs font-medium" style={{ color: "var(--onity-dark-text-muted)" }}>Status</th>
+                  <th className="px-4 py-3 text-xs font-medium" style={{ color: "var(--onity-dark-text-muted)" }}>Telemetria</th>
                   <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>Licenças</th>
                   <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>Usuários</th>
                   <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>Ac. Franqueado</th>
@@ -325,6 +344,16 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
                         {STATUS_LABELS[c.status]}
                       </span>
                     </td>
+                    <td className="px-4 py-3">
+                      {c.telemetria ? (
+                        <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border ${TELEMETRIA_COLORS[c.telemetria]}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${TELEMETRIA_DOT[c.telemetria]}`} />
+                          {TELEMETRIA_LABELS[c.telemetria]}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-white/30">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-center text-white/70">{c.qtdLicencas}</td>
                     <td className="px-4 py-3 text-center text-white/70">{c.qtdUsuarios}</td>
                     <td className="px-4 py-3 text-center text-white/70">{c.acessosFranqueado}</td>
@@ -342,7 +371,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                           </button>
                           <button
-                            onClick={(e) => { e.stopPropagation(); excluir(c.id); }}
+                            onClick={(e) => { e.stopPropagation(); setConfirmar({ acao: () => excluir(c.id), mensagem: `Excluir o cliente "${c.nome}"?` }); }}
                             disabled={excluindo === c.id}
                             className="text-red-400/60 hover:text-red-400 transition-colors disabled:opacity-50"
                             title="Excluir"
@@ -400,6 +429,19 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs mb-1" style={{ color: "var(--onity-dark-text-muted)" }}>Telemetria</label>
+                <select
+                  className="ds-input w-full"
+                  value={form.telemetria ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, telemetria: (e.target.value || null) as AlterdataTelemetria | null }))}
+                >
+                  <option value="">— sem dados —</option>
+                  <option value="ATIVO">Ativo</option>
+                  <option value="INATIVO">Inativo</option>
+                </select>
               </div>
 
               <div>
@@ -555,6 +597,13 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
             </div>
           </div>
         </div>
+      )}
+      {confirmar && (
+        <ConfirmModal
+          mensagem={confirmar.mensagem}
+          onConfirm={() => { confirmar.acao(); setConfirmar(null); }}
+          onCancel={() => setConfirmar(null)}
+        />
       )}
     </div>
   );

@@ -18,6 +18,7 @@ export async function GET() {
     "Unidade": c.unidade ?? "",
     "CNPJ": c.cnpj ?? "",
     "Status": c.status,
+    "Telemetria": c.telemetria ?? "",
     "Qtd. Licenças": c.qtdLicencas,
     "Qtd. Usuários": c.qtdUsuarios,
     "Acessos Franqueado": c.acessosFranqueado,
@@ -32,7 +33,7 @@ export async function GET() {
 
   ws["!cols"] = [
     { wch: 14 }, { wch: 50 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 14 },
-    { wch: 16 }, { wch: 20 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 30 },
+    { wch: 16 }, { wch: 20 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 30 }, { wch: 12 },
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, "Clientes");

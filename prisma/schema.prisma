@@ -45,6 +45,11 @@ enum AlterdataCredencialTipo {
   PACK
 }
 
+enum AlterdataTelemetria {
+  ATIVO
+  INATIVO
+}
+
 enum UsageSource {
   MANUAL
   IMPORT
@@ -347,6 +352,7 @@ model AlterdataCliente {
   unidade           String?
   cnpj              String?
   status            AlterdataClienteStatus        @default(ATIVO)
+  telemetria        AlterdataTelemetria?
   qtdLicencas       Int                           @default(1)
   qtdUsuarios       Int                           @default(0)
   acessosFranqueado Int                           @default(0)

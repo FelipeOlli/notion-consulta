@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ensureMaster } from "@/lib/admin-auth";
-import type { AlterdataClienteStatus } from "@prisma/client";
+import type { AlterdataClienteStatus, AlterdataTelemetria } from "@prisma/client";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const isMaster = await ensureMaster();
@@ -9,7 +9,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const { id } = await params;
   const body = await request.json();
-  const { codPessoa, nome, unidade, cnpj, status, qtdLicencas, qtdUsuarios, acessosFranqueado, acessosBackoffice, observacao } = body;
+  const { codPessoa, nome, unidade, cnpj, status, telemetria, qtdLicencas, qtdUsuarios, acessosFranqueado, acessosBackoffice, observacao } = body;
 
   const data: Record<string, unknown> = {};
   if (codPessoa !== undefined) data.codPessoa = String(codPessoa).trim();
@@ -17,6 +17,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (unidade !== undefined) data.unidade = unidade ? String(unidade).trim() : null;
   if (cnpj !== undefined) data.cnpj = cnpj ? String(cnpj).replace(/\D/g, "") || null : null;
   if (status !== undefined) data.status = status as AlterdataClienteStatus;
+  if (telemetria !== undefined) data.telemetria = (telemetria || null) as AlterdataTelemetria | null;
   if (qtdLicencas !== undefined) data.qtdLicencas = Number(qtdLicencas);
   if (qtdUsuarios !== undefined) data.qtdUsuarios = Number(qtdUsuarios);
   if (acessosFranqueado !== undefined) data.acessosFranqueado = Number(acessosFranqueado);
