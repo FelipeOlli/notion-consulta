@@ -320,6 +320,7 @@ model IpMonitorProtocol {
   monitor      IpMonitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
   protocol     String
   serviceOrder String
+  observacao   String?
   createdAt    DateTime  @default(now())
 
   @@index([monitorId, createdAt])

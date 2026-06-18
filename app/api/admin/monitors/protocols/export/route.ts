@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
       Host: r.monitor.host,
       Protocolo: r.protocol,
       "Ordem de Serviço": r.serviceOrder,
+      Observações: r.observacao ?? "",
       "Data/Hora": new Date(r.createdAt).toLocaleString("pt-BR"),
     }));
 

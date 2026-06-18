@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 type MonitorStatus = "UP" | "DOWN" | "PENDING";
 
@@ -30,6 +31,7 @@ type Protocol = {
   id: string;
   protocol: string;
   serviceOrder: string;
+  observacao: string | null;
   createdAt: string;
 };
 
@@ -102,7 +104,7 @@ export function AdminMonitorDashboard() {
   const [protocolMonitor, setProtocolMonitor] = useState<Monitor | null>(null);
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [protocolsLoading, setProtocolsLoading] = useState(false);
-  const [protocolForm, setProtocolForm] = useState({ protocol: "", serviceOrder: "" });
+  const [protocolForm, setProtocolForm] = useState({ protocol: "", serviceOrder: "", observacao: "" });
   const [protocolSaving, setProtocolSaving] = useState(false);
   const [protocolError, setProtocolError] = useState("");
 
@@ -113,6 +115,7 @@ export function AdminMonitorDashboard() {
   const [exportTo, setExportTo] = useState("");
   const [exportMonitorId, setExportMonitorId] = useState("");
   const [exportingExcel, setExportingExcel] = useState(false);
+  const [confirmar, setConfirmar] = useState<{ acao: () => void; mensagem: string } | null>(null);
 
   const prevStatusRef = useRef<Record<string, MonitorStatus>>({});
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -245,7 +248,6 @@ export function AdminMonitorDashboard() {
   }
 
   async function deleteMonitor(id: string, name: string) {
-    if (!window.confirm(`Excluir o monitor "${name}"?`)) return;
     await fetch(`/api/admin/monitors/${id}`, { method: "DELETE" });
     setMonitors((prev) => prev.filter((m) => m.id !== id));
   }
@@ -281,7 +283,7 @@ export function AdminMonitorDashboard() {
   async function openProtocols(m: Monitor) {
     setProtocolMonitor(m);
     setProtocols([]);
-    setProtocolForm({ protocol: "", serviceOrder: "" });
+    setProtocolForm({ protocol: "", serviceOrder: "", observacao: "" });
     setProtocolError("");
     setProtocolsLoading(true);
     try {
@@ -317,14 +319,13 @@ export function AdminMonitorDashboard() {
       const json = await res.json();
       if (!res.ok) { setProtocolError(json.message || "Erro ao registrar."); return; }
       setProtocols((prev) => [json.data, ...prev]);
-      setProtocolForm({ protocol: "", serviceOrder: "" });
+      setProtocolForm({ protocol: "", serviceOrder: "", observacao: "" });
     } finally {
       setProtocolSaving(false);
     }
   }
 
   async function deleteProtocol(id: string) {
-    if (!window.confirm("Excluir este protocolo?")) return;
     await fetch(`/api/admin/monitors/protocols/${id}`, { method: "DELETE" });
     setProtocols((prev) => prev.filter((p) => p.id !== id));
   }
@@ -603,7 +604,7 @@ export function AdminMonitorDashboard() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => void deleteMonitor(m.id, m.name)}
+                        onClick={() => setConfirmar({ acao: () => void deleteMonitor(m.id, m.name), mensagem: `Excluir o monitor "${m.name}"?` })}
                         className="rounded-lg px-2.5 py-1 text-xs font-medium text-[#ff453a] transition hover:bg-[rgba(255,69,58,0.1)]"
                         style={{ background: "rgba(255,69,58,0.05)", border: "1px solid rgba(255,69,58,0.2)" }}
                       >
@@ -655,6 +656,14 @@ export function AdminMonitorDashboard() {
                 placeholder="Ordem de serviço"
                 className="ds-input"
               />
+              <textarea
+                value={protocolForm.observacao}
+                onChange={(e) => setProtocolForm((p) => ({ ...p, observacao: e.target.value }))}
+                placeholder="Observações (opcional)"
+                rows={3}
+                className="ds-input sm:col-span-2"
+                style={{ resize: "none", height: "auto", minHeight: "76px", paddingTop: "10px", paddingBottom: "10px" }}
+              />
               <div className="sm:col-span-2 flex items-center gap-2">
                 <button
                   type="submit"
@@ -682,13 +691,18 @@ export function AdminMonitorDashboard() {
                     <div className="flex-1 min-w-0 space-y-0.5">
                       <p className="font-semibold text-white">Protocolo: {p.protocol}</p>
                       {p.serviceOrder && <p style={{ color: "var(--onity-dark-text-muted)" }}>OS: {p.serviceOrder}</p>}
+                      {p.observacao && (
+                        <p className="whitespace-pre-wrap" style={{ color: "var(--onity-dark-text-muted)" }}>
+                          {p.observacao}
+                        </p>
+                      )}
                       <p style={{ color: "var(--onity-dark-text-muted)" }}>
                         {new Date(p.createdAt).toLocaleString("pt-BR")}
                       </p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => void deleteProtocol(p.id)}
+                      onClick={() => setConfirmar({ acao: () => void deleteProtocol(p.id), mensagem: "Excluir este protocolo?" })}
                       className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium text-[#ff453a] transition hover:bg-[rgba(255,69,58,0.1)]"
                       style={{ border: "1px solid rgba(255,69,58,0.2)" }}
                     >
@@ -862,6 +876,13 @@ export function AdminMonitorDashboard() {
             </div>
           </div>
         </div>
+      )}
+      {confirmar && (
+        <ConfirmModal
+          mensagem={confirmar.mensagem}
+          onConfirm={() => { confirmar.acao(); setConfirmar(null); }}
+          onCancel={() => setConfirmar(null)}
+        />
       )}
     </section>
   );
