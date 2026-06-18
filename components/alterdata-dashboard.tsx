@@ -95,6 +95,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
   const [clientes, setClientes] = useState<AlterdataCliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState<AlterdataClienteStatus | "TODOS">("TODOS");
+  const [filtroTelemetria, setFiltroTelemetria] = useState<AlterdataTelemetria | "TODOS">("TODOS");
   const [busca, setBusca] = useState("");
 
   const [formAberto, setFormAberto] = useState(false);
@@ -129,9 +130,10 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
 
   const clientesFiltrados = clientes.filter((c) => {
     const matchStatus = filtroStatus === "TODOS" || c.status === filtroStatus;
+    const matchTelemetria = filtroTelemetria === "TODOS" || c.telemetria === filtroTelemetria;
     const buscaLower = busca.toLowerCase();
     const matchBusca = busca === "" || c.nome.toLowerCase().includes(buscaLower) || c.codPessoa.includes(busca) || (c.unidade ?? "").toLowerCase().includes(buscaLower);
-    return matchStatus && matchBusca;
+    return matchStatus && matchTelemetria && matchBusca;
   });
 
   function abrirNovo() {
@@ -260,14 +262,34 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
             onChange={(e) => setBusca(e.target.value)}
             className="ds-input flex-1"
           />
-          {filtroStatus !== "TODOS" && (
+          {(filtroStatus !== "TODOS" || filtroTelemetria !== "TODOS") && (
             <button
-              onClick={() => setFiltroStatus("TODOS")}
+              onClick={() => { setFiltroStatus("TODOS"); setFiltroTelemetria("TODOS"); }}
               className="shrink-0 text-sm px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors"
             >
-              × Limpar filtro
+              × Limpar filtros
             </button>
           )}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Telemetria:</span>
+          {(["TODOS", "ATIVO", "INATIVO"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setFiltroTelemetria(t)}
+              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                filtroTelemetria === t
+                  ? t === "ATIVO"
+                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
+                    : t === "INATIVO"
+                    ? "bg-red-500/20 text-red-400 border-red-500/40"
+                    : "bg-white/10 text-white border-white/20"
+                  : "border-white/10 text-white/50 hover:text-white hover:border-white/20"
+              }`}
+            >
+              {t === "TODOS" ? "Todos" : t === "ATIVO" ? "Ativo" : "Inativo"}
+            </button>
+          ))}
         </div>
         {isMaster && (
           <div className="flex items-center justify-end gap-2">
@@ -302,7 +324,8 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
       {/* Totalizador filtrado */}
       <p className="text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
         {clientesFiltrados.length} de {clientes.length} clientes
-        {filtroStatus !== "TODOS" && ` · filtro: ${STATUS_LABELS[filtroStatus]}`}
+        {filtroStatus !== "TODOS" && ` · status: ${STATUS_LABELS[filtroStatus]}`}
+        {filtroTelemetria !== "TODOS" && ` · telemetria: ${TELEMETRIA_LABELS[filtroTelemetria]}`}
       </p>
 
       {/* Tabela */}
@@ -324,7 +347,6 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
                   <th className="px-4 py-3 text-xs font-medium" style={{ color: "var(--onity-dark-text-muted)" }}>Status</th>
                   <th className="px-4 py-3 text-xs font-medium" style={{ color: "var(--onity-dark-text-muted)" }}>Telemetria</th>
                   <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>Licenças</th>
-                  <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>Usuários</th>
                   <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>Ac. Franqueado</th>
                   <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>Ac. Backoffice</th>
                   <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>V. Franqueado</th>
@@ -355,7 +377,6 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
                       )}
                     </td>
                     <td className="px-4 py-3 text-center text-white/70">{c.qtdLicencas}</td>
-                    <td className="px-4 py-3 text-center text-white/70">{c.qtdUsuarios}</td>
                     <td className="px-4 py-3 text-center text-white/70">{c.acessosFranqueado}</td>
                     <td className="px-4 py-3 text-center text-white/70">{c.acessosBackoffice}</td>
                     <td className="px-4 py-3 text-center text-white/70">{formatBRL(c.acessosFranqueado * FRANQUEADO_UNIT_PRICE)}</td>
