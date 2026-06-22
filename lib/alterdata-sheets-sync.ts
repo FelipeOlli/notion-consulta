@@ -38,6 +38,7 @@ export type ClienteRow = {
   nome: string;
   unidade: string | null;
   cnpj: string | null;
+  cpf: string | null;
   status: AlterdataClienteStatus;
   telemetria: AlterdataTelemetria | null;
   qtdLicencas: number;
@@ -66,6 +67,7 @@ export function mapClienteRow(row: Record<string, string>): ClienteRow {
 
   const rawUnidade = row["Unidade"] ?? row["Unidades"] ?? row["unidade"];
   const rawCnpj = row["CNPJ"] ?? row["Cnpj"] ?? row["cnpj"];
+  const rawCpf = row["CPF"] ?? row["Cpf"] ?? row["cpf"];
   const rawStatus = row["Status"] ?? row["STATUS"] ?? row["status"] ?? "";
   const rawTelemetria = row["Telemetria"] ?? row["telemetria"];
 
@@ -91,6 +93,7 @@ export function mapClienteRow(row: Record<string, string>): ClienteRow {
     nome,
     unidade: rawUnidade ? rawUnidade.trim() : null,
     cnpj: rawCnpj ? rawCnpj.replace(/\D/g, "") || null : null,
+    cpf: rawCpf ? rawCpf.replace(/\D/g, "") || null : null,
     status,
     telemetria,
     qtdLicencas: Number(row["Qtd. Licenças"] ?? row["Quantidade de Licenças"] ?? 1) || 1,
@@ -107,6 +110,7 @@ type ExistingCliente = {
   nome: string;
   unidade: string | null;
   cnpj: string | null;
+  cpf: string | null;
   status: AlterdataClienteStatus;
   telemetria: AlterdataTelemetria | null;
   qtdLicencas: number;
@@ -122,6 +126,7 @@ function buildDiff(existing: ExistingCliente, next: ClienteRow): string[] {
       nome: "Nome",
       unidade: "Unidade",
       cnpj: "CNPJ",
+      cpf: "CPF",
       status: "Status",
       telemetria: "Telemetria",
       qtdLicencas: "Licenças",
@@ -133,6 +138,7 @@ function buildDiff(existing: ExistingCliente, next: ClienteRow): string[] {
     "nome",
     "unidade",
     "cnpj",
+    "cpf",
     "status",
     "telemetria",
     "qtdLicencas",
@@ -210,6 +216,7 @@ export async function syncAlterdataFromSheet(): Promise<SyncResult> {
           nome: mapped.nome,
           unidade: mapped.unidade,
           cnpj: mapped.cnpj,
+          cpf: mapped.cpf,
           status: mapped.status,
           telemetria: mapped.telemetria,
           qtdLicencas: mapped.qtdLicencas,
@@ -243,6 +250,7 @@ export async function syncAlterdataFromSheet(): Promise<SyncResult> {
         nome: mapped.nome,
         unidade: mapped.unidade,
         cnpj: mapped.cnpj,
+        cpf: mapped.cpf,
         status: mapped.status,
         telemetria: mapped.telemetria,
         qtdLicencas: mapped.qtdLicencas,

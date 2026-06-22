@@ -72,6 +72,14 @@ function maskCNPJ(v: string) {
     .replace(/(\d{4})(\d)/, "$1-$2");
 }
 
+function maskCPF(v: string) {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  return d
+    .replace(/^(\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1-$2");
+}
+
 const EMPTY_FORM = {
   codPessoa: "",
   nome: "",
@@ -79,6 +87,7 @@ const EMPTY_FORM = {
   status: "ATIVO" as AlterdataClienteStatus,
   telemetria: null as AlterdataTelemetria | null,
   cnpj: "",
+  cpf: "",
   qtdLicencas: 1,
   acessosFranqueado: 0,
   acessosBackoffice: 0,
@@ -161,6 +170,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
       nome: c.nome,
       unidade: c.unidade ?? "",
       cnpj: c.cnpj ? maskCNPJ(c.cnpj) : "",
+      cpf: c.cpf ? maskCPF(c.cpf) : "",
       status: c.status,
       telemetria: c.telemetria ?? null,
       qtdLicencas: c.qtdLicencas,
@@ -195,6 +205,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
       body: JSON.stringify({
         ...form,
         cnpj: form.cnpj.replace(/\D/g, "") || null,
+        cpf: form.cpf.replace(/\D/g, "") || null,
         qtdLicencas: Number(form.qtdLicencas),
         acessosFranqueado: Number(form.acessosFranqueado),
         acessosBackoffice: Number(form.acessosBackoffice),
@@ -568,6 +579,17 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
                   onChange={(e) => setForm((f) => ({ ...f, cnpj: maskCNPJ(e.target.value) }))}
                   maxLength={18}
                   placeholder="00.000.000/0000-00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs mb-1" style={{ color: "var(--onity-dark-text-muted)" }}>CPF</label>
+                <input
+                  className="ds-input w-full"
+                  value={form.cpf}
+                  onChange={(e) => setForm((f) => ({ ...f, cpf: maskCPF(e.target.value) }))}
+                  maxLength={14}
+                  placeholder="000.000.000-00"
                 />
               </div>
 

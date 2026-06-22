@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
       nome: mapped.nome,
       unidade: mapped.unidade,
       cnpj: mapped.cnpj,
+      cpf: mapped.cpf,
       status: mapped.status,
       telemetria: mapped.telemetria,
       qtdLicencas: mapped.qtdLicencas,

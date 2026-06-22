@@ -9,13 +9,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const { id } = await params;
   const body = await request.json();
-  const { codPessoa, nome, unidade, cnpj, status, telemetria, qtdLicencas, acessosFranqueado, acessosBackoffice, observacao } = body;
+  const { codPessoa, nome, unidade, cnpj, cpf, status, telemetria, qtdLicencas, acessosFranqueado, acessosBackoffice, observacao } = body;
 
   const data: Record<string, unknown> = {};
   if (codPessoa !== undefined) data.codPessoa = String(codPessoa).trim();
   if (nome !== undefined) data.nome = String(nome).trim();
   if (unidade !== undefined) data.unidade = unidade ? String(unidade).trim() : null;
   if (cnpj !== undefined) data.cnpj = cnpj ? String(cnpj).replace(/\D/g, "") || null : null;
+  if (cpf !== undefined) data.cpf = cpf ? String(cpf).replace(/\D/g, "") || null : null;
   if (status !== undefined) data.status = status as AlterdataClienteStatus;
   if (telemetria !== undefined) data.telemetria = (telemetria || null) as AlterdataTelemetria | null;
   if (qtdLicencas !== undefined) data.qtdLicencas = Number(qtdLicencas);

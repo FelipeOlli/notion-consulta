@@ -17,6 +17,7 @@ export async function GET() {
     "Nome": c.nome,
     "Unidade": c.unidade ?? "",
     "CNPJ": c.cnpj ?? "",
+    "CPF": c.cpf ?? "",
     "Status": c.status,
     "Telemetria": c.telemetria ?? "",
     "Qtd. Licenças": c.qtdLicencas,
@@ -31,7 +32,7 @@ export async function GET() {
   const ws = XLSX.utils.json_to_sheet(rows);
 
   ws["!cols"] = [
-    { wch: 14 }, { wch: 50 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 14 },
+    { wch: 14 }, { wch: 50 }, { wch: 20 }, { wch: 22 }, { wch: 16 }, { wch: 14 }, { wch: 14 },
     { wch: 16 }, { wch: 20 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 30 },
   ];
 

@@ -12,6 +12,7 @@ export async function GET() {
       "Nome": "EXEMPLO CONTABILIDADE LTDA",
       "Unidade": "CF EXEMPLO",
       "CNPJ": "00.000.000/0000-00",
+      "CPF": "000.000.000-00",
       "Status": "ATIVO",
       "Qtd. Licenças": 1,
       "Acessos Franqueado": 0,
@@ -24,7 +25,7 @@ export async function GET() {
   const ws = XLSX.utils.json_to_sheet(rows);
 
   ws["!cols"] = [
-    { wch: 14 }, { wch: 50 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 14 },
+    { wch: 14 }, { wch: 50 }, { wch: 20 }, { wch: 22 }, { wch: 18 }, { wch: 14 }, { wch: 14 },
     { wch: 20 }, { wch: 20 }, { wch: 30 },
   ];
 

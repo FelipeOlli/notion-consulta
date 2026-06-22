@@ -351,6 +351,7 @@ model AlterdataCliente {
   nome              String
   unidade           String?
   cnpj              String?
+  cpf               String?
   status            AlterdataClienteStatus        @default(ATIVO)
   telemetria        AlterdataTelemetria?
   qtdLicencas       Int                           @default(1)
