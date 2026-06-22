@@ -80,7 +80,6 @@ const EMPTY_FORM = {
   telemetria: null as AlterdataTelemetria | null,
   cnpj: "",
   qtdLicencas: 1,
-  qtdUsuarios: 0,
   acessosFranqueado: 0,
   acessosBackoffice: 0,
   observacao: "",
@@ -109,6 +108,18 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
   const [importando, setImportando] = useState(false);
   const [importResultado, setImportResultado] = useState<{ inserted: number; updated: number; errors: string[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [sincronizando, setSincronizando] = useState(false);
+  const [syncResultado, setSyncResultado] = useState<{
+    ok: boolean;
+    inserted?: number;
+    updated?: number;
+    unchanged?: number;
+    changes?: { codPessoa: string; nome: string; diffs: string[] }[];
+    errors?: string[];
+    message?: string;
+  } | null>(null);
+  const [syncDetalhesAbertos, setSyncDetalhesAbertos] = useState(false);
 
   const [excluindo, setExcluindo] = useState<string | null>(null);
   const [confirmar, setConfirmar] = useState<{ acao: () => void; mensagem: string } | null>(null);
@@ -153,7 +164,6 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
       status: c.status,
       telemetria: c.telemetria ?? null,
       qtdLicencas: c.qtdLicencas,
-      qtdUsuarios: c.qtdUsuarios,
       acessosFranqueado: c.acessosFranqueado,
       acessosBackoffice: c.acessosBackoffice,
       observacao: c.observacao ?? "",
@@ -186,7 +196,6 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
         ...form,
         cnpj: form.cnpj.replace(/\D/g, "") || null,
         qtdLicencas: Number(form.qtdLicencas),
-        qtdUsuarios: Number(form.qtdUsuarios),
         acessosFranqueado: Number(form.acessosFranqueado),
         acessosBackoffice: Number(form.acessosBackoffice),
         observacao: form.observacao || null,
@@ -223,6 +232,17 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
     setImportando(false);
     setImportFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function sincronizar() {
+    setSincronizando(true);
+    setSyncResultado(null);
+    setSyncDetalhesAbertos(false);
+    const res = await fetch("/api/admin/alterdata/clientes/sync", { method: "POST" });
+    const data = await res.json();
+    setSyncResultado(data);
+    if (data.ok) await carregar();
+    setSincronizando(false);
   }
 
   return (
@@ -306,6 +326,13 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
               Exportar xlsx
             </a>
             <button
+              onClick={sincronizar}
+              disabled={sincronizando}
+              className="text-sm px-3 py-2 rounded-lg border border-purple-500/30 text-purple-400 hover:text-purple-300 hover:border-purple-400/50 transition-colors whitespace-nowrap disabled:opacity-50"
+            >
+              {sincronizando ? "Sincronizando..." : "↻ Sincronizar Sheets"}
+            </button>
+            <button
               onClick={() => { setImportAberto(true); setImportResultado(null); }}
               className="text-sm px-3 py-2 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors whitespace-nowrap"
             >
@@ -327,6 +354,53 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
         {filtroStatus !== "TODOS" && ` · status: ${STATUS_LABELS[filtroStatus]}`}
         {filtroTelemetria !== "TODOS" && ` · telemetria: ${TELEMETRIA_LABELS[filtroTelemetria]}`}
       </p>
+
+      {/* Resultado da sincronização */}
+      {syncResultado && (
+        <div className={`glass-card p-4 rounded-xl text-sm space-y-2 border ${syncResultado.ok ? "border-purple-500/20" : "border-red-500/20"}`}>
+          <div className="flex items-center justify-between gap-2">
+            {syncResultado.ok ? (
+              <p className="text-purple-300 font-medium">
+                ✓ Sync concluído · {syncResultado.inserted} inseridos · {syncResultado.updated} atualizados · {syncResultado.unchanged} inalterados
+              </p>
+            ) : (
+              <p className="text-red-400 font-medium">✗ Erro no sync: {syncResultado.message}</p>
+            )}
+            <div className="flex items-center gap-2 shrink-0">
+              {syncResultado.ok && (syncResultado.changes?.length ?? 0) > 0 && (
+                <button
+                  onClick={() => setSyncDetalhesAbertos((v) => !v)}
+                  className="text-xs text-white/50 hover:text-white/80 transition-colors"
+                >
+                  {syncDetalhesAbertos ? "▲ ocultar" : `▼ ${syncResultado.changes?.length} alterações`}
+                </button>
+              )}
+              <button
+                onClick={() => setSyncResultado(null)}
+                className="text-xs text-white/40 hover:text-white/70 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {syncDetalhesAbertos && syncResultado.changes && syncResultado.changes.length > 0 && (
+            <div className="space-y-1 max-h-48 overflow-y-auto pt-1 border-t border-white/5">
+              {syncResultado.changes.map((c) => (
+                <div key={c.codPessoa} className="text-xs text-white/60">
+                  <span className="text-white/80">{c.nome}</span>
+                  {" — "}
+                  {c.diffs.join(" · ")}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {syncResultado.ok && (syncResultado.errors?.length ?? 0) > 0 && (
+            <p className="text-xs text-amber-400">{syncResultado.errors?.length} linhas ignoradas por dados ausentes.</p>
+          )}
+        </div>
+      )}
 
       {/* Tabela */}
       {loading ? (
@@ -502,11 +576,6 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
                   <label className="block text-xs mb-1" style={{ color: "var(--onity-dark-text-muted)" }}>Licenças</label>
                   <input type="number" min={0} className="ds-input w-full" value={form.qtdLicencas}
                     onChange={(e) => setForm((f) => ({ ...f, qtdLicencas: Number(e.target.value) }))} />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: "var(--onity-dark-text-muted)" }}>Usuários</label>
-                  <input type="number" min={0} className="ds-input w-full" value={form.qtdUsuarios}
-                    onChange={(e) => setForm((f) => ({ ...f, qtdUsuarios: Number(e.target.value) }))} />
                 </div>
                 <div>
                   <label className="block text-xs mb-1" style={{ color: "var(--onity-dark-text-muted)" }}>Ac. Franqueado</label>

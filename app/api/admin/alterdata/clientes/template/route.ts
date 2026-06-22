@@ -14,7 +14,6 @@ export async function GET() {
       "CNPJ": "00.000.000/0000-00",
       "Status": "ATIVO",
       "Qtd. Licenças": 1,
-      "Qtd. Usuários": 1,
       "Acessos Franqueado": 0,
       "Acessos Backoffice": 1,
       "Observação": "",
@@ -26,7 +25,7 @@ export async function GET() {
 
   ws["!cols"] = [
     { wch: 14 }, { wch: 50 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 14 },
-    { wch: 16 }, { wch: 20 }, { wch: 20 }, { wch: 30 },
+    { wch: 20 }, { wch: 20 }, { wch: 30 },
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, "Clientes");

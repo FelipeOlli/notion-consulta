@@ -354,7 +354,6 @@ model AlterdataCliente {
   status            AlterdataClienteStatus        @default(ATIVO)
   telemetria        AlterdataTelemetria?
   qtdLicencas       Int                           @default(1)
-  qtdUsuarios       Int                           @default(0)
   acessosFranqueado Int                           @default(0)
   acessosBackoffice Int                           @default(0)
   observacao        String?
