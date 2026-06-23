@@ -61,8 +61,9 @@ export function AdminNav({ modules }: Props) {
           Início
         </Link>
 
-        {/* Direita: PortalHeader (oculto em mobile via hidden md:flex) + hamburger */}
+        {/* Direita: sino sempre visível + PortalHeader (oculto em mobile) + hamburger */}
         <div className="flex items-center gap-2">
+          <span className="md:hidden"><HeaderNotificationsBell /></span>
           <PortalHeader />
 
           <button
@@ -194,12 +195,6 @@ export function AdminNav({ modules }: Props) {
                 <p className="px-4 pb-1 text-xs font-semibold uppercase tracking-widest" style={{ color: "rgba(148,163,184,0.5)" }}>
                   Conta
                 </p>
-
-                {/* Sino de notificações */}
-                <div className="px-4 py-2 flex items-center gap-3">
-                  <HeaderNotificationsBell />
-                  <span className="text-sm" style={{ color: "#94a3b8" }}>Notificações</span>
-                </div>
 
                 {/* Troca de Senha */}
                 <button
