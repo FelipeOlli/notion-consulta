@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import type { AppModule } from "@/lib/modules";
 import { moduleLabels, appModules } from "@/lib/modules";
 import { moduleHrefs } from "@/lib/portal-modules";
 import { PortalHeader } from "@/components/portal-header";
+import { HeaderNotificationsBell } from "@/components/header-notifications-bell";
+import { MinhaContaModal } from "@/components/minha-conta-modal";
 
 type Props = {
   modules: AppModule[];
@@ -26,7 +28,9 @@ function itemStyle(active: boolean): React.CSSProperties {
 
 export function AdminNav({ modules }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [minhaContaOpen, setMinhaContaOpen] = useState(false);
 
   const visibleModules = appModules.filter((m) => modules.includes(m));
 
@@ -38,6 +42,12 @@ export function AdminNav({ modules }: Props) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, []);
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/");
+    router.refresh();
+  }
 
   return (
     <>
@@ -51,7 +61,7 @@ export function AdminNav({ modules }: Props) {
           Início
         </Link>
 
-        {/* Direita: sino + Minha Conta + Sair + hamburger */}
+        {/* Direita: PortalHeader (oculto em mobile via hidden md:flex) + hamburger */}
         <div className="flex items-center gap-2">
           <PortalHeader />
 
@@ -99,11 +109,11 @@ export function AdminNav({ modules }: Props) {
           >
             {/* Cabeçalho do drawer */}
             <div
-              className="flex items-center justify-between px-5 py-4"
+              className="flex items-center justify-between px-5 py-4 shrink-0"
               style={{ borderBottom: "1px solid rgba(29,127,229,0.15)" }}
             >
               <span className="text-sm font-semibold text-white tracking-wide uppercase" style={{ letterSpacing: "0.08em" }}>
-                Módulos
+                Menu
               </span>
               <button
                 onClick={() => setDrawerOpen(false)}
@@ -114,8 +124,14 @@ export function AdminNav({ modules }: Props) {
               </button>
             </div>
 
-            {/* Lista de módulos */}
-            <nav className="flex-1 overflow-y-auto py-3 px-3">
+            {/* Corpo rolável */}
+            <div className="flex-1 overflow-y-auto py-3 px-3">
+
+              {/* ── Seção MÓDULOS ─────────────────────────────── */}
+              <p className="px-4 pb-1 pt-1 text-xs font-semibold uppercase tracking-widest" style={{ color: "rgba(148,163,184,0.5)" }}>
+                Módulos
+              </p>
+
               {/* Início */}
               <Link
                 href="/admin"
@@ -172,10 +188,63 @@ export function AdminNav({ modules }: Props) {
                   </Link>
                 );
               })}
-            </nav>
+
+              {/* ── Seção CONTA (só mobile, hidden em md+) ─────── */}
+              <div className="md:hidden mt-3 pt-3" style={{ borderTop: "1px solid rgba(29,127,229,0.15)" }}>
+                <p className="px-4 pb-1 text-xs font-semibold uppercase tracking-widest" style={{ color: "rgba(148,163,184,0.5)" }}>
+                  Conta
+                </p>
+
+                {/* Sino de notificações */}
+                <div className="px-4 py-2 flex items-center gap-3">
+                  <HeaderNotificationsBell />
+                  <span className="text-sm" style={{ color: "#94a3b8" }}>Notificações</span>
+                </div>
+
+                {/* Troca de Senha */}
+                <button
+                  type="button"
+                  onClick={() => { setMinhaContaOpen(true); setDrawerOpen(false); }}
+                  className="w-full flex items-center px-4 py-2.5 rounded-lg text-sm transition-colors mb-1 text-left"
+                  style={{ color: "#94a3b8" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = "white";
+                    e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "#94a3b8";
+                    e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  Minha Conta
+                </button>
+
+                {/* Sair */}
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full flex items-center px-4 py-2.5 rounded-lg text-sm transition-colors mb-1 text-left"
+                  style={{ color: "#94a3b8" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = "white";
+                    e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "#94a3b8";
+                    e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  Sair
+                </button>
+              </div>
+
+            </div>
           </div>
         </div>
       )}
+
+      {/* Modal de troca de senha (aberto pelo item do drawer) */}
+      <MinhaContaModal open={minhaContaOpen} onClose={() => setMinhaContaOpen(false)} />
     </>
   );
 }

@@ -41,7 +41,7 @@ export function PortalHeader() {
 
   return (
     <>
-      <div className="flex items-center gap-3">
+      <div className="hidden md:flex items-center gap-3">
         <HeaderNotificationsBell />
 
         <div className="relative" ref={dropdownRef}>
