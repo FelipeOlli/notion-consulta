@@ -110,6 +110,7 @@ export function AdminCertificatesManager({
 
   // List
   const [query, setQuery] = useState("");
+  const [onlyExpired, setOnlyExpired] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editCompanyId, setEditCompanyId] = useState("");
   const [editPassword, setEditPassword] = useState("");
@@ -128,14 +129,21 @@ export function AdminCertificatesManager({
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    if (!term) return items;
-    return items.filter(
-      (item) =>
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    return items.filter((item) => {
+      if (onlyExpired) {
+        const venc = new Date(item.expiresAt);
+        venc.setHours(0, 0, 0, 0);
+        if (venc >= hoje) return false;
+      }
+      if (!term) return true;
+      return (
         item.company.legalName.toLowerCase().includes(term) ||
-        (item.company.document ?? "").toLowerCase().includes(term) ||
-        (item.company.partnerName ?? "").toLowerCase().includes(term)
-    );
-  }, [items, query]);
+        (item.company.document ?? "").toLowerCase().includes(term)
+      );
+    });
+  }, [items, query, onlyExpired]);
 
   async function createCompany(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -316,7 +324,17 @@ export function AdminCertificatesManager({
       {/* Lista */}
       <div style={cardStyle}>
         <div className="mb-4 flex items-center gap-3">
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar empresa, CPF/CNPJ ou sócio..." className="ds-input flex-1" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar empresa ou CPF/CNPJ..." className="ds-input flex-1" />
+          <button
+            type="button"
+            onClick={() => setOnlyExpired((v) => !v)}
+            className="shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition"
+            style={onlyExpired
+              ? { background: "rgba(255,69,58,0.15)", border: "1px solid rgba(255,69,58,0.4)", color: "#ff6b62" }
+              : { ...btnGhost, color: "#6b8aaa" }}
+          >
+            Somente vencidos
+          </button>
           <span className="shrink-0 text-sm" style={{ color: M }}>{filtered.length} registro{filtered.length !== 1 ? "s" : ""}</span>
         </div>
 
