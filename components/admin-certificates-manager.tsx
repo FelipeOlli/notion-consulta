@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 type Company = {
   id: string;
@@ -116,6 +117,14 @@ export function AdminCertificatesManager({
   const [editSocio, setEditSocio] = useState("");
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+  const [confirmar, setConfirmar] = useState<{ acao: () => void; mensagem: string } | null>(null);
+  const [revealedPasswords, setRevealedPasswords] = useState<Set<string>>(new Set());
+  const togglePassword = (id: string) =>
+    setRevealedPasswords((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -181,7 +190,6 @@ export function AdminCertificatesManager({
 
   async function remove(id: string) {
     if (readOnly) { setError("Somente o administrador principal pode excluir certificados."); return; }
-    if (!confirm("Deseja excluir este certificado?")) return;
     const res = await fetch(`/api/admin/certificados/${id}`, { method: "DELETE" });
     if (!res.ok) { const p = await res.json().catch(() => null); setError(p?.message || "Erro ao excluir."); return; }
     setItems((prev) => prev.filter((item) => item.id !== id));
@@ -342,13 +350,36 @@ export function AdminCertificatesManager({
                   </form>
                 </article>
               ) : (
-                <article key={item.id} className="rounded-xl p-4" style={{ background: "rgba(3,8,15,0.5)", border: "1px solid rgba(29,127,229,0.1)" }}>
+                <article key={item.id} id={`certificado-${item.id}`} className="rounded-xl p-4 scroll-mt-24" style={{ background: "rgba(3,8,15,0.5)", border: "1px solid rgba(29,127,229,0.1)" }}>
                   <h3 className="text-sm font-semibold text-white">{item.company.legalName}</h3>
                   <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: M }}>
                     {item.company.document ? <span>CPF/CNPJ: {item.company.document}</span> : null}
                     {item.company.partnerName ? <span>Sócio: {item.company.partnerName}</span> : null}
                     <span>Vencimento: {new Date(item.expiresAt).toLocaleDateString("pt-BR")}</span>
                     <span>Arquivo: {item.fileName} ({Math.round(item.fileSize / 1024)} KB)</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      Senha: {revealedPasswords.has(item.id) ? item.certificatePassword : "••••••"}
+                      <button
+                        type="button"
+                        onClick={() => togglePassword(item.id)}
+                        aria-label={revealedPasswords.has(item.id) ? "Ocultar senha" : "Mostrar senha"}
+                        className="transition hover:opacity-70"
+                        style={{ color: "#1d7fe5", lineHeight: 0 }}
+                      >
+                        {revealedPasswords.has(item.id) ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                            <line x1="1" y1="1" x2="23" y2="23"/>
+                          </svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                          </svg>
+                        )}
+                      </button>
+                    </span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button type="button" onClick={() => window.open(`/api/admin/certificados/${item.id}`, "_blank")} className="rounded-md px-3 py-1.5 text-xs font-medium transition" style={{ border: "1px solid rgba(29,127,229,0.4)", color: "#1d7fe5", background: "rgba(8,15,26,0.5)" }}>
@@ -359,7 +390,7 @@ export function AdminCertificatesManager({
                         <button type="button" onClick={() => startEdit(item)} className="rounded-md px-3 py-1.5 text-xs font-medium text-white transition" style={btnGhost}>
                           Editar
                         </button>
-                        <button type="button" onClick={() => remove(item.id)} className="rounded-md px-3 py-1.5 text-xs font-medium transition" style={{ border: "1px solid rgba(255,69,58,0.35)", color: "#ff453a", background: "rgba(8,15,26,0.5)" }}>
+                        <button type="button" onClick={() => setConfirmar({ acao: () => remove(item.id), mensagem: "Excluir este certificado?" })} className="rounded-md px-3 py-1.5 text-xs font-medium transition" style={{ border: "1px solid rgba(255,69,58,0.35)", color: "#ff453a", background: "rgba(8,15,26,0.5)" }}>
                           Excluir
                         </button>
                       </>
@@ -371,6 +402,13 @@ export function AdminCertificatesManager({
           </div>
         )}
       </div>
+      {confirmar && (
+        <ConfirmModal
+          mensagem={confirmar.mensagem}
+          onConfirm={() => { confirmar.acao(); setConfirmar(null); }}
+          onCancel={() => setConfirmar(null)}
+        />
+      )}
     </section>
   );
 }
