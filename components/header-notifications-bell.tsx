@@ -4,11 +4,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import type { Chip, ChipEmpresa } from "@prisma/client";
 
-type ChipWithEmpresa = Chip & { empresa: ChipEmpresa };
+type ChipWithEmpresa = Chip & { empresa: ChipEmpresa; lido: boolean };
 
 type CertNotif = {
   id: string;
   expiresAt: string;
+  lido: boolean;
   company: { legalName: string };
 };
 
@@ -39,6 +40,14 @@ function diffDaysCert(expiresAt: string): number {
   return Math.round((venc.getTime() - hoje.getTime()) / 86400000);
 }
 
+function CheckIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
 export function HeaderNotificationsBell() {
   const [data, setData] = useState<ChipsData | null>(null);
   const [certData, setCertData] = useState<CertificadosData | null>(null);
@@ -55,19 +64,12 @@ export function HeaderNotificationsBell() {
     ]);
 
     if (chipsRes.status === 403) { setUnauthorized(true); return; }
-    if (chipsRes.ok) {
-      const json = await chipsRes.json();
-      setData(json);
-    }
+    if (chipsRes.ok) setData(await chipsRes.json());
     if (dominioRes.ok) {
       const json = await dominioRes.json();
       setDominioTotal((json as { total: number }).total ?? 0);
     }
-    // 403 em certificados apenas oculta a seção, não esconde o sino inteiro
-    if (certRes.ok) {
-      const json = await certRes.json();
-      setCertData(json);
-    }
+    if (certRes.ok) setCertData(await certRes.json());
   }, []);
 
   useEffect(() => {
@@ -78,27 +80,51 @@ export function HeaderNotificationsBell() {
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  async function markRead(kind: "chip" | "certificado", id: string) {
+    await fetch("/api/admin/notifications/read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind, refId: id }),
+    });
+    if (kind === "chip") {
+      setData((prev) => prev ? {
+        vencidos: prev.vencidos.map((c) => c.id === id ? { ...c, lido: true } : c),
+        proximos: prev.proximos.map((c) => c.id === id ? { ...c, lido: true } : c),
+      } : prev);
+    } else {
+      setCertData((prev) => prev ? {
+        vencidos: prev.vencidos.map((c) => c.id === id ? { ...c, lido: true } : c),
+        proximos: prev.proximos.map((c) => c.id === id ? { ...c, lido: true } : c),
+      } : prev);
+    }
+  }
+
+  async function markDominioRead() {
+    await fetch("/api/admin/dominio/notifications", { method: "PATCH" });
+    setDominioTotal(0);
+  }
+
   if (unauthorized || !data) return null;
 
   const certVencidos = certData?.vencidos ?? [];
   const certProximos = certData?.proximos ?? [];
+
   const total =
-    data.vencidos.length +
-    data.proximos.length +
+    data.vencidos.filter((c) => !c.lido).length +
+    data.proximos.filter((c) => !c.lido).length +
     dominioTotal +
-    certVencidos.length +
-    certProximos.length;
+    certVencidos.filter((c) => !c.lido).length +
+    certProximos.filter((c) => !c.lido).length;
 
   const hasChips = data.vencidos.length > 0 || data.proximos.length > 0;
   const hasCerts = certVencidos.length > 0 || certProximos.length > 0;
+  const hasAny = hasChips || hasCerts || dominioTotal > 0;
 
   return (
     <div ref={ref} className="relative">
@@ -114,13 +140,7 @@ export function HeaderNotificationsBell() {
         {total > 0 && (
           <span
             className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-white font-bold"
-            style={{
-              background: "#E3000F",
-              fontSize: "10px",
-              minWidth: "16px",
-              height: "16px",
-              padding: "0 3px",
-            }}
+            style={{ background: "#E3000F", fontSize: "10px", minWidth: "16px", height: "16px", padding: "0 3px" }}
           >
             {total}
           </span>
@@ -130,100 +150,101 @@ export function HeaderNotificationsBell() {
       {open && (
         <div
           className="absolute right-0 top-full mt-2 z-50 rounded-xl overflow-hidden"
-          style={{
-            width: "320px",
-            background: "rgba(15,23,42,0.97)",
-            border: "1px solid rgba(29,127,246,0.2)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-          }}
+          style={{ width: "320px", background: "rgba(15,23,42,0.97)", border: "1px solid rgba(29,127,246,0.2)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}
         >
           <div className="px-4 py-3 border-b border-white/5">
             <p className="text-xs font-semibold text-white/80">Notificações</p>
           </div>
 
-          {total === 0 ? (
+          {!hasAny ? (
             <div className="px-4 py-4">
               <p className="text-xs text-white/40">Nenhuma pendência.</p>
             </div>
           ) : (
             <div className="max-h-80 overflow-y-auto">
-              {/* ── Chips ─────────────────────────────────── */}
+              {/* ── Chips ──────────────────────────────────────── */}
               {hasChips && (
                 <div className="px-4 py-1.5" style={{ background: "rgba(255,255,255,0.02)" }}>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30">Chips</p>
                 </div>
               )}
-              {data.vencidos.map((chip) => {
+              {[...data.vencidos, ...data.proximos].map((chip) => {
                 const dias = diffDays(chip);
+                const vencido = dias < 0;
                 return (
-                  <div key={chip.id} className="px-4 py-3 border-b border-white/5 flex items-start gap-3">
-                    <span className="mt-0.5 w-2 h-2 rounded-full bg-red-500 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white/85 truncate">{chip.empresa.nome}</p>
-                      <p className="text-xs text-white/40">{chip.numero}</p>
-                    </div>
-                    <span className="text-xs text-red-400 shrink-0 mt-0.5">
-                      vencido há {Math.abs(dias)} {Math.abs(dias) === 1 ? "dia" : "dias"}
-                    </span>
-                  </div>
-                );
-              })}
-              {data.proximos.map((chip) => {
-                const dias = diffDays(chip);
-                return (
-                  <div key={chip.id} className="px-4 py-3 border-b border-white/5 flex items-start gap-3">
-                    <span className="mt-0.5 w-2 h-2 rounded-full bg-yellow-500 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white/85 truncate">{chip.empresa.nome}</p>
-                      <p className="text-xs text-white/40">{chip.numero}</p>
-                    </div>
-                    <span className="text-xs text-yellow-400 shrink-0 mt-0.5">
-                      {dias === 0 ? "vence hoje" : `vence em ${dias} ${dias === 1 ? "dia" : "dias"}`}
-                    </span>
+                  <div key={chip.id} className="border-b border-white/5 flex items-center" style={{ opacity: chip.lido ? 0.45 : 1 }}>
+                    <Link
+                      href={`/admin/chips#chip-${chip.id}`}
+                      onClick={() => setOpen(false)}
+                      className="flex-1 flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors min-w-0"
+                    >
+                      <span className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${chip.lido ? "bg-white/20" : vencido ? "bg-red-500" : "bg-yellow-500"}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white/85 truncate">{chip.empresa.nome}</p>
+                        <p className="text-xs text-white/40">{chip.numero}</p>
+                      </div>
+                      <span className={`text-xs shrink-0 mt-0.5 ${chip.lido ? "text-white/30" : vencido ? "text-red-400" : "text-yellow-400"}`}>
+                        {vencido
+                          ? `vencido há ${Math.abs(dias)} ${Math.abs(dias) === 1 ? "dia" : "dias"}`
+                          : dias === 0 ? "vence hoje" : `vence em ${dias} ${dias === 1 ? "dia" : "dias"}`}
+                      </span>
+                    </Link>
+                    {!chip.lido && (
+                      <button
+                        title="Marcar como lida"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); markRead("chip", chip.id); }}
+                        className="px-3 py-3 text-white/25 hover:text-white/70 transition-colors shrink-0"
+                      >
+                        <CheckIcon />
+                      </button>
+                    )}
                   </div>
                 );
               })}
 
-              {/* ── Certificados ──────────────────────────── */}
+              {/* ── Certificados ───────────────────────────────── */}
               {hasCerts && (
                 <div className="px-4 py-1.5" style={{ background: "rgba(255,255,255,0.02)" }}>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30">Certificados</p>
                 </div>
               )}
-              {certVencidos.map((cert) => {
+              {[...certVencidos, ...certProximos].map((cert) => {
                 const dias = diffDaysCert(cert.expiresAt);
+                const vencido = dias < 0;
                 return (
-                  <div key={cert.id} className="px-4 py-3 border-b border-white/5 flex items-start gap-3">
-                    <span className="mt-0.5 w-2 h-2 rounded-full bg-red-500 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white/85 truncate">{cert.company.legalName}</p>
-                      <p className="text-xs text-white/40">Certificado digital</p>
-                    </div>
-                    <span className="text-xs text-red-400 shrink-0 mt-0.5">
-                      vencido há {Math.abs(dias)} {Math.abs(dias) === 1 ? "dia" : "dias"}
-                    </span>
-                  </div>
-                );
-              })}
-              {certProximos.map((cert) => {
-                const dias = diffDaysCert(cert.expiresAt);
-                return (
-                  <div key={cert.id} className="px-4 py-3 border-b border-white/5 flex items-start gap-3">
-                    <span className="mt-0.5 w-2 h-2 rounded-full bg-yellow-500 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white/85 truncate">{cert.company.legalName}</p>
-                      <p className="text-xs text-white/40">Certificado digital</p>
-                    </div>
-                    <span className="text-xs text-yellow-400 shrink-0 mt-0.5">
-                      {dias === 0 ? "vence hoje" : `vence em ${dias} ${dias === 1 ? "dia" : "dias"}`}
-                    </span>
+                  <div key={cert.id} className="border-b border-white/5 flex items-center" style={{ opacity: cert.lido ? 0.45 : 1 }}>
+                    <Link
+                      href={`/admin/certificados#certificado-${cert.id}`}
+                      onClick={() => setOpen(false)}
+                      className="flex-1 flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors min-w-0"
+                    >
+                      <span className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${cert.lido ? "bg-white/20" : vencido ? "bg-red-500" : "bg-yellow-500"}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white/85 truncate">{cert.company.legalName}</p>
+                        <p className="text-xs text-white/40">Certificado digital</p>
+                      </div>
+                      <span className={`text-xs shrink-0 mt-0.5 ${cert.lido ? "text-white/30" : vencido ? "text-red-400" : "text-yellow-400"}`}>
+                        {vencido
+                          ? `vencido há ${Math.abs(dias)} ${Math.abs(dias) === 1 ? "dia" : "dias"}`
+                          : dias === 0 ? "vence hoje" : `vence em ${dias} ${dias === 1 ? "dia" : "dias"}`}
+                      </span>
+                    </Link>
+                    {!cert.lido && (
+                      <button
+                        title="Marcar como lida"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); markRead("certificado", cert.id); }}
+                        className="px-3 py-3 text-white/25 hover:text-white/70 transition-colors shrink-0"
+                      >
+                        <CheckIcon />
+                      </button>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
 
-          {/* ── Domínio ───────────────────────────────────── */}
+          {/* ── Domínio ──────────────────────────────────────── */}
           {dominioTotal > 0 && (
             <div className="px-4 py-3 border-t border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -232,17 +253,26 @@ export function HeaderNotificationsBell() {
                   {dominioTotal} resposta{dominioTotal > 1 ? "s" : ""} de SSC
                 </p>
               </div>
-              <Link
-                href="/admin/dominio"
-                onClick={() => setOpen(false)}
-                className="text-xs text-purple-400 hover:text-purple-300 transition-colors shrink-0"
-              >
-                Ver →
-              </Link>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  title="Marcar como lida"
+                  onClick={markDominioRead}
+                  className="text-white/25 hover:text-white/70 transition-colors"
+                >
+                  <CheckIcon />
+                </button>
+                <Link
+                  href="/admin/dominio"
+                  onClick={() => setOpen(false)}
+                  className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  Ver →
+                </Link>
+              </div>
             </div>
           )}
 
-          {/* ── Footer de links ───────────────────────────── */}
+          {/* ── Footer ───────────────────────────────────────── */}
           <div className="px-4 py-3 border-t border-white/5 flex flex-col gap-1.5">
             <Link
               href="/admin/chips"
