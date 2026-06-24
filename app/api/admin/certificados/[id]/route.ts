@@ -58,6 +58,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const certificatePassword = String(form.get("certificatePassword") ?? "").trim();
     const expiresAt = String(form.get("expiresAt") ?? "").trim();
     const socio = String(form.get("socio") ?? "").trim();
+    const document = String(form.get("document") ?? "").trim();
     const file = form.get("file");
 
     if (!companyId) return NextResponse.json({ message: "Empresa obrigatoria." }, { status: 400 });
@@ -86,7 +87,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     await prisma.company.update({
       where: { id: companyId },
-      data: { partnerName: socio || null },
+      data: { partnerName: socio || null, document: document || null },
     });
 
     const updated = await prisma.digitalCertificate.update({
@@ -111,6 +112,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     return NextResponse.json({ data: updated });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Nao foi possivel atualizar certificado.";
+    if (/Unique constraint/i.test(message)) {
+      return NextResponse.json({ message: "Já existe empresa com este CPF/CNPJ." }, { status: 409 });
+    }
     return NextResponse.json({ message }, { status: 400 });
   }
 }

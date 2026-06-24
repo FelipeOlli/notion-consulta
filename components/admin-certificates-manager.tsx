@@ -116,6 +116,7 @@ export function AdminCertificatesManager({
   const [editPassword, setEditPassword] = useState("");
   const [editExpiresAt, setEditExpiresAt] = useState("");
   const [editSocio, setEditSocio] = useState("");
+  const [editDocument, setEditDocument] = useState("");
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [confirmar, setConfirmar] = useState<{ acao: () => void; mensagem: string } | null>(null);
@@ -209,6 +210,7 @@ export function AdminCertificatesManager({
     setEditCompanyId(item.companyId);
     setEditPassword(item.certificatePassword);
     setEditSocio(item.company.partnerName ?? "");
+    setEditDocument(item.company.document ?? "");
     setEditFile(null);
     setEditExpiresAt(new Date(item.expiresAt).toISOString().slice(0, 10));
     setError("");
@@ -225,6 +227,7 @@ export function AdminCertificatesManager({
       fd.set("certificatePassword", editPassword);
       fd.set("expiresAt", editExpiresAt);
       if (editSocio.trim()) fd.set("socio", editSocio.trim());
+      fd.set("document", editDocument.trim());
       if (editFile) fd.set("file", editFile);
       const res = await fetch(`/api/admin/certificados/${editingId}`, { method: "PATCH", body: fd });
       const payload = await res.json();
@@ -354,6 +357,7 @@ export function AdminCertificatesManager({
                     </select>
                     <input type="date" value={editExpiresAt} onChange={(e) => setEditExpiresAt(e.target.value)} required className={inSm} />
                     <input type="text" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} placeholder="Senha do certificado" required className={inSm} />
+                    <input value={editDocument} onChange={(e) => setEditDocument(e.target.value)} placeholder="CPF/CNPJ (opcional)" className={inSm} />
                     <input value={editSocio} onChange={(e) => setEditSocio(e.target.value)} placeholder="Sócio (opcional)" className={inSm} />
                     <input type="file" onChange={(e) => setEditFile(e.target.files?.[0] ?? null)} className="ds-input h-auto py-2 file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(29,127,229,0.15)] file:px-2 file:py-1 file:text-sm file:text-white md:col-span-2" />
                     <div className="flex gap-2 md:col-span-2">
