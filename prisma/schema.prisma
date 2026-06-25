@@ -357,6 +357,7 @@ model AlterdataCliente {
   qtdLicencas       Int                           @default(1)
   acessosFranqueado Int                           @default(0)
   acessosBackoffice Int                           @default(0)
+  acessoLiberado    Boolean                       @default(false)
   observacao        String?
   createdAt         DateTime                      @default(now())
   updatedAt         DateTime                      @updatedAt

@@ -9,7 +9,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const { id } = await params;
   const body = await request.json();
-  const { codPessoa, nome, unidade, cnpj, cpf, status, telemetria, qtdLicencas, acessosFranqueado, acessosBackoffice, observacao } = body;
+  const { codPessoa, nome, unidade, cnpj, cpf, status, telemetria, qtdLicencas, acessosFranqueado, acessosBackoffice, acessoLiberado, observacao } = body;
 
   const data: Record<string, unknown> = {};
   if (codPessoa !== undefined) data.codPessoa = String(codPessoa).trim();
@@ -22,6 +22,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (qtdLicencas !== undefined) data.qtdLicencas = Number(qtdLicencas);
   if (acessosFranqueado !== undefined) data.acessosFranqueado = Number(acessosFranqueado);
   if (acessosBackoffice !== undefined) data.acessosBackoffice = Number(acessosBackoffice);
+  if (acessoLiberado !== undefined) data.acessoLiberado = Boolean(acessoLiberado);
   if (observacao !== undefined) data.observacao = observacao ? String(observacao).trim() : null;
 
   try {

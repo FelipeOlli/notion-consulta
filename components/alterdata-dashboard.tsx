@@ -93,6 +93,7 @@ const EMPTY_FORM = {
   qtdLicencas: 1,
   acessosFranqueado: 0,
   acessosBackoffice: 0,
+  acessoLiberado: false,
   observacao: "",
 };
 
@@ -189,6 +190,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
       qtdLicencas: c.qtdLicencas,
       acessosFranqueado: c.acessosFranqueado,
       acessosBackoffice: c.acessosBackoffice,
+      acessoLiberado: c.acessoLiberado,
       observacao: c.observacao ?? "",
     });
     setErro("");
@@ -226,6 +228,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
           qtdLicencas: Number(form.qtdLicencas),
           acessosFranqueado: Number(form.acessosFranqueado),
           acessosBackoffice: Number(form.acessosBackoffice),
+          acessoLiberado: form.acessoLiberado,
         }),
       });
       if (res.ok) {
@@ -525,7 +528,16 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
                 {clientesFiltrados.map((c) => (
                   <tr key={c.id} onClick={() => abrirEditar(c)} className="hover:bg-white/5 transition-colors cursor-pointer">
                     <td className="px-4 py-3 text-white/50 font-mono text-xs">{c.codPessoa}</td>
-                    <td className="px-4 py-3 text-white font-medium max-w-[260px] truncate">{c.nome}</td>
+                    <td className="px-4 py-3 text-white font-medium max-w-[260px]">
+                      <span className="inline-flex items-center gap-1.5 min-w-0">
+                        <span className="truncate">{c.nome}</span>
+                        {c.acessoLiberado && (
+                          <svg className="shrink-0 w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="currentColor" title="Acesso liberado">
+                            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.06-1.06L10.94 12.69l-1.69-1.69a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.06 0l4.06-4.124z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-white/60 text-xs max-w-[160px] truncate">{c.unidade ?? "—"}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border ${STATUS_COLORS[c.status]}`}>
@@ -692,6 +704,23 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
                     onChange={(e) => setForm((f) => ({ ...f, acessosBackoffice: Number(e.target.value) }))} />
                 </div>
               </div>
+
+              {/* Toggle acesso liberado */}
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={form.acessoLiberado}
+                    onChange={(e) => setForm((f) => ({ ...f, acessoLiberado: e.target.checked }))}
+                  />
+                  <div className={`w-9 h-5 rounded-full transition-colors ${form.acessoLiberado ? "bg-blue-500" : "bg-white/15"}`} />
+                  <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${form.acessoLiberado ? "translate-x-4" : "translate-x-0"}`} />
+                </div>
+                <span className="text-xs" style={{ color: form.acessoLiberado ? "#3b82f6" : "var(--onity-dark-text-muted)" }}>
+                  Acesso total liberado
+                </span>
+              </label>
 
               {/* Credenciais — só para clientes já existentes */}
               {editando && (
