@@ -6,7 +6,9 @@ import { AlterdataCostDashboard } from "@/components/alterdata-cost-dashboard";
 import { AlterdataObservacoesList } from "@/components/alterdata-observacoes-list";
 import { AlterdataContadoresList } from "@/components/alterdata-contadores-list";
 import { ConfirmModal } from "@/components/confirm-modal";
-import type { AlterdataCliente, AlterdataClienteStatus, AlterdataTelemetria } from "@prisma/client";
+import type { AlterdataCliente, AlterdataClienteStatus, AlterdataCredencialTipo, AlterdataTelemetria } from "@prisma/client";
+
+type ClienteComCredenciais = AlterdataCliente & { contadores?: { tipo: AlterdataCredencialTipo }[] };
 
 const STATUS_LABELS: Record<AlterdataClienteStatus, string> = {
   ATIVO: "Ativo",
@@ -100,10 +102,11 @@ interface Props {
 }
 
 export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
-  const [clientes, setClientes] = useState<AlterdataCliente[]>([]);
+  const [clientes, setClientes] = useState<ClienteComCredenciais[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState<AlterdataClienteStatus | "TODOS">("TODOS");
   const [filtroTelemetria, setFiltroTelemetria] = useState<AlterdataTelemetria | "TODOS">("TODOS");
+  const [filtroCredencial, setFiltroCredencial] = useState<AlterdataCredencialTipo | "TODOS">("TODOS");
   const [busca, setBusca] = useState("");
 
   const [formAberto, setFormAberto] = useState(false);
@@ -151,9 +154,10 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
   const clientesFiltrados = clientes.filter((c) => {
     const matchStatus = filtroStatus === "TODOS" || c.status === filtroStatus;
     const matchTelemetria = filtroTelemetria === "TODOS" || c.telemetria === filtroTelemetria;
+    const matchCredencial = filtroCredencial === "TODOS" || (c.contadores?.some((cr) => cr.tipo === filtroCredencial) ?? false);
     const buscaLower = busca.toLowerCase();
     const matchBusca = busca === "" || c.nome.toLowerCase().includes(buscaLower) || c.codPessoa.includes(busca) || (c.unidade ?? "").toLowerCase().includes(buscaLower);
-    return matchStatus && matchTelemetria && matchBusca;
+    return matchStatus && matchTelemetria && matchCredencial && matchBusca;
   });
 
   function abrirNovo() {
@@ -293,9 +297,9 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
             onChange={(e) => setBusca(e.target.value)}
             className="ds-input flex-1"
           />
-          {(filtroStatus !== "TODOS" || filtroTelemetria !== "TODOS") && (
+          {(filtroStatus !== "TODOS" || filtroTelemetria !== "TODOS" || filtroCredencial !== "TODOS") && (
             <button
-              onClick={() => { setFiltroStatus("TODOS"); setFiltroTelemetria("TODOS"); }}
+              onClick={() => { setFiltroStatus("TODOS"); setFiltroTelemetria("TODOS"); setFiltroCredencial("TODOS"); }}
               className="shrink-0 text-sm px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors"
             >
               × Limpar filtros
@@ -319,6 +323,22 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
               }`}
             >
               {t === "TODOS" ? "Todos" : t === "ATIVO" ? "Ativo" : "Inativo"}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Credencial:</span>
+          {(["TODOS", "NUVEM", "PACK", "ECONTADOR"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setFiltroCredencial(t)}
+              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                filtroCredencial === t
+                  ? "bg-blue-500/20 text-blue-400 border-blue-500/40"
+                  : "border-white/10 text-white/50 hover:text-white hover:border-white/20"
+              }`}
+            >
+              {t === "TODOS" ? "Todos" : t === "NUVEM" ? "Nuvem" : t === "PACK" ? "Pack" : "eContador"}
             </button>
           ))}
         </div>
@@ -364,6 +384,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
         {clientesFiltrados.length} de {clientes.length} clientes
         {filtroStatus !== "TODOS" && ` · status: ${STATUS_LABELS[filtroStatus]}`}
         {filtroTelemetria !== "TODOS" && ` · telemetria: ${TELEMETRIA_LABELS[filtroTelemetria]}`}
+        {filtroCredencial !== "TODOS" && ` · credencial: ${filtroCredencial === "NUVEM" ? "Nuvem" : filtroCredencial === "PACK" ? "Pack" : "eContador"}`}
       </p>
 
       {/* Resultado da sincronização */}

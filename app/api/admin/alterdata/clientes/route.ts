@@ -9,6 +9,7 @@ export async function GET() {
 
   const clientes = await prisma.alterdataCliente.findMany({
     orderBy: [{ status: "asc" }, { nome: "asc" }],
+    include: { contadores: { select: { tipo: true } } },
   });
   return NextResponse.json(clientes);
 }
