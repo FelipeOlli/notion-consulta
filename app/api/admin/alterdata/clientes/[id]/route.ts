@@ -24,8 +24,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (acessosBackoffice !== undefined) data.acessosBackoffice = Number(acessosBackoffice);
   if (observacao !== undefined) data.observacao = observacao ? String(observacao).trim() : null;
 
-  const cliente = await prisma.alterdataCliente.update({ where: { id }, data });
-  return NextResponse.json(cliente);
+  try {
+    const cliente = await prisma.alterdataCliente.update({ where: { id }, data });
+    return NextResponse.json(cliente);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro ao atualizar cliente.";
+    if (/Unique constraint/i.test(message)) {
+      return NextResponse.json({ message: "Já existe cliente com este código." }, { status: 409 });
+    }
+    return NextResponse.json({ message }, { status: 400 });
+  }
 }
 
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {

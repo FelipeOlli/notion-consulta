@@ -116,6 +116,8 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const skipAutoSave = useRef(false);
 
   const [importAberto, setImportAberto] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -165,6 +167,8 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
 
   function abrirNovo() {
     setEditando(null);
+    setAutoSaveStatus("idle");
+    skipAutoSave.current = true;
     setForm(EMPTY_FORM);
     setErro("");
     setFormAberto(true);
@@ -172,6 +176,8 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
 
   function abrirEditar(c: AlterdataCliente) {
     setEditando(c);
+    setAutoSaveStatus("idle");
+    skipAutoSave.current = true;
     setForm({
       codPessoa: c.codPessoa,
       nome: c.nome,
@@ -194,20 +200,62 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
     setEditando(null);
     setForm(EMPTY_FORM);
     setErro("");
+    setAutoSaveStatus("idle");
   }
+
+  // Auto-save com debounce — só na edição de clientes existentes
+  useEffect(() => {
+    if (!editando) return;
+    if (skipAutoSave.current) { skipAutoSave.current = false; return; }
+    if (!form.codPessoa.trim() || !form.nome.trim()) return;
+
+    const timer = setTimeout(async () => {
+      setAutoSaveStatus("saving");
+      setErro("");
+      const res = await fetch(`/api/admin/alterdata/clientes/${editando.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          codPessoa: form.codPessoa,
+          nome: form.nome,
+          unidade: form.unidade || null,
+          cnpj: form.cnpj.replace(/\D/g, "") || null,
+          cpf: form.cpf.replace(/\D/g, "") || null,
+          status: form.status,
+          telemetria: form.telemetria,
+          qtdLicencas: Number(form.qtdLicencas),
+          acessosFranqueado: Number(form.acessosFranqueado),
+          acessosBackoffice: Number(form.acessosBackoffice),
+        }),
+      });
+      if (res.ok) {
+        const atualizado = await res.json();
+        setClientes((prev) =>
+          prev.map((c) => c.id === editando.id ? { ...c, ...atualizado } : c)
+        );
+        setAutoSaveStatus("saved");
+        setTimeout(() => setAutoSaveStatus("idle"), 2000);
+      } else {
+        const d = await res.json();
+        setErro(d.message ?? "Erro ao salvar.");
+        setAutoSaveStatus("error");
+      }
+    }, 700);
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, editando?.id]);
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
+    // Edição é tratada pelo auto-save; aqui só criação de novo cliente
+    if (editando) return;
+
     setSalvando(true);
     setErro("");
 
-    const url = editando
-      ? `/api/admin/alterdata/clientes/${editando.id}`
-      : "/api/admin/alterdata/clientes";
-    const method = editando ? "PATCH" : "POST";
-
-    const res = await fetch(url, {
-      method,
+    const res = await fetch("/api/admin/alterdata/clientes", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
@@ -656,13 +704,29 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
 
               {erro && <p className="text-sm text-red-400">{erro}</p>}
 
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={fecharForm} className="link-muted text-sm px-4 py-2">
-                  Cancelar
-                </button>
-                <button type="submit" disabled={salvando} className="text-sm px-3 py-2 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors disabled:opacity-50">
-                  {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Criar cliente"}
-                </button>
+              <div className="flex items-center justify-end gap-3 pt-2">
+                {editando ? (
+                  <>
+                    {autoSaveStatus === "saving" && (
+                      <span className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Salvando…</span>
+                    )}
+                    {autoSaveStatus === "saved" && (
+                      <span className="text-xs text-emerald-400">✓ Salvo</span>
+                    )}
+                    <button type="button" onClick={fecharForm} className="link-muted text-sm px-4 py-2">
+                      Fechar
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" onClick={fecharForm} className="link-muted text-sm px-4 py-2">
+                      Cancelar
+                    </button>
+                    <button type="submit" disabled={salvando} className="text-sm px-3 py-2 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors disabled:opacity-50">
+                      {salvando ? "Salvando..." : "Criar cliente"}
+                    </button>
+                  </>
+                )}
               </div>
             </form>
 
