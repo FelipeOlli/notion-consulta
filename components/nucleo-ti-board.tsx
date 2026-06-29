@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 export type TiTask = {
@@ -150,6 +151,7 @@ function TaskModal({
   const [raciRef, setRaciRef] = useState(task.raciRef ?? "");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmar, setConfirmar] = useState<{ acao: () => void } | null>(null);
 
   const raciRow = RACI.find((r) => r.id === raciRef) ?? null;
 
@@ -171,7 +173,6 @@ function TaskModal({
   }
 
   async function handleDelete() {
-    if (!confirm(`Excluir "${task.title}"?`)) return;
     setDeleting(true);
     try {
       await fetch(`/api/admin/ti-tasks/${task.id}`, { method: "DELETE" });
@@ -313,7 +314,7 @@ function TaskModal({
         <div className="flex items-center justify-between gap-3 border-t pt-4" style={{ borderColor: C.border }}>
           {isMaster ? (
             <button
-              onClick={handleDelete}
+              onClick={() => setConfirmar({ acao: handleDelete })}
               disabled={deleting}
               className="rounded px-3 py-2 text-xs font-mono transition-colors"
               style={{ background: "rgba(248,113,113,0.1)", color: C.red, border: `1px solid rgba(248,113,113,0.3)` }}
@@ -334,6 +335,13 @@ function TaskModal({
           </div>
         </div>
       </div>
+      {confirmar && (
+        <ConfirmModal
+          mensagem={`Excluir "${task.title}"?`}
+          onConfirm={() => { confirmar.acao(); setConfirmar(null); }}
+          onCancel={() => setConfirmar(null)}
+        />
+      )}
     </div>
   );
 }

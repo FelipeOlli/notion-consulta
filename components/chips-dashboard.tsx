@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import type { Chip, ChipEmpresa, ChipOperadora } from "@prisma/client";
 import { ChipOperadoraLogo, OPERADORA_LABELS } from "@/components/chips-operator-logo";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 type ChipWithEmpresa = Chip & { empresa: ChipEmpresa };
 
@@ -82,6 +83,7 @@ export function ChipsDashboard({ initialChips, initialEmpresas }: Props) {
   const [adicionandoEmpresa, setAdicionandoEmpresa] = useState(false);
   const [excluindoEmpresa, setExcluindoEmpresa] = useState<string | null>(null);
   const [erroEmpresa, setErroEmpresa] = useState("");
+  const [confirmar, setConfirmar] = useState<{ acao: () => void; mensagem: string } | null>(null);
   const [gerenciarEmpresas, setGerenciarEmpresas] = useState(false);
 
   const reloadChips = useCallback(async () => {
@@ -231,7 +233,7 @@ export function ChipsDashboard({ initialChips, initialEmpresas }: Props) {
               <div key={e.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5">
                 <span className="text-sm text-white/80">{e.nome}</span>
                 <button
-                  onClick={() => excluirEmpresa(e.id)}
+                  onClick={() => setConfirmar({ acao: () => excluirEmpresa(e.id), mensagem: `Excluir a empresa "${e.nome}"?` })}
                   disabled={excluindoEmpresa === e.id}
                   className="text-red-400/50 hover:text-red-400 transition-colors disabled:opacity-40"
                   title="Excluir empresa"
@@ -272,7 +274,7 @@ export function ChipsDashboard({ initialChips, initialEmpresas }: Props) {
               </thead>
               <tbody>
                 {chips.map((c) => (
-                  <tr key={c.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                  <tr key={c.id} id={`chip-${c.id}`} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors scroll-mt-24">
                     <td className="px-4 py-3 text-white/80 text-sm">{c.empresa.nome}</td>
                     <td className="px-4 py-3 text-white/70 font-mono text-sm">{c.numero}</td>
                     <td className="px-4 py-3">
@@ -305,7 +307,7 @@ export function ChipsDashboard({ initialChips, initialEmpresas }: Props) {
                           </svg>
                         </button>
                         <button
-                          onClick={() => excluir(c.id)}
+                          onClick={() => setConfirmar({ acao: () => excluir(c.id), mensagem: `Excluir o chip ${c.numero}?` })}
                           disabled={excluindo === c.id}
                           className="text-red-400/50 hover:text-red-400 transition-colors disabled:opacity-40"
                           title="Excluir"
@@ -422,6 +424,13 @@ export function ChipsDashboard({ initialChips, initialEmpresas }: Props) {
             </div>
           </div>
         </div>
+      )}
+      {confirmar && (
+        <ConfirmModal
+          mensagem={confirmar.mensagem}
+          onConfirm={() => { confirmar.acao(); setConfirmar(null); }}
+          onCancel={() => setConfirmar(null)}
+        />
       )}
     </div>
   );

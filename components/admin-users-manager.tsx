@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { appModules, moduleLabels, type AppModule } from "@/lib/modules";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 type AdminUser = {
   id: string;
@@ -134,6 +135,7 @@ export function AdminUsersManager({ initialUsers, lockedPrimaryEmail }: Props) {
   }
 
   const [blockingId, setBlockingId] = useState<string | null>(null);
+  const [confirmar, setConfirmar] = useState<{ acao: () => void; mensagem: string } | null>(null);
 
   async function toggleBlock(user: AdminUser) {
     if (isProtected(user)) return;
@@ -162,7 +164,6 @@ export function AdminUsersManager({ initialUsers, lockedPrimaryEmail }: Props) {
   async function deleteUser(id: string) {
     const target = users.find((u) => u.id === id);
     if (target && isProtected(target)) return;
-    if (!window.confirm("Deseja excluir este usuario?")) return;
     const response = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
@@ -359,7 +360,7 @@ export function AdminUsersManager({ initialUsers, lockedPrimaryEmail }: Props) {
                 )}
                 <button
                   type="button"
-                  onClick={() => deleteUser(user.id)}
+                  onClick={() => setConfirmar({ acao: () => deleteUser(user.id), mensagem: `Excluir o usuário ${user.email}?` })}
                   disabled={isProtected(user)}
                   className="rounded-lg px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
                   style={{ border: "1px solid rgba(255,69,58,0.35)", color: "#ff453a", background: "rgba(8,15,26,0.5)" }}
@@ -379,6 +380,13 @@ export function AdminUsersManager({ initialUsers, lockedPrimaryEmail }: Props) {
           ) : null}
         </div>
       </div>
+      {confirmar && (
+        <ConfirmModal
+          mensagem={confirmar.mensagem}
+          onConfirm={() => { confirmar.acao(); setConfirmar(null); }}
+          onCancel={() => setConfirmar(null)}
+        />
+      )}
     </section>
   );
 }

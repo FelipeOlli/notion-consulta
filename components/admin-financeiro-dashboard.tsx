@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FINANCEIRO_SEM_EMPRESA } from "@/lib/financeiro-allocation";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 type SnapshotPoint = {
   totalUsers: number;
@@ -148,6 +149,7 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
   const [exportingExcel, setExportingExcel] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [clearingServiceKey, setClearingServiceKey] = useState<string | null>(null);
+  const [confirmar, setConfirmar] = useState<{ acao: () => void; mensagem: string; detalhe?: string } | null>(null);
   const lineEditorPanelRef = useRef<HTMLDivElement>(null);
   const sheetScrollRef = useRef<HTMLDivElement>(null);
   const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
@@ -375,7 +377,6 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
 
   async function deleteServerCompany(companyId: string) {
     if (!sheetServerId) return;
-    if (!window.confirm("Excluir esta empresa? Linhas alocadas ficam sem empresa.")) return;
     setCompanyUiError("");
     try {
       const res = await fetch(`/api/admin/financeiro/servers/${sheetServerId}/companies/${companyId}`, {
@@ -632,7 +633,6 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
 
   async function deleteLineFromEditor() {
     if (!sheetSnapshotId || !lineEditor || lineEditor.mode !== "edit") return;
-    if (!window.confirm("Excluir esta linha do snapshot?")) return;
     setEditorSaving(true);
     setSheetError("");
     try {
@@ -1317,7 +1317,7 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
                           <button
                             type="button"
                             disabled={readOnlyFinanceiro || editorSaving}
-                            onClick={() => void deleteLineFromEditor()}
+                            onClick={() => setConfirmar({ acao: () => void deleteLineFromEditor(), mensagem: "Excluir esta linha do snapshot?" })}
                             className="rounded-lg border border-red-800/80 bg-red-950/40 px-4 py-2 text-sm text-red-200 hover:bg-red-950/70 disabled:opacity-50"
                           >
                             Excluir linha
@@ -1524,6 +1524,14 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
 
         </>
       ) : null}
+      {confirmar && (
+        <ConfirmModal
+          mensagem={confirmar.mensagem}
+          detalhe={confirmar.detalhe}
+          onConfirm={() => { confirmar.acao(); setConfirmar(null); }}
+          onCancel={() => setConfirmar(null)}
+        />
+      )}
     </div>
   );
 }

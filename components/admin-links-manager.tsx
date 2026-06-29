@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { NotionLink } from "@/lib/types";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 type Props = {
   initialLinks: NotionLink[];
@@ -36,6 +37,7 @@ export function AdminLinksManager({ initialLinks, canEditAcessos = true }: Props
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState("");
+  const [confirmar, setConfirmar] = useState<{ acao: () => void; mensagem: string } | null>(null);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -113,8 +115,6 @@ export function AdminLinksManager({ initialLinks, canEditAcessos = true }: Props
       setError("Somente o administrador principal pode excluir acessos.");
       return;
     }
-    if (!window.confirm("Deseja mesmo excluir este link?")) return;
-
     const response = await fetch(`/api/admin/links/${id}`, { method: "DELETE" });
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
@@ -311,7 +311,7 @@ export function AdminLinksManager({ initialLinks, canEditAcessos = true }: Props
                 </button>
                 <button
                   type="button"
-                  onClick={() => onDelete(item.id)}
+                  onClick={() => setConfirmar({ acao: () => onDelete(item.id), mensagem: "Excluir este link?" })}
                   disabled={readOnlyAcessos}
                   className="rounded-lg px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
                   style={{ border: "1px solid rgba(255,69,58,0.35)", color: "#ff453a", background: "rgba(8,15,26,0.5)" }}
@@ -334,6 +334,13 @@ export function AdminLinksManager({ initialLinks, canEditAcessos = true }: Props
           ) : null}
         </div>
       </div>
+      {confirmar && (
+        <ConfirmModal
+          mensagem={confirmar.mensagem}
+          onConfirm={() => { confirmar.acao(); setConfirmar(null); }}
+          onCancel={() => setConfirmar(null)}
+        />
+      )}
     </section>
   );
 }
