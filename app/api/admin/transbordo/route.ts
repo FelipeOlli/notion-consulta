@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const ok = await ensureModuleAccess("transbordo");
+  const ok = await ensureModuleAccess("dominio");
   if (!ok) return NextResponse.json({ message: "Não autorizado." }, { status: 403 });
 
   const tickets = await prisma.transbordoTicket.findMany({
@@ -20,7 +20,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const ok = await ensureModuleAccess("transbordo");
+  const ok = await ensureModuleAccess("dominio");
   if (!ok) return NextResponse.json({ message: "Não autorizado." }, { status: 403 });
 
   const body = await req.json();

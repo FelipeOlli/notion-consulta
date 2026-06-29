@@ -86,13 +86,6 @@ export default async function AdminPage() {
       description: "Acompanhe SSCs do portal DOMÍNIO/ONVIO e receba alertas de novas respostas por email.",
     });
   }
-  if (modules.includes("transbordo")) {
-    cards.push({
-      href: "/admin/transbordo",
-      title: "Transbordo",
-      description: "Controle de tickets de migração de sistemas contábeis por franquia.",
-    });
-  }
 
   return (
     <main className="relative z-10 min-h-screen">

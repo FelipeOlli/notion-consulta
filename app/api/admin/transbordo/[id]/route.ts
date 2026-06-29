@@ -8,7 +8,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const ok = await ensureModuleAccess("transbordo");
+  const ok = await ensureModuleAccess("dominio");
   if (!ok) return NextResponse.json({ message: "Não autorizado." }, { status: 403 });
 
   const { id } = await params;
@@ -63,7 +63,7 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const ok = await ensureModuleAccess("transbordo");
+  const ok = await ensureModuleAccess("dominio");
   if (!ok) return NextResponse.json({ message: "Não autorizado." }, { status: 403 });
 
   const { id } = await params;
