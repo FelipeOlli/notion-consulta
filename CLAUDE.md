@@ -26,6 +26,7 @@
 | `usuarios` | `/admin/usuarios` | Gestão de usuários |
 | `cadastro_empresa` | `/admin/cadastro-empresa` | iframe externo |
 | `nucleo_ti` | `/admin/nucleo-ti` | Controle de demandas do Núcleo TI (master-only, sem enum Prisma) |
+| `transbordo` | `/admin/transbordo` | Tickets de migração de sistemas contábeis por franquia |
 
 - Role `master` tem acesso a todos os módulos (`ALL_MODULES_FOR_MASTER` em `lib/modules.ts`)
 - Admin principal protegido: `LOCKED_PRIMARY_ADMIN_EMAIL` em `lib/locked-admin.ts`
@@ -78,7 +79,22 @@
 - Cards de monitor colapsáveis: clique no cabeçalho (nome + status) expande metadados e ações; `expandedId` state em `admin-monitor-dashboard.tsx`
 - Inner pages (links, certificados, etc.) mantêm `AdminNav` para navegação entre módulos
 
+## Alterdata (`/admin/alterdata`)
+- Model: `AlterdataCliente` com `acessoLiberado Boolean @default(false)` — toggle no modal de edição, exibe ícone ✓ azul na tabela
+- Credenciais: `AlterdataClienteContador` (enum `AlterdataCredencialTipo`: NUVEM/PACK/ECONTADOR); API CRUD em `/api/admin/alterdata/clientes/[id]/contadores` e `/api/admin/alterdata/contadores/[id]` (GET/POST/PATCH/DELETE)
+- Filtro de credencial multi-select com lógica AND (`filtroCredenciais: AlterdataCredencialTipo[]`) — mostra só franquias que têm TODAS as credenciais marcadas
+- Edição de cliente com auto-save (debounce 700ms via useEffect); botão "Salvar alterações" removido; indicador "Salvando…/✓ Salvo"; criação mantém botão "Criar cliente"
+- Edição inline de login/senha nas credenciais (botão lápis → form pré-preenchido → PATCH)
+- Coluna "Nome" na tabela: `div.flex.max-w-[260px]` + `span.truncate.min-w-0` para evitar overflow sobre coluna "Unidade"
+
+## Transbordo (`/admin/transbordo`)
+- Models: `TransbordoTicket`, `TransbordoComment`, `TransbordoBadgeColor`, `TransbordoStatusOption` (enum `AppModule.TRANSBORDO`)
+- Ticket: franchiseName, sistemaOrigem, systems[], status (texto livre + datalist), statusColorId→cor de badge hex configurável, progress 0-100, companies, ssc, ticketTransbordoNo, lembrete, agendado, solicitacao, request, tempoMigracao, totalDays/prevDays/workDays, dConcluido
+- Comentários em texto puro com anexos (multipart/form-data → `/app/data/anexos/transbordo/<ticketId>/`)
+- API: `/api/admin/transbordo` (GET/POST), `/api/admin/transbordo/[id]` (PATCH/DELETE), `/api/admin/transbordo/[id]/comments` (GET/POST), `/api/admin/transbordo/comments/[id]` (DELETE), `badge-colors/`, `status-options/` (CRUD master-only)
+- Configurações (cores e opções de status) visíveis só para `master`; drawer lateral para detalhes e comentários; barra de progresso gradiente azul→roxo
+
 ## Sessões recentes
-- **2026-06-05** — Módulo Chips (controle de chips de telefone: empresas, operadoras CLARO/TIM/VIVO/OI, recargas); sininho de notificações no header (vencidos + próximos 3 dias); nav responsivo com overflow "Mais ▾" conforme largura da tela
-- **2026-05-26** — Remove nav header da home; cards de monitor colapsáveis (clique para expandir detalhes/ações); grid de módulos em 3 colunas
-- **2026-05-26** — Protocolos de atendimento no monitoramento (registro + exportação xlsx com filtros), redesign para System Design (slate + azul/roxo, Outfit+Inter), ordenação alfabética de conexões ativas/inativas
+- **2026-06-29** — Módulo Transbordo: tickets de migração por franquia, pipeline de status com badges coloridas, comentários com anexos, config master-only de cores/status; migration `add_transbordo_module`
+- **2026-06-29** — Edição inline de credenciais (PATCH `/api/admin/alterdata/contadores/[id]`); selo "acesso liberado" (campo `acessoLiberado` + migration); fix truncamento do nome na tabela; filtro multi-select de credenciais com AND; auto-save na edição de cliente
+- **2026-06-24** — Notificações in-app de vencimento de certificados (`NotificationRead` table, marcar como lido); filtro "Somente vencidos" nos certificados; busca só em nome/CNPJ; edição do CNPJ da empresa no certificado

@@ -16,6 +16,7 @@ enum AppModule {
   ALTERDATA
   CHIPS
   DOMINIO
+  TRANSBORDO
 }
 
 enum DominioSscStatus {
@@ -492,4 +493,60 @@ model NotificationRead {
   createdAt DateTime @default(now())
 
   @@unique([kind, refId])
+}
+
+// ─── Transbordo ────────────────────────────────────────────────────────────────
+
+model TransbordoBadgeColor {
+  id        Int                @id @default(autoincrement())
+  label     String
+  hexValue  String
+  tickets   TransbordoTicket[]
+  createdAt DateTime           @default(now())
+}
+
+model TransbordoStatusOption {
+  id        Int      @id @default(autoincrement())
+  label     String
+  value     String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model TransbordoTicket {
+  id                 String                @id @default(cuid())
+  franchiseName      String
+  sistemaOrigem      String?
+  systems            String[]
+  status             String                @default("T0 - Coleta inicial de dados")
+  statusColorId      Int?
+  statusColor        TransbordoBadgeColor? @relation(fields: [statusColorId], references: [id])
+  progress           Int                   @default(0)
+  companies          Int?
+  request            String?
+  ticketTransbordoNo String?
+  lembrete           String?
+  agendado           String?
+  solicitacao        String?
+  ssc                String?
+  tempoMigracao      String?
+  totalDays          Int?
+  prevDays           Int?
+  workDays           Int?
+  dConcluido         DateTime?
+  comments           TransbordoComment[]
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+}
+
+model TransbordoComment {
+  id          String           @id @default(cuid())
+  ticketId    String
+  ticket      TransbordoTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  content     String
+  attachments Json?
+  createdAt   DateTime         @default(now())
+
+  @@index([ticketId])
 }
