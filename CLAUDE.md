@@ -81,7 +81,7 @@
 
 ## Alterdata (`/admin/alterdata`)
 - Model: `AlterdataCliente` com `acessoLiberado Boolean @default(false)` — toggle no modal de edição, exibe ícone ✓ azul na tabela
-- Credenciais: `AlterdataClienteContador` (enum `AlterdataCredencialTipo`: NUVEM/PACK/ECONTADOR); API CRUD em `/api/admin/alterdata/clientes/[id]/contadores` e `/api/admin/alterdata/contadores/[id]` (GET/POST/PATCH/DELETE)
+- Credenciais: `AlterdataClienteContador` (enum `AlterdataCredencialTipo`: NUVEM/PACK/ECONTADOR/PASSAPORTE); API CRUD em `/api/admin/alterdata/clientes/[id]/contadores` e `/api/admin/alterdata/contadores/[id]` (GET/POST/PATCH/DELETE)
 - Filtro de credencial multi-select com lógica AND (`filtroCredenciais: AlterdataCredencialTipo[]`) — mostra só franquias que têm TODAS as credenciais marcadas
 - Edição de cliente com auto-save (debounce 700ms via useEffect); botão "Salvar alterações" removido; indicador "Salvando…/✓ Salvo"; criação mantém botão "Criar cliente"
 - Edição inline de login/senha nas credenciais (botão lápis → form pré-preenchido → PATCH)

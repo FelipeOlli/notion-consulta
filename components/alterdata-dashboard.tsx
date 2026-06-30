@@ -53,6 +53,13 @@ const TELEMETRIA_LABELS: Record<AlterdataTelemetria, string> = {
   INATIVO: "Inativo",
 };
 
+const CRED_LABELS: Record<AlterdataCredencialTipo, string> = {
+  NUVEM: "Nuvem",
+  PACK: "Pack",
+  ECONTADOR: "eContador",
+  PASSAPORTE: "Passaporte",
+};
+
 const TELEMETRIA_COLORS: Record<AlterdataTelemetria, string> = {
   ATIVO: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
   INATIVO: "bg-red-500/20 text-red-400 border-red-500/30",
@@ -392,7 +399,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
           >
             Todos
           </button>
-          {(["NUVEM", "PACK", "ECONTADOR"] as const).map((t) => (
+          {(["NUVEM", "PACK", "ECONTADOR", "PASSAPORTE"] as const).map((t) => (
             <button
               key={t}
               onClick={() => toggleCredencial(t)}
@@ -402,7 +409,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
                   : "border-white/10 text-white/50 hover:text-white hover:border-white/20"
               }`}
             >
-              {t === "NUVEM" ? "Nuvem" : t === "PACK" ? "Pack" : "eContador"}
+              {CRED_LABELS[t]}
             </button>
           ))}
         </div>
@@ -448,7 +455,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
         {clientesFiltrados.length} de {clientes.length} clientes
         {filtroStatus !== "TODOS" && ` · status: ${STATUS_LABELS[filtroStatus]}`}
         {filtroTelemetria !== "TODOS" && ` · telemetria: ${TELEMETRIA_LABELS[filtroTelemetria]}`}
-        {filtroCredenciais.length > 0 && ` · credenciais: ${filtroCredenciais.map((t) => t === "NUVEM" ? "Nuvem" : t === "PACK" ? "Pack" : "eContador").join(" + ")}`}
+        {filtroCredenciais.length > 0 && ` · credenciais: ${filtroCredenciais.map((t) => CRED_LABELS[t]).join(" + ")}`}
       </p>
 
       {/* Resultado da sincronização */}
@@ -729,6 +736,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
                   <AlterdataContadoresList clienteId={editando.id} tipo="NUVEM" titulo="Alterdata Nuvem" />
                   <AlterdataContadoresList clienteId={editando.id} tipo="PACK" titulo="Alterdata Pack" />
                   <AlterdataContadoresList clienteId={editando.id} tipo="ECONTADOR" titulo="eContador" />
+                  <AlterdataContadoresList clienteId={editando.id} tipo="PASSAPORTE" titulo="Passaporte" />
                 </div>
               )}
 

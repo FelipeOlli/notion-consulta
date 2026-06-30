@@ -9,7 +9,7 @@ interface Contador {
   senha: string;
 }
 
-type CredencialTipo = "ECONTADOR" | "NUVEM" | "PACK";
+type CredencialTipo = "ECONTADOR" | "NUVEM" | "PACK" | "PASSAPORTE";
 
 interface Props {
   clienteId: string;
