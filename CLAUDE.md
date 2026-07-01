@@ -26,7 +26,8 @@
 | `usuarios` | `/admin/usuarios` | Gestão de usuários |
 | `cadastro_empresa` | `/admin/cadastro-empresa` | iframe externo |
 | `nucleo_ti` | `/admin/nucleo-ti` | Controle de demandas do Núcleo TI (master-only, sem enum Prisma) |
-| `transbordo` | `/admin/transbordo` | Tickets de migração de sistemas contábeis por franquia |
+| `alterdata` | `/admin/alterdata` | Clientes Alterdata + credenciais (Nuvem/Pack/eContador/Passaporte) |
+| `dominio` | `/admin/dominio` | SSCs DOMÍNIO/ONVIO + aba Transbordo (tickets de migração por franquia) |
 
 - Role `master` tem acesso a todos os módulos (`ALL_MODULES_FOR_MASTER` em `lib/modules.ts`)
 - Admin principal protegido: `LOCKED_PRIMARY_ADMIN_EMAIL` em `lib/locked-admin.ts`
@@ -87,14 +88,16 @@
 - Edição inline de login/senha nas credenciais (botão lápis → form pré-preenchido → PATCH)
 - Coluna "Nome" na tabela: `div.flex.max-w-[260px]` + `span.truncate.min-w-0` para evitar overflow sobre coluna "Unidade"
 
-## Transbordo (`/admin/transbordo`)
-- Models: `TransbordoTicket`, `TransbordoComment`, `TransbordoBadgeColor`, `TransbordoStatusOption` (enum `AppModule.TRANSBORDO`)
+## Transbordo (aba dentro de `/admin/dominio`)
+- **NÃO é um módulo separado** — é a segunda aba da página do Domínio (`DominioTabs` em `components/dominio-tabs.tsx`)
+- Acesso controlado pelo módulo `dominio`; `/admin/transbordo` redireciona para `/admin/dominio`
+- Models: `TransbordoTicket`, `TransbordoComment`, `TransbordoBadgeColor`, `TransbordoStatusOption` (enum `TRANSBORDO` existe no Prisma mas não em `appModules`)
 - Ticket: franchiseName, sistemaOrigem, systems[], status (texto livre + datalist), statusColorId→cor de badge hex configurável, progress 0-100, companies, ssc, ticketTransbordoNo, lembrete, agendado, solicitacao, request, tempoMigracao, totalDays/prevDays/workDays, dConcluido
 - Comentários em texto puro com anexos (multipart/form-data → `/app/data/anexos/transbordo/<ticketId>/`)
-- API: `/api/admin/transbordo` (GET/POST), `/api/admin/transbordo/[id]` (PATCH/DELETE), `/api/admin/transbordo/[id]/comments` (GET/POST), `/api/admin/transbordo/comments/[id]` (DELETE), `badge-colors/`, `status-options/` (CRUD master-only)
-- Configurações (cores e opções de status) visíveis só para `master`; drawer lateral para detalhes e comentários; barra de progresso gradiente azul→roxo
+- API: `/api/admin/transbordo/` (todas as rotas usam `ensureModuleAccess("dominio")`)
+- Configurações (cores e opções de status) visíveis só para `master`; `CRED_LABELS` mapeia tipo→label em `alterdata-dashboard.tsx`
 
 ## Sessões recentes
-- **2026-06-29** — Módulo Transbordo: tickets de migração por franquia, pipeline de status com badges coloridas, comentários com anexos, config master-only de cores/status; migration `add_transbordo_module`
-- **2026-06-29** — Edição inline de credenciais (PATCH `/api/admin/alterdata/contadores/[id]`); selo "acesso liberado" (campo `acessoLiberado` + migration); fix truncamento do nome na tabela; filtro multi-select de credenciais com AND; auto-save na edição de cliente
-- **2026-06-24** — Notificações in-app de vencimento de certificados (`NotificationRead` table, marcar como lido); filtro "Somente vencidos" nos certificados; busca só em nome/CNPJ; edição do CNPJ da empresa no certificado
+- **2026-06-30** — Credencial Passaporte no Alterdata (enum `PASSAPORTE`, seção no modal, chip de filtro, `CRED_LABELS`); migration `add_passaporte_credencial`
+- **2026-06-29** — Transbordo como aba do módulo Domínio (`DominioTabs`); módulos Domínio e Transbordo commitados; fix truncamento Nome na tabela Alterdata; `ConfirmModal` substituindo `window.confirm` em links/usuários/financeiro/chips/nucleo-ti
+- **2026-06-29** — Edição inline de credenciais (PATCH `/api/admin/alterdata/contadores/[id]`); selo "acesso liberado" (campo `acessoLiberado` + migration); filtro multi-select de credenciais com AND; auto-save na edição de cliente
