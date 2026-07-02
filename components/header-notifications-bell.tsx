@@ -48,6 +48,15 @@ function CheckIcon() {
   );
 }
 
+function UnreadIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function HeaderNotificationsBell() {
   const [data, setData] = useState<ChipsData | null>(null);
   const [certData, setCertData] = useState<CertificadosData | null>(null);
@@ -101,6 +110,25 @@ export function HeaderNotificationsBell() {
       setCertData((prev) => prev ? {
         vencidos: prev.vencidos.map((c) => c.id === id ? { ...c, lido: true } : c),
         proximos: prev.proximos.map((c) => c.id === id ? { ...c, lido: true } : c),
+      } : prev);
+    }
+  }
+
+  async function markUnread(kind: "chip" | "certificado", id: string) {
+    await fetch("/api/admin/notifications/read", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind, refId: id }),
+    });
+    if (kind === "chip") {
+      setData((prev) => prev ? {
+        vencidos: prev.vencidos.map((c) => c.id === id ? { ...c, lido: false } : c),
+        proximos: prev.proximos.map((c) => c.id === id ? { ...c, lido: false } : c),
+      } : prev);
+    } else {
+      setCertData((prev) => prev ? {
+        vencidos: prev.vencidos.map((c) => c.id === id ? { ...c, lido: false } : c),
+        proximos: prev.proximos.map((c) => c.id === id ? { ...c, lido: false } : c),
       } : prev);
     }
   }
@@ -168,7 +196,9 @@ export function HeaderNotificationsBell() {
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30">Chips</p>
                 </div>
               )}
-              {[...data.vencidos, ...data.proximos].map((chip) => {
+              {[...data.proximos, ...data.vencidos]
+                .sort((a, b) => diffDays(b) - diffDays(a))
+                .map((chip) => {
                 const dias = diffDays(chip);
                 const vencido = dias < 0;
                 return (
@@ -189,13 +219,21 @@ export function HeaderNotificationsBell() {
                           : dias === 0 ? "vence hoje" : `vence em ${dias} ${dias === 1 ? "dia" : "dias"}`}
                       </span>
                     </Link>
-                    {!chip.lido && (
+                    {!chip.lido ? (
                       <button
                         title="Marcar como lida"
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); markRead("chip", chip.id); }}
                         className="px-3 py-3 text-white/25 hover:text-white/70 transition-colors shrink-0"
                       >
                         <CheckIcon />
+                      </button>
+                    ) : (
+                      <button
+                        title="Marcar como não lida"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); markUnread("chip", chip.id); }}
+                        className="px-3 py-3 text-white/20 hover:text-blue-400 transition-colors shrink-0"
+                      >
+                        <UnreadIcon />
                       </button>
                     )}
                   </div>
@@ -208,7 +246,9 @@ export function HeaderNotificationsBell() {
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30">Certificados</p>
                 </div>
               )}
-              {[...certVencidos, ...certProximos].map((cert) => {
+              {[...certProximos, ...certVencidos]
+                .sort((a, b) => diffDaysCert(b.expiresAt) - diffDaysCert(a.expiresAt))
+                .map((cert) => {
                 const dias = diffDaysCert(cert.expiresAt);
                 const vencido = dias < 0;
                 return (
@@ -229,13 +269,21 @@ export function HeaderNotificationsBell() {
                           : dias === 0 ? "vence hoje" : `vence em ${dias} ${dias === 1 ? "dia" : "dias"}`}
                       </span>
                     </Link>
-                    {!cert.lido && (
+                    {!cert.lido ? (
                       <button
                         title="Marcar como lida"
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); markRead("certificado", cert.id); }}
                         className="px-3 py-3 text-white/25 hover:text-white/70 transition-colors shrink-0"
                       >
                         <CheckIcon />
+                      </button>
+                    ) : (
+                      <button
+                        title="Marcar como não lida"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); markUnread("certificado", cert.id); }}
+                        className="px-3 py-3 text-white/20 hover:text-blue-400 transition-colors shrink-0"
+                      >
+                        <UnreadIcon />
                       </button>
                     )}
                   </div>
