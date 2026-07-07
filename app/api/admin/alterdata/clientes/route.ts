@@ -15,8 +15,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const isMaster = await ensureMaster();
-  if (!isMaster) return NextResponse.json({ message: "Nao autorizado." }, { status: 403 });
+  const ok = await ensureModuleAccess("alterdata");
+  if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 403 });
 
   const body = await request.json();
   const { codPessoa, nome, unidade, cnpj, cpf, status, telemetria, qtdLicencas, acessosFranqueado, acessosBackoffice, acessoLiberado, observacao } = body;

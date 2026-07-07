@@ -444,41 +444,43 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
             </button>
           ))}
         </div>
-        {isMaster && (
-          <div className="flex items-center justify-end gap-2">
-            <a
-              href="/api/admin/alterdata/clientes/template"
-              className="text-sm px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors whitespace-nowrap"
-            >
-              Baixar template
-            </a>
-            <a
-              href="/api/admin/alterdata/clientes/export"
-              className="text-sm px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors whitespace-nowrap"
-            >
-              Exportar xlsx
-            </a>
-            <button
-              onClick={sincronizar}
-              disabled={sincronizando}
-              className="text-sm px-3 py-2 rounded-lg border border-purple-500/30 text-purple-400 hover:text-purple-300 hover:border-purple-400/50 transition-colors whitespace-nowrap disabled:opacity-50"
-            >
-              {sincronizando ? "Sincronizando..." : "↻ Sincronizar Sheets"}
-            </button>
-            <button
-              onClick={() => { setImportAberto(true); setImportResultado(null); }}
-              className="text-sm px-3 py-2 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors whitespace-nowrap"
-            >
-              Importar xlsx
-            </button>
-            <button
-              onClick={abrirNovo}
-              className="text-sm px-3 py-2 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors whitespace-nowrap"
-            >
-              + Novo cliente
-            </button>
-          </div>
-        )}
+        <div className="flex items-center justify-end gap-2">
+          {isMaster && (
+            <>
+              <a
+                href="/api/admin/alterdata/clientes/template"
+                className="text-sm px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors whitespace-nowrap"
+              >
+                Baixar template
+              </a>
+              <a
+                href="/api/admin/alterdata/clientes/export"
+                className="text-sm px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors whitespace-nowrap"
+              >
+                Exportar xlsx
+              </a>
+              <button
+                onClick={sincronizar}
+                disabled={sincronizando}
+                className="text-sm px-3 py-2 rounded-lg border border-purple-500/30 text-purple-400 hover:text-purple-300 hover:border-purple-400/50 transition-colors whitespace-nowrap disabled:opacity-50"
+              >
+                {sincronizando ? "Sincronizando..." : "↻ Sincronizar Sheets"}
+              </button>
+              <button
+                onClick={() => { setImportAberto(true); setImportResultado(null); }}
+                className="text-sm px-3 py-2 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors whitespace-nowrap"
+              >
+                Importar xlsx
+              </button>
+            </>
+          )}
+          <button
+            onClick={abrirNovo}
+            className="text-sm px-3 py-2 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors whitespace-nowrap"
+          >
+            + Novo cliente
+          </button>
+        </div>
       </div>
 
       {/* Totalizador filtrado */}
@@ -559,7 +561,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
                   <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>Ac. Backoffice</th>
                   <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>V. Franqueado</th>
                   <th className="px-4 py-3 text-xs font-medium text-center" style={{ color: "var(--onity-dark-text-muted)" }}>V. Backoffice</th>
-                  {isMaster && <th className="px-4 py-3" />}
+                  <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -599,16 +601,16 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
                     <td className="px-4 py-3 text-center text-white/70">{c.acessosBackoffice}</td>
                     <td className="px-4 py-3 text-center text-white/70">{formatBRL(c.acessosFranqueado * FRANQUEADO_UNIT_PRICE)}</td>
                     <td className="px-4 py-3 text-center text-white/70">{formatBRL(c.acessosBackoffice * BACKOFFICE_UNIT_PRICE)}</td>
-                    {isMaster && (
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2 justify-end items-center">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); abrirEditar(c); }}
-                            className="text-blue-400/60 hover:text-blue-400 transition-colors"
-                            title="Editar"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                          </button>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2 justify-end items-center">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); abrirEditar(c); }}
+                          className="text-blue-400/60 hover:text-blue-400 transition-colors"
+                          title="Editar"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        </button>
+                        {isMaster && (
                           <button
                             onClick={(e) => { e.stopPropagation(); setConfirmar({ acao: () => excluir(c.id), mensagem: `Excluir o cliente "${c.nome}"?` }); }}
                             disabled={excluindo === c.id}
@@ -621,9 +623,9 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             )}
                           </button>
-                        </div>
-                      </td>
-                    )}
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

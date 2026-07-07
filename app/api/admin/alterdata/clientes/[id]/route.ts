@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { ensureMaster } from "@/lib/admin-auth";
+import { ensureMaster, ensureModuleAccess } from "@/lib/admin-auth";
 import type { AlterdataClienteStatus, AlterdataTelemetria } from "@prisma/client";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const isMaster = await ensureMaster();
-  if (!isMaster) return NextResponse.json({ message: "Nao autorizado." }, { status: 403 });
+  const ok = await ensureModuleAccess("alterdata");
+  if (!ok) return NextResponse.json({ message: "Nao autorizado." }, { status: 403 });
 
   const { id } = await params;
   const body = await request.json();
