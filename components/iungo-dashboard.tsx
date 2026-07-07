@@ -265,11 +265,17 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
               {editando ? `Editar ramal ${editando.ramal}` : "Novo ramal"}
             </h2>
             {editando && (
-              <span className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
-                {autoSaveStatus === "saving" && "Salvando…"}
-                {autoSaveStatus === "saved" && "✓ Salvo"}
-                {autoSaveStatus === "error" && "Erro ao salvar"}
-              </span>
+              <div className="text-xs">
+                {autoSaveStatus === "saving" && (
+                  <span style={{ color: "var(--onity-dark-text-muted)" }}>Salvando…</span>
+                )}
+                {autoSaveStatus === "saved" && (
+                  <span className="text-emerald-400">✓ Salvo</span>
+                )}
+                {autoSaveStatus === "error" && (
+                  <span className="text-red-400">Erro ao salvar</span>
+                )}
+              </div>
             )}
           </div>
 
