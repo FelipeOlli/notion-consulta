@@ -18,6 +18,7 @@ const descriptions: Record<AppModule, string> = {
   alterdata: "Controle de clientes ativos, inativos, inadimplentes, congelados e distratados na plataforma Alterdata.",
   chips: "Gerencie os chips de telefone corporativos, operadoras e datas de recarga.",
   dominio: "Acompanhe SSCs do portal DOMÍNIO/ONVIO e receba alertas de novas respostas por email.",
+  iungo: "Ramais PABX: status, credenciais, telefones e funcionários vinculados.",
 };
 
 export const moduleHrefs: Record<AppModule, string> = {
@@ -30,6 +31,7 @@ export const moduleHrefs: Record<AppModule, string> = {
   alterdata: "/admin/alterdata",
   chips: "/admin/chips",
   dominio: "/admin/dominio",
+  iungo: "/admin/iungo",
 };
 
 export function getPortalCardsForModules(modules: AppModule[]): PortalModuleCard[] {

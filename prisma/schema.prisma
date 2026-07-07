@@ -17,6 +17,12 @@ enum AppModule {
   CHIPS
   DOMINIO
   TRANSBORDO
+  IUNGO
+}
+
+enum IungoStatus {
+  ATIVO
+  INATIVO
 }
 
 enum DominioSscStatus {
@@ -550,4 +556,18 @@ model TransbordoComment {
   createdAt   DateTime         @default(now())
 
   @@index([ticketId])
+}
+
+model IungoRamal {
+  id           String      @id @default(cuid())
+  ramal        String      @unique
+  status       IungoStatus @default(ATIVO)
+  login        String
+  senha        String
+  numero       String?
+  funcionarios String[]    @default([])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([status])
 }

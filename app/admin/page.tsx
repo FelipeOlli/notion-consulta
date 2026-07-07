@@ -86,6 +86,13 @@ export default async function AdminPage() {
       description: "Acompanhe SSCs do portal DOMÍNIO/ONVIO e receba alertas de novas respostas por email.",
     });
   }
+  if (modules.includes("iungo")) {
+    cards.push({
+      href: "/admin/iungo",
+      title: "IUNGO",
+      description: "Ramais PABX: status, credenciais, telefones e funcionários vinculados.",
+    });
+  }
 
   return (
     <main className="relative z-10 min-h-screen">
