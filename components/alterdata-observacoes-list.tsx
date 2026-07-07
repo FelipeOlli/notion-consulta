@@ -191,9 +191,10 @@ function AnexoPreview({ anexo, canDelete, onDelete }: { anexo: Anexo; canDelete:
 interface Props {
   clienteId: string;
   currentEmail: string;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
+export function AlterdataObservacoesList({ clienteId, currentEmail, onDirtyChange }: Props) {
   const [obs, setObs] = useState<Observacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [novoTexto, setNovoTexto] = useState("");
@@ -202,6 +203,18 @@ export function AlterdataObservacoesList({ clienteId, currentEmail }: Props) {
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [confirmar, setConfirmar] = useState<{ acao: () => void; mensagem: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Notifica o pai quando há texto ou arquivos não salvos (dirty)
+  useEffect(() => {
+    onDirtyChange?.(novoTexto.trim() !== "" || novoArquivos.length > 0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [novoTexto, novoArquivos]);
+
+  // Ao desmontar, garante que o pai saiba que não há mais dirty
+  useEffect(() => {
+    return () => { onDirtyChange?.(false); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const carregar = useCallback(async () => {
     const res = await fetch(`/api/admin/alterdata/clientes/${clienteId}/observacoes`);

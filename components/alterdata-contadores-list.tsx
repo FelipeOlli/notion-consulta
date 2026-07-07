@@ -15,9 +15,10 @@ interface Props {
   clienteId: string;
   tipo: CredencialTipo;
   titulo: string;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function AlterdataContadoresList({ clienteId, tipo, titulo }: Props) {
+export function AlterdataContadoresList({ clienteId, tipo, titulo, onDirtyChange }: Props) {
   const [contadores, setContadores] = useState<Contador[]>([]);
   const [loading, setLoading] = useState(true);
   const [login, setLogin] = useState("");
@@ -31,6 +32,20 @@ export function AlterdataContadoresList({ clienteId, tipo, titulo }: Props) {
   const [editLogin, setEditLogin] = useState("");
   const [editSenha, setEditSenha] = useState("");
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+
+  // Notifica o pai quando há inputs não salvos (dirty)
+  useEffect(() => {
+    const dirty = login.trim() !== "" || senha.trim() !== "" ||
+      (editandoId !== null && (editLogin.trim() !== "" || editSenha.trim() !== ""));
+    onDirtyChange?.(dirty);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [login, senha, editandoId, editLogin, editSenha]);
+
+  // Ao desmontar, garante que o pai saiba que não há mais dirty
+  useEffect(() => {
+    return () => { onDirtyChange?.(false); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const carregar = useCallback(async () => {
     const res = await fetch(`/api/admin/alterdata/clientes/${clienteId}/contadores?tipo=${tipo}`);

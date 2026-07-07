@@ -126,6 +126,12 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
   const [erro, setErro] = useState("");
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const skipAutoSave = useRef(false);
+  const dirtyRef = useRef(false);
+  const subDirtyRef = useRef<Record<string, boolean>>({});
+
+  const marcarSubDirty = useCallback((key: string) => (dirty: boolean) => {
+    subDirtyRef.current[key] = dirty;
+  }, []);
 
   const [importAberto, setImportAberto] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -204,12 +210,68 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
     setFormAberto(true);
   }
 
-  function fecharForm() {
+  // Persiste a edição atual no backend; retorna true se ok
+  async function persistirEdicao(clienteId: string, snapshot: typeof form) {
+    setAutoSaveStatus("saving");
+    setErro("");
+    const res = await fetch(`/api/admin/alterdata/clientes/${clienteId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        codPessoa: snapshot.codPessoa,
+        nome: snapshot.nome,
+        unidade: snapshot.unidade || null,
+        cnpj: snapshot.cnpj.replace(/\D/g, "") || null,
+        cpf: snapshot.cpf.replace(/\D/g, "") || null,
+        status: snapshot.status,
+        telemetria: snapshot.telemetria,
+        qtdLicencas: Number(snapshot.qtdLicencas),
+        acessosFranqueado: Number(snapshot.acessosFranqueado),
+        acessosBackoffice: Number(snapshot.acessosBackoffice),
+        acessoLiberado: snapshot.acessoLiberado,
+      }),
+    });
+    if (res.ok) {
+      const atualizado = await res.json();
+      setClientes((prev) =>
+        prev.map((c) => c.id === clienteId ? { ...c, ...atualizado } : c)
+      );
+      dirtyRef.current = false;
+      setAutoSaveStatus("saved");
+      setTimeout(() => setAutoSaveStatus("idle"), 2000);
+      return true;
+    } else {
+      const d = await res.json();
+      setErro(d.message ?? "Erro ao salvar.");
+      setAutoSaveStatus("error");
+      return false;
+    }
+  }
+
+  function resetForm() {
     setFormAberto(false);
     setEditando(null);
     setForm(EMPTY_FORM);
     setErro("");
     setAutoSaveStatus("idle");
+    dirtyRef.current = false;
+    subDirtyRef.current = {};
+  }
+
+  async function fecharForm() {
+    // Flush do auto-save pendente — evita perder dados digitados antes dos 700ms
+    if (editando && dirtyRef.current && form.codPessoa.trim() && form.nome.trim()) {
+      await persistirEdicao(editando.id, form);
+    }
+    // Avisa se há inputs não salvos nos sub-formulários (credenciais/observações)
+    if (Object.values(subDirtyRef.current).some(Boolean)) {
+      setConfirmar({
+        mensagem: "Há alterações não salvas em credenciais ou observações que serão descartadas. Fechar mesmo assim?",
+        acao: resetForm,
+      });
+      return;
+    }
+    resetForm();
   }
 
   // Auto-save com debounce — só na edição de clientes existentes
@@ -218,39 +280,8 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
     if (skipAutoSave.current) { skipAutoSave.current = false; return; }
     if (!form.codPessoa.trim() || !form.nome.trim()) return;
 
-    const timer = setTimeout(async () => {
-      setAutoSaveStatus("saving");
-      setErro("");
-      const res = await fetch(`/api/admin/alterdata/clientes/${editando.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          codPessoa: form.codPessoa,
-          nome: form.nome,
-          unidade: form.unidade || null,
-          cnpj: form.cnpj.replace(/\D/g, "") || null,
-          cpf: form.cpf.replace(/\D/g, "") || null,
-          status: form.status,
-          telemetria: form.telemetria,
-          qtdLicencas: Number(form.qtdLicencas),
-          acessosFranqueado: Number(form.acessosFranqueado),
-          acessosBackoffice: Number(form.acessosBackoffice),
-          acessoLiberado: form.acessoLiberado,
-        }),
-      });
-      if (res.ok) {
-        const atualizado = await res.json();
-        setClientes((prev) =>
-          prev.map((c) => c.id === editando.id ? { ...c, ...atualizado } : c)
-        );
-        setAutoSaveStatus("saved");
-        setTimeout(() => setAutoSaveStatus("idle"), 2000);
-      } else {
-        const d = await res.json();
-        setErro(d.message ?? "Erro ao salvar.");
-        setAutoSaveStatus("error");
-      }
-    }, 700);
+    dirtyRef.current = true;
+    const timer = setTimeout(() => persistirEdicao(editando.id, form), 700);
 
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -733,10 +764,10 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
               {/* Credenciais — só para clientes já existentes */}
               {editando && (
                 <div className="border-t border-white/10 pt-4 space-y-5">
-                  <AlterdataContadoresList clienteId={editando.id} tipo="NUVEM" titulo="Alterdata Nuvem" />
-                  <AlterdataContadoresList clienteId={editando.id} tipo="PACK" titulo="Alterdata Pack" />
-                  <AlterdataContadoresList clienteId={editando.id} tipo="ECONTADOR" titulo="eContador" />
-                  <AlterdataContadoresList clienteId={editando.id} tipo="PASSAPORTE" titulo="Passaporte" />
+                  <AlterdataContadoresList clienteId={editando.id} tipo="NUVEM" titulo="Alterdata Nuvem" onDirtyChange={marcarSubDirty("NUVEM")} />
+                  <AlterdataContadoresList clienteId={editando.id} tipo="PACK" titulo="Alterdata Pack" onDirtyChange={marcarSubDirty("PACK")} />
+                  <AlterdataContadoresList clienteId={editando.id} tipo="ECONTADOR" titulo="eContador" onDirtyChange={marcarSubDirty("ECONTADOR")} />
+                  <AlterdataContadoresList clienteId={editando.id} tipo="PASSAPORTE" titulo="Passaporte" onDirtyChange={marcarSubDirty("PASSAPORTE")} />
                 </div>
               )}
 
@@ -771,7 +802,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
             {/* Coluna direita — observações */}
             <div className="border-t border-white/10 pt-4 lg:border-t-0 lg:border-l lg:pl-6 lg:pt-0">
               {editando ? (
-                <AlterdataObservacoesList clienteId={editando.id} currentEmail={currentEmail} />
+                <AlterdataObservacoesList clienteId={editando.id} currentEmail={currentEmail} onDirtyChange={marcarSubDirty("obs")} />
               ) : (
                 <div className="flex h-full items-center justify-center">
                   <p className="text-xs text-center" style={{ color: "var(--onity-dark-text-muted)" }}>
