@@ -23,7 +23,17 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
   const [filtroStatus, setFiltroStatus] = useState<IungoStatus | "TODOS">("TODOS");
   const [filtroVinculo, setFiltroVinculo] = useState<"TODOS" | "LIVRES" | "OCUPADOS">("TODOS");
   const [busca, setBusca] = useState("");
-  const [ordenar, setOrdenar] = useState<"RAMAL" | "STATUS" | "FUNCIONARIO">("RAMAL");
+  const [sortField, setSortField] = useState<"RAMAL" | "STATUS" | "FUNCIONARIO">("RAMAL");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const toggleSort = (field: "RAMAL" | "STATUS" | "FUNCIONARIO") => {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  };
 
   // Form (criação / edição)
   const [formAberto, setFormAberto] = useState(false);
@@ -189,20 +199,22 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
     }
     return true;
   }).sort((a, b) => {
-    if (ordenar === "STATUS") {
-      if (a.status !== b.status) return a.status === "ATIVO" ? -1 : 1;
+    const dir = sortDir === "asc" ? 1 : -1;
+    if (sortField === "STATUS") {
+      if (a.status !== b.status) return (a.status === "ATIVO" ? -1 : 1) * dir;
       return a.ramal.localeCompare(b.ramal, undefined, { numeric: true });
     }
-    if (ordenar === "FUNCIONARIO") {
+    if (sortField === "FUNCIONARIO") {
       const fa = (a.funcionarios as string[])[0] ?? "";
       const fb = (b.funcionarios as string[])[0] ?? "";
+      // Sem funcionário sempre ao final, independente da direção
       if (!fa && !fb) return a.ramal.localeCompare(b.ramal, undefined, { numeric: true });
       if (!fa) return 1;
       if (!fb) return -1;
-      return fa.localeCompare(fb, "pt-BR");
+      return fa.localeCompare(fb, "pt-BR") * dir;
     }
     // RAMAL (default)
-    return a.ramal.localeCompare(b.ramal, undefined, { numeric: true });
+    return a.ramal.localeCompare(b.ramal, undefined, { numeric: true }) * dir;
   });
 
   return (
@@ -235,16 +247,6 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
           <option value="TODOS">Todos os ramais</option>
           <option value="LIVRES">Livres (sem funcionário)</option>
           <option value="OCUPADOS">Ocupados</option>
-        </select>
-
-        <select
-          value={ordenar}
-          onChange={(e) => setOrdenar(e.target.value as "RAMAL" | "STATUS" | "FUNCIONARIO")}
-          className="ds-input"
-        >
-          <option value="RAMAL">Ordenar por ramal</option>
-          <option value="STATUS">Ordenar por status</option>
-          <option value="FUNCIONARIO">Ordenar por funcionário</option>
         </select>
 
         <button
@@ -417,12 +419,27 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
                 className="border-b"
                 style={{ borderColor: "rgba(148,163,184,0.15)", color: "var(--onity-dark-text-muted)" }}
               >
-                <th className="px-4 py-3 text-left font-medium">Ramal</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
+                {(["RAMAL", "STATUS", "FUNCIONARIO"] as const).map((field) => {
+                  const labels = { RAMAL: "Ramal", STATUS: "Status", FUNCIONARIO: "Funcionários" };
+                  const active = sortField === field;
+                  return (
+                    <th key={field} className="px-4 py-3 text-left font-medium">
+                      <button
+                        onClick={() => toggleSort(field)}
+                        className="inline-flex items-center gap-1 hover:text-white transition-colors"
+                        style={{ color: active ? "#fff" : "var(--onity-dark-text-muted)" }}
+                      >
+                        {labels[field]}
+                        <span className="text-[10px] opacity-60">
+                          {active ? (sortDir === "asc" ? "▲" : "▼") : "⇕"}
+                        </span>
+                      </button>
+                    </th>
+                  );
+                })}
                 <th className="px-4 py-3 text-left font-medium">Login</th>
                 <th className="px-4 py-3 text-left font-medium">Senha</th>
                 <th className="px-4 py-3 text-left font-medium">Número</th>
-                <th className="px-4 py-3 text-left font-medium">Funcionários</th>
                 <th className="px-4 py-3 text-left font-medium">Ações</th>
               </tr>
             </thead>
