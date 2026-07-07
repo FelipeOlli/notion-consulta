@@ -56,6 +56,38 @@ export default async function IungoPage() {
           </p>
         </header>
 
+        {/* Card de suporte do provedor */}
+        <div className="glass-card rounded-2xl p-5 mb-6">
+          <p className="text-xs font-semibold mb-3" style={{ color: "var(--onity-dark-text-muted)" }}>
+            Suporte IUNGO
+          </p>
+          <div className="flex flex-wrap gap-x-8 gap-y-2">
+            <a
+              href="tel:08000421496"
+              className="flex items-center gap-2 text-sm text-white hover:text-[#4da3ff] transition-colors"
+            >
+              <span>📞</span>
+              <span>0800 042 1496</span>
+            </a>
+            <a
+              href="mailto:suporte@iungo.cloud"
+              className="flex items-center gap-2 text-sm text-white hover:text-[#4da3ff] transition-colors"
+            >
+              <span>🖥️</span>
+              <span>suporte@iungo.cloud</span>
+            </a>
+            <a
+              href="https://wa.me/551152000052"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-white hover:text-[#4da3ff] transition-colors"
+            >
+              <span>📲</span>
+              <span>11 5200-0052</span>
+            </a>
+          </div>
+        </div>
+
         <IungoDashboard isMaster={isMaster} />
       </div>
     </main>
