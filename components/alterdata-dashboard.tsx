@@ -639,9 +639,21 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
           onClick={(e) => { if (e.target === e.currentTarget) fecharForm(); }}
         >
           <div className="glass-panel w-full max-w-4xl rounded-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-white mb-5">
-              {editando ? "Editar cliente" : "Novo cliente"}
-            </h2>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-white">
+                {editando ? "Editar cliente" : "Novo cliente"}
+              </h2>
+              {editando && (
+                <div className="text-xs">
+                  {autoSaveStatus === "saving" && (
+                    <span style={{ color: "var(--onity-dark-text-muted)" }}>Salvando…</span>
+                  )}
+                  {autoSaveStatus === "saved" && (
+                    <span className="text-emerald-400">✓ Salvo</span>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
             {/* Coluna esquerda — campos do cliente */}
             <form onSubmit={salvar} className="space-y-4 m-0">
@@ -776,12 +788,6 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
               <div className="flex items-center justify-end gap-3 pt-2">
                 {editando ? (
                   <>
-                    {autoSaveStatus === "saving" && (
-                      <span className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Salvando…</span>
-                    )}
-                    {autoSaveStatus === "saved" && (
-                      <span className="text-xs text-emerald-400">✓ Salvo</span>
-                    )}
                     <button type="button" onClick={fecharForm} className="link-muted text-sm px-4 py-2">
                       Fechar
                     </button>
