@@ -19,6 +19,7 @@ const descriptions: Record<AppModule, string> = {
   chips: "Gerencie os chips de telefone corporativos, operadoras e datas de recarga.",
   dominio: "Acompanhe SSCs do portal DOMÍNIO/ONVIO e receba alertas de novas respostas por email.",
   iungo: "Ramais PABX: status, credenciais, telefones e funcionários vinculados.",
+  monitoramento: "Monitoramento de disponibilidade de IPs, HTTP/TCP/PING.",
 };
 
 export const moduleHrefs: Record<AppModule, string> = {
@@ -32,6 +33,7 @@ export const moduleHrefs: Record<AppModule, string> = {
   chips: "/admin/chips",
   dominio: "/admin/dominio",
   iungo: "/admin/iungo",
+  monitoramento: "/admin",
 };
 
 export function getPortalCardsForModules(modules: AppModule[]): PortalModuleCard[] {

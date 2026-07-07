@@ -109,9 +109,11 @@ export default async function AdminPage() {
           <PortalHeader />
         </div>
 
-        <div className="mb-10">
-          <AdminMonitorDashboard />
-        </div>
+        {modules.includes("monitoramento") && (
+          <div className="mb-10">
+            <AdminMonitorDashboard />
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {cards.map((card) => (
