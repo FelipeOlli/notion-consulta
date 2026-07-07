@@ -283,3 +283,92 @@ body {
 .animate-spin { animation: spin 1s linear infinite; }
 .animate-float { animation: float 6s ease-in-out infinite; }
 .animate-fade-in { animation: fadeIn 0.35s ease; }
+
+/* ------------------------------------------------------------------ */
+/* Headings — Outfit em todos os títulos do portal                     */
+/* ------------------------------------------------------------------ */
+h1, h2, h3 {
+  font-family: var(--onity-font-family-heading);
+}
+
+/* ------------------------------------------------------------------ */
+/* Metric card — enhancer do glass-card com barra de topo em gradiente */
+/* ------------------------------------------------------------------ */
+.metric-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(to right, #3b82f6, #8b5cf6);
+  border-radius: 16px 16px 0 0;
+  z-index: 1;
+}
+
+/* Suaviza o hover dos metric cards (herdam glass-card:hover) */
+.glass-card.metric-card:hover {
+  transform: translateY(-4px);
+}
+
+/* Valor de destaque — gradiente azul→verde + Outfit */
+.metric-value {
+  background: linear-gradient(to right, #60a5fa, #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-family: var(--onity-font-family-heading);
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------------ */
+/* Badge pill com glow opcional                                        */
+/* ------------------------------------------------------------------ */
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid;
+  transition: box-shadow 0.2s ease;
+}
+
+.badge-pill.is-blue {
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.35);
+}
+
+.badge-pill.is-violet {
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.35);
+}
+
+/* ------------------------------------------------------------------ */
+/* Styled list com marcador ▹                                          */
+/* ------------------------------------------------------------------ */
+.styled-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.styled-list li {
+  position: relative;
+  padding-left: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--onity-dark-text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.styled-list li::before {
+  content: "▹";
+  position: absolute;
+  left: 0;
+  color: var(--onity-dark-primary-light);
+}

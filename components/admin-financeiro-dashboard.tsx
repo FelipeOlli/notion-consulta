@@ -918,12 +918,12 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
             {data.latestByService.map((row) => (
               <div
                 key={row.key}
-                className="rounded-2xl border border-[rgba(29,127,229,0.15)] bg-[rgba(8,15,26,0.7)] p-4 shadow-sm"
+                className="metric-card rounded-2xl border border-[rgba(29,127,229,0.15)] bg-[rgba(8,15,26,0.7)] p-4 shadow-sm"
               >
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#1d7fe5]">{row.name}</p>
                 {row.latest ? (
                   <>
-                    <p className="mt-2 text-3xl font-bold text-white">{row.latest.totalUsers}</p>
+                    <p className="mt-2 text-3xl font-heading font-bold text-white">{row.latest.totalUsers}</p>
                     <p className="text-sm text-[#6b8aaa]">usuarios no mes {row.latest.competence}</p>
                     {row.latest.activeUsers != null ? (
                       <p className="mt-1 text-sm text-[#6b8aaa]">Ativos (Google): {row.latest.activeUsers}</p>

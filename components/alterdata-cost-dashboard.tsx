@@ -80,21 +80,21 @@ export function AlterdataCostDashboard({ clientes }: Props) {
 
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="glass-card border border-violet-500/30 p-5">
+        <div className="glass-card metric-card rounded-2xl border border-violet-500/30 p-5">
           <p className="text-xs font-medium mb-2" style={{ color: "var(--onity-dark-text-muted)" }}>
             Acessos Backoffice (ativos)
           </p>
-          <p className="text-3xl font-bold text-white">{stats.activeBackoffice}</p>
+          <p className="metric-value text-3xl">{stats.activeBackoffice}</p>
           <p className="text-xs mt-1" style={{ color: "var(--onity-dark-text-muted)" }}>
             {stats.totalBackoffice} no total (todos os status)
           </p>
         </div>
 
-        <div className="glass-card border border-blue-500/30 p-5">
+        <div className="glass-card metric-card rounded-2xl border border-blue-500/30 p-5">
           <p className="text-xs font-medium mb-2" style={{ color: "var(--onity-dark-text-muted)" }}>
             Custo Mensal Estimado
           </p>
-          <p className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">
+          <p className="text-3xl font-bold font-heading bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">
             {formatBRL(stats.mensalBackoffice)}
           </p>
           <p className="text-xs mt-1" style={{ color: "var(--onity-dark-text-muted)" }}>
@@ -102,11 +102,11 @@ export function AlterdataCostDashboard({ clientes }: Props) {
           </p>
         </div>
 
-        <div className="glass-card border border-violet-500/30 p-5">
+        <div className="glass-card metric-card rounded-2xl border border-violet-500/30 p-5">
           <p className="text-xs font-medium mb-2" style={{ color: "var(--onity-dark-text-muted)" }}>
             Projeção Anual
           </p>
-          <p className="text-3xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+          <p className="text-3xl font-bold font-heading bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
             {formatBRL(stats.anualBackoffice)}
           </p>
           <p className="text-xs mt-1" style={{ color: "var(--onity-dark-text-muted)" }}>
