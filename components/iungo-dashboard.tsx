@@ -419,8 +419,12 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
                 className="border-b"
                 style={{ borderColor: "rgba(148,163,184,0.15)", color: "var(--onity-dark-text-muted)" }}
               >
-                {(["RAMAL", "STATUS", "FUNCIONARIO"] as const).map((field) => {
-                  const labels = { RAMAL: "Ramal", STATUS: "Status", FUNCIONARIO: "Funcionários" };
+                {(
+                  [
+                    { field: "RAMAL", label: "Ramal" },
+                    { field: "STATUS", label: "Status" },
+                  ] as const
+                ).map(({ field, label }) => {
                   const active = sortField === field;
                   return (
                     <th key={field} className="px-4 py-3 text-left font-medium">
@@ -429,7 +433,7 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
                         className="inline-flex items-center gap-1 hover:text-white transition-colors"
                         style={{ color: active ? "#fff" : "var(--onity-dark-text-muted)" }}
                       >
-                        {labels[field]}
+                        {label}
                         <span className="text-[10px] opacity-60">
                           {active ? (sortDir === "asc" ? "▲" : "▼") : "⇕"}
                         </span>
@@ -440,6 +444,23 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
                 <th className="px-4 py-3 text-left font-medium">Login</th>
                 <th className="px-4 py-3 text-left font-medium">Senha</th>
                 <th className="px-4 py-3 text-left font-medium">Número</th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {(() => {
+                    const active = sortField === "FUNCIONARIO";
+                    return (
+                      <button
+                        onClick={() => toggleSort("FUNCIONARIO")}
+                        className="inline-flex items-center gap-1 hover:text-white transition-colors"
+                        style={{ color: active ? "#fff" : "var(--onity-dark-text-muted)" }}
+                      >
+                        Funcionários
+                        <span className="text-[10px] opacity-60">
+                          {active ? (sortDir === "asc" ? "▲" : "▼") : "⇕"}
+                        </span>
+                      </button>
+                    );
+                  })()}
+                </th>
                 <th className="px-4 py-3 text-left font-medium">Ações</th>
               </tr>
             </thead>
