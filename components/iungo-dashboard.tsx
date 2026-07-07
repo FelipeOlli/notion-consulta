@@ -21,7 +21,9 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
 
   // Filtros
   const [filtroStatus, setFiltroStatus] = useState<IungoStatus | "TODOS">("TODOS");
+  const [filtroVinculo, setFiltroVinculo] = useState<"TODOS" | "LIVRES" | "OCUPADOS">("TODOS");
   const [busca, setBusca] = useState("");
+  const [ordenar, setOrdenar] = useState<"RAMAL" | "STATUS" | "FUNCIONARIO">("RAMAL");
 
   // Form (criação / edição)
   const [formAberto, setFormAberto] = useState(false);
@@ -171,6 +173,9 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
   // Filtros aplicados
   const ramaisfiltrados = ramais.filter((r) => {
     if (filtroStatus !== "TODOS" && r.status !== filtroStatus) return false;
+    const nFuncionarios = (r.funcionarios as string[]).length;
+    if (filtroVinculo === "LIVRES" && nFuncionarios > 0) return false;
+    if (filtroVinculo === "OCUPADOS" && nFuncionarios === 0) return false;
     if (busca) {
       const q = busca.toLowerCase();
       const funcionariosStr = (r.funcionarios as string[]).join(" ").toLowerCase();
@@ -183,6 +188,21 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
         return false;
     }
     return true;
+  }).sort((a, b) => {
+    if (ordenar === "STATUS") {
+      if (a.status !== b.status) return a.status === "ATIVO" ? -1 : 1;
+      return a.ramal.localeCompare(b.ramal, undefined, { numeric: true });
+    }
+    if (ordenar === "FUNCIONARIO") {
+      const fa = (a.funcionarios as string[])[0] ?? "";
+      const fb = (b.funcionarios as string[])[0] ?? "";
+      if (!fa && !fb) return a.ramal.localeCompare(b.ramal, undefined, { numeric: true });
+      if (!fa) return 1;
+      if (!fb) return -1;
+      return fa.localeCompare(fb, "pt-BR");
+    }
+    // RAMAL (default)
+    return a.ramal.localeCompare(b.ramal, undefined, { numeric: true });
   });
 
   return (
@@ -205,6 +225,26 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
           <option value="TODOS">Todos os status</option>
           <option value="ATIVO">Ativo</option>
           <option value="INATIVO">Inativo</option>
+        </select>
+
+        <select
+          value={filtroVinculo}
+          onChange={(e) => setFiltroVinculo(e.target.value as "TODOS" | "LIVRES" | "OCUPADOS")}
+          className="ds-input"
+        >
+          <option value="TODOS">Todos os ramais</option>
+          <option value="LIVRES">Livres (sem funcionário)</option>
+          <option value="OCUPADOS">Ocupados</option>
+        </select>
+
+        <select
+          value={ordenar}
+          onChange={(e) => setOrdenar(e.target.value as "RAMAL" | "STATUS" | "FUNCIONARIO")}
+          className="ds-input"
+        >
+          <option value="RAMAL">Ordenar por ramal</option>
+          <option value="STATUS">Ordenar por status</option>
+          <option value="FUNCIONARIO">Ordenar por funcionário</option>
         </select>
 
         <button
