@@ -82,27 +82,47 @@ function UnreadIcon() {
   );
 }
 
-function IframeModal({ url, title, onClose }: { url: string; title?: string; onClose: () => void }) {
+function TicketQuickModal({ ticket, onClose }: { ticket: TicketNotif; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)" }}>
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div
-        className="flex flex-shrink-0 items-center justify-between gap-4 px-4 py-3"
-        style={{ background: "#0f172a", borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+        className="w-full max-w-md rounded-2xl p-6 shadow-2xl"
+        style={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", maxHeight: "80vh", overflowY: "auto" }}
       >
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />
-          <p className="text-sm font-medium text-white truncate">{title ?? "ScrumHub"}</p>
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: "#3b82f6" }}>
+              Ticket #{ticket.id}
+            </p>
+            <h2 className="text-lg font-bold leading-snug text-white">{ticket.nome}</h2>
+          </div>
+          <button type="button" onClick={onClose} className="flex-shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white" aria-label="Fechar">✕</button>
         </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
-            Abrir em nova aba ↗
-          </a>
-          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white transition" aria-label="Fechar">
-            ✕
-          </button>
-        </div>
+
+        <dl className="mb-5 grid grid-cols-2 gap-3">
+          {ticket.solicitante && (
+            <div className="col-span-2 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
+              <dt className="text-xs" style={{ color: "#94a3b8" }}>Solicitante</dt>
+              <dd className="mt-0.5 text-sm font-medium text-white">{ticket.solicitante}</dd>
+            </div>
+          )}
+          <div className="col-span-2 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
+            <dt className="text-xs" style={{ color: "#94a3b8" }}>Aberto em</dt>
+            <dd className="mt-0.5 text-sm font-medium text-white">
+              {new Date(ticket.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+            </dd>
+          </div>
+        </dl>
+
+        <a href={ticket.url} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition" style={{ background: "linear-gradient(135deg,#3b82f6,#8b5cf6)", color: "#fff" }}>
+          Abrir no ScrumHub ↗
+        </a>
       </div>
-      <iframe src={url} title={title ?? "ScrumHub"} className="flex-1 w-full border-0" allow="clipboard-write" />
     </div>
   );
 }
@@ -114,8 +134,7 @@ export function HeaderNotificationsBell() {
   const [dominioTotal, setDominioTotal] = useState(0);
   const [open, setOpen] = useState(false);
   const [unauthorized, setUnauthorized] = useState(false);
-  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
-  const [iframeTitle, setIframeTitle] = useState<string | undefined>(undefined);
+  const [selectedNotifTicket, setSelectedNotifTicket] = useState<TicketNotif | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -237,11 +256,10 @@ export function HeaderNotificationsBell() {
 
   return (
     <>
-    {iframeUrl && (
-      <IframeModal
-        url={iframeUrl}
-        title={iframeTitle}
-        onClose={() => { setIframeUrl(null); setIframeTitle(undefined); }}
+    {selectedNotifTicket && (
+      <TicketQuickModal
+        ticket={selectedNotifTicket}
+        onClose={() => setSelectedNotifTicket(null)}
       />
     )}
     <div ref={ref} className="relative">
@@ -298,8 +316,7 @@ export function HeaderNotificationsBell() {
                           type="button"
                           onClick={() => {
                             setOpen(false);
-                            setIframeTitle(`#${ticket.id} — ${ticket.nome}`);
-                            setIframeUrl(ticket.url);
+                            setSelectedNotifTicket(ticket);
                           }}
                           className="flex-1 flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors min-w-0 text-left"
                         >

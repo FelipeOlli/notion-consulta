@@ -84,55 +84,83 @@ function isConcluido(t: Ticket): boolean {
   return t.concluido || s.includes("conclu") || s.includes("cancelad");
 }
 
-// ── Modal com iframe do ScrumHub ─────────────────────────────────────────────
-function IframeModal({ url, title, onClose }: { url: string; title?: string; onClose: () => void }) {
+// ── Modal de detalhes do ticket ──────────────────────────────────────────────
+function TicketDetailModal({ ticket, onClose }: { ticket: Ticket; onClose: () => void }) {
+  const pLower = (ticket.prioridade ?? "").toLowerCase();
+  const prioColor = PRIORIDADE_COLOR[pLower] ?? "#6b8aaa";
+  const prioLabel = PRIORIDADE_LABEL[pLower] ?? ticket.prioridade;
+
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col"
-      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      {/* Barra de título */}
       <div
-        className="flex flex-shrink-0 items-center justify-between gap-4 px-4 py-3"
-        style={{
-          background: "#0f172a",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
-        }}
+        className="w-full max-w-lg rounded-2xl p-6 shadow-2xl"
+        style={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", maxHeight: "90vh", overflowY: "auto" }}
       >
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />
-          <p className="text-sm font-medium text-white truncate">
-            {title ?? "ScrumHub"}
-          </p>
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="section-label mb-1">Ticket #{ticket.id}</p>
+            <h2 className="text-lg font-bold leading-snug text-white">{ticket.nome}</h2>
+          </div>
+          <button type="button" onClick={onClose} className="flex-shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white" aria-label="Fechar">✕</button>
         </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs transition-colors"
-            style={{ color: "#3b82f6" }}
-          >
-            Abrir em nova aba ↗
-          </a>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
-            aria-label="Fechar"
-          >
-            ✕
-          </button>
-        </div>
-      </div>
 
-      {/* iframe */}
-      <iframe
-        src={url}
-        title={title ?? "ScrumHub"}
-        className="flex-1 w-full border-0"
-        allow="clipboard-write"
-      />
+        <div className="mb-5 flex flex-wrap gap-2">
+          <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium" style={{ background: `${ticket.statusCor}22`, color: ticket.statusCor, border: `1px solid ${ticket.statusCor}44` }}>
+            {ticket.statusNome}
+          </span>
+          {prioLabel && (
+            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium" style={{ background: `${prioColor}18`, color: prioColor, border: `1px solid ${prioColor}33` }}>
+              {prioLabel}
+            </span>
+          )}
+          {ticket.tipo && (
+            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium" style={{ background: "rgba(139,92,246,0.12)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.25)" }}>
+              {ticket.tipo}
+            </span>
+          )}
+        </div>
+
+        <dl className="mb-5 grid grid-cols-2 gap-3">
+          {ticket.solicitante && (
+            <div className="col-span-2 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
+              <dt className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Solicitante</dt>
+              <dd className="mt-0.5 text-sm font-medium text-white">{ticket.solicitante}</dd>
+            </div>
+          )}
+          {ticket.responsavel && (
+            <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
+              <dt className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Responsável</dt>
+              <dd className="mt-0.5 text-sm font-medium text-white">{ticket.responsavel}</dd>
+            </div>
+          )}
+          <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
+            <dt className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Aberto em</dt>
+            <dd className="mt-0.5 text-sm font-medium text-white">{formatDateShort(ticket.createdAt)}</dd>
+          </div>
+          {ticket.prazo && (
+            <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
+              <dt className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Prazo</dt>
+              <dd className="mt-0.5 text-sm font-medium text-white">{formatDateShort(ticket.prazo)}</dd>
+            </div>
+          )}
+        </dl>
+
+        {ticket.descricao && (
+          <div className="mb-5 rounded-xl p-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <p className="mb-1.5 text-xs font-semibold" style={{ color: "var(--onity-dark-text-muted)" }}>Descrição</p>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">{ticket.descricao}</p>
+          </div>
+        )}
+
+        <a href={ticket.url} target="_blank" rel="noopener noreferrer" className="btn-primary flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold">
+          Abrir no ScrumHub ↗
+        </a>
+      </div>
     </div>
   );
 }
@@ -208,8 +236,7 @@ export function TicketsTiDashboard({
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [notifGranted, setNotifGranted] = useState(false);
   const [mes, setMes] = useState<string>("all");
-  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
-  const [iframeTitle, setIframeTitle] = useState<string | undefined>(undefined);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const maxIdRef = useRef<number | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isFirst = useRef(true);
@@ -316,8 +343,7 @@ export function TicketsTiDashboard({
   }
 
   function openTicket(t: Ticket) {
-    setIframeTitle(`#${t.id} — ${t.nome}`);
-    setIframeUrl(t.url);
+    setSelectedTicket(t);
   }
 
   if (loading) {
@@ -373,12 +399,8 @@ export function TicketsTiDashboard({
 
     return (
       <>
-        {iframeUrl && (
-          <IframeModal
-            url={iframeUrl}
-            title={iframeTitle}
-            onClose={() => { setIframeUrl(null); setIframeTitle(undefined); }}
-          />
+        {selectedTicket && (
+          <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
         )}
 
         <div className="space-y-6">
@@ -475,12 +497,8 @@ export function TicketsTiDashboard({
   if (scrumhubCompanyUrl) {
     return (
       <>
-        {iframeUrl && (
-          <IframeModal
-            url={iframeUrl}
-            title={iframeTitle}
-            onClose={() => { setIframeUrl(null); setIframeTitle(undefined); }}
-          />
+        {selectedTicket && (
+          <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
         )}
 
         {/* iframe ocupa toda a altura restante */}
@@ -509,12 +527,8 @@ export function TicketsTiDashboard({
 
   return (
     <>
-      {iframeUrl && (
-        <IframeModal
-          url={iframeUrl}
-          title={iframeTitle}
-          onClose={() => { setIframeUrl(null); setIframeTitle(undefined); }}
-        />
+      {selectedTicket && (
+        <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
       )}
 
       <div className="space-y-6">
