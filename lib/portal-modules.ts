@@ -20,6 +20,7 @@ const descriptions: Record<AppModule, string> = {
   dominio: "Acompanhe SSCs do portal DOMÍNIO/ONVIO e receba alertas de novas respostas por email.",
   iungo: "Ramais PABX: status, credenciais, telefones e funcionários vinculados.",
   monitoramento: "Monitoramento de disponibilidade de IPs, HTTP/TCP/PING.",
+  tickets_ti: "Acompanhe chamados da equipe de TI: gráfico por status e notificação de ticket novo.",
 };
 
 export const moduleHrefs: Record<AppModule, string> = {
@@ -34,6 +35,7 @@ export const moduleHrefs: Record<AppModule, string> = {
   dominio: "/admin/dominio",
   iungo: "/admin/iungo",
   monitoramento: "/admin",
+  tickets_ti: "/admin/tickets-ti",
 };
 
 export function getPortalCardsForModules(modules: AppModule[]): PortalModuleCard[] {

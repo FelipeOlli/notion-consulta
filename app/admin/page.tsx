@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminMonitorDashboard } from "@/components/admin-monitor-dashboard";
+import { TicketsTiDashboard } from "@/components/tickets-ti-dashboard";
 import { PortalHeader } from "@/components/portal-header";
 import { getAdminSession } from "@/lib/session";
 import { ALL_MODULES_FOR_MASTER, type AppModule } from "@/lib/modules";
@@ -93,6 +94,13 @@ export default async function AdminPage() {
       description: "Ramais PABX: status, credenciais, telefones e funcionários vinculados.",
     });
   }
+  if (modules.includes("tickets_ti")) {
+    cards.push({
+      href: "/admin/tickets-ti",
+      title: "Tickets TI",
+      description: "Chamados da equipe de TI: gráfico por status e notificação de ticket novo.",
+    });
+  }
 
   return (
     <main className="relative z-10 min-h-screen">
@@ -112,6 +120,12 @@ export default async function AdminPage() {
         {modules.includes("monitoramento") && (
           <div className="mb-10">
             <AdminMonitorDashboard />
+          </div>
+        )}
+
+        {modules.includes("tickets_ti") && (
+          <div className="mb-10">
+            <TicketsTiDashboard variant="home" />
           </div>
         )}
 

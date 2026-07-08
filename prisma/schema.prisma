@@ -19,6 +19,7 @@ enum AppModule {
   TRANSBORDO
   IUNGO
   MONITORAMENTO
+  TICKETS_TI
 }
 
 enum IungoStatus {
