@@ -117,6 +117,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
   const [filtroCredenciais, setFiltroCredenciais] = useState<AlterdataCredencialTipo[]>([]);
   const toggleCredencial = (t: AlterdataCredencialTipo) =>
     setFiltroCredenciais((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]);
+  const [filtroAcesso, setFiltroAcesso] = useState<"TODOS" | "SIM" | "NAO">("TODOS");
   const [busca, setBusca] = useState("");
 
   const [formAberto, setFormAberto] = useState(false);
@@ -174,9 +175,10 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
     const matchTelemetria = filtroTelemetria === "TODOS" || c.telemetria === filtroTelemetria;
     const matchCredencial = filtroCredenciais.length === 0 ||
       filtroCredenciais.every((t) => c.contadores?.some((cr) => cr.tipo === t) ?? false);
+    const matchAcesso = filtroAcesso === "TODOS" || (filtroAcesso === "SIM" ? c.acessoLiberado : !c.acessoLiberado);
     const buscaLower = busca.toLowerCase();
     const matchBusca = busca === "" || c.nome.toLowerCase().includes(buscaLower) || c.codPessoa.includes(busca) || (c.unidade ?? "").toLowerCase().includes(buscaLower);
-    return matchStatus && matchTelemetria && matchCredencial && matchBusca;
+    return matchStatus && matchTelemetria && matchCredencial && matchAcesso && matchBusca;
   });
 
   function abrirNovo() {
@@ -389,9 +391,9 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
             onChange={(e) => setBusca(e.target.value)}
             className="ds-input flex-1"
           />
-          {(filtroStatus !== "TODOS" || filtroTelemetria !== "TODOS" || filtroCredenciais.length > 0) && (
+          {(filtroStatus !== "TODOS" || filtroTelemetria !== "TODOS" || filtroCredenciais.length > 0 || filtroAcesso !== "TODOS") && (
             <button
-              onClick={() => { setFiltroStatus("TODOS"); setFiltroTelemetria("TODOS"); setFiltroCredenciais([]); }}
+              onClick={() => { setFiltroStatus("TODOS"); setFiltroTelemetria("TODOS"); setFiltroCredenciais([]); setFiltroAcesso("TODOS"); }}
               className="shrink-0 text-sm px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors"
             >
               × Limpar filtros
@@ -444,6 +446,26 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
             </button>
           ))}
         </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Acesso liberado:</span>
+          {(["TODOS", "SIM", "NAO"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setFiltroAcesso(v)}
+              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                filtroAcesso === v
+                  ? v === "SIM"
+                    ? "bg-blue-500/20 text-blue-400 border-blue-500/40"
+                    : v === "NAO"
+                    ? "bg-slate-500/20 text-slate-400 border-slate-500/40"
+                    : "bg-white/10 text-white border-white/20"
+                  : "border-white/10 text-white/50 hover:text-white hover:border-white/20"
+              }`}
+            >
+              {v === "TODOS" ? "Todos" : v === "SIM" ? "Liberado" : "Não liberado"}
+            </button>
+          ))}
+        </div>
         <div className="flex items-center justify-end gap-2">
           {isMaster && (
             <>
@@ -489,6 +511,7 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
         {filtroStatus !== "TODOS" && ` · status: ${STATUS_LABELS[filtroStatus]}`}
         {filtroTelemetria !== "TODOS" && ` · telemetria: ${TELEMETRIA_LABELS[filtroTelemetria]}`}
         {filtroCredenciais.length > 0 && ` · credenciais: ${filtroCredenciais.map((t) => CRED_LABELS[t]).join(" + ")}`}
+        {filtroAcesso !== "TODOS" && ` · acesso: ${filtroAcesso === "SIM" ? "liberado" : "não liberado"}`}
       </p>
 
       {/* Resultado da sincronização */}

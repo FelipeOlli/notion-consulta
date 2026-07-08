@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useRef, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { appModules, moduleLabels, type AppModule } from "@/lib/modules";
 import { ConfirmModal } from "@/components/confirm-modal";
@@ -45,6 +45,7 @@ export function AdminUsersManager({ initialUsers, lockedPrimaryEmail }: Props) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState("");
+  const formRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -75,6 +76,7 @@ export function AdminUsersManager({ initialUsers, lockedPrimaryEmail }: Props) {
       modules: user.modules.filter((item): item is AppModule => appModules.includes(item as AppModule)),
     });
     setShowForm(true);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   }
 
   function toggleModule(moduleKey: AppModule) {
@@ -211,7 +213,7 @@ export function AdminUsersManager({ initialUsers, lockedPrimaryEmail }: Props) {
       </div>
 
       {(showForm || editingId) && (
-        <div style={cardStyle}>
+        <div ref={formRef} style={cardStyle}>
           <h2 className="mb-4 text-lg font-semibold text-white">{editingId ? "Editar usuario" : "Novo usuario"}</h2>
           <form onSubmit={submit} className="grid gap-3 md:grid-cols-2">
             <input
