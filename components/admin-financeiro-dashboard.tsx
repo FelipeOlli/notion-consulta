@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FINANCEIRO_SEM_EMPRESA } from "@/lib/financeiro-allocation";
 import { ConfirmModal } from "@/components/confirm-modal";
+import type { FinanceiroServiceKey } from "@/lib/financeiro-services";
 
 type SnapshotPoint = {
   totalUsers: number;
@@ -105,9 +106,18 @@ async function parseJsonBody(res: Response): Promise<{ message?: string; data?: 
   }
 }
 
-export type AdminFinanceiroDashboardProps = { canEditFinanceiro?: boolean };
+export type AdminFinanceiroDashboardProps = {
+  canEditFinanceiro?: boolean;
+  serviceFilter?: FinanceiroServiceKey;
+};
 
-export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFinanceiroDashboardProps) {
+const SERVICE_FILTER_TO_FORM: Record<FinanceiroServiceKey, string> = {
+  cfCom: "cf-com",
+  cfComBr: "cf-com-br",
+  timeIsMoney: "time-is-money",
+};
+
+export function AdminFinanceiroDashboard({ canEditFinanceiro = true, serviceFilter }: AdminFinanceiroDashboardProps) {
   const readOnlyFinanceiro = !canEditFinanceiro;
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -119,7 +129,9 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
     const m = String(d.getMonth() + 1).padStart(2, "0");
     return `${y}-${m}`;
   });
-  const [serviceKey, setServiceKey] = useState("cf-com");
+  const [serviceKey, setServiceKey] = useState(
+    serviceFilter ? SERVICE_FILTER_TO_FORM[serviceFilter] : "cf-com"
+  );
   const [file, setFile] = useState<File | null>(null);
   const [importError, setImportError] = useState("");
   const [importOk, setImportOk] = useState("");
@@ -737,17 +749,6 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
     return m;
   }, [data]);
 
-  const maxUsersByCompanyBar = useMemo(() => {
-    const blocks = data?.usersByCompanyLatest;
-    if (!blocks?.length) return 1;
-    let m = 1;
-    for (const b of blocks) {
-      for (const r of b.byCompany) {
-        if (r.count > m) m = r.count;
-      }
-    }
-    return m;
-  }, [data]);
 
   async function clearServiceData(serviceKey: string, serviceName: string) {
     const confirmed = window.confirm(
@@ -865,8 +866,9 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
               Servico
               <select
                 value={serviceKey}
+                disabled={!!serviceFilter}
                 onChange={(e) => setServiceKey(e.target.value)}
-                className="h-11 rounded-xl border border-[rgba(29,127,229,0.18)] bg-[rgba(8,15,26,0.7)] px-3 text-white"
+                className="h-11 rounded-xl border border-[rgba(29,127,229,0.18)] bg-[rgba(8,15,26,0.7)] px-3 text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <option value="cf-com">CFCONTABILIDADE.COM (Google)</option>
                 <option value="cf-com-br">CFCONTABILIDADE.COM.BR (Google)</option>
@@ -915,7 +917,10 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
       ) : data ? (
         <>
           <section className="grid gap-4 sm:grid-cols-3">
-            {data.latestByService.map((row) => (
+            {(serviceFilter
+              ? data.latestByService.filter((r) => r.key === serviceFilter)
+              : data.latestByService
+            ).map((row) => (
               <div
                 key={row.key}
                 className="metric-card rounded-2xl border border-[rgba(29,127,229,0.15)] bg-[rgba(8,15,26,0.7)] p-4 shadow-sm"
@@ -961,46 +966,6 @@ export function AdminFinanceiroDashboard({ canEditFinanceiro = true }: AdminFina
             ))}
           </section>
 
-          {data.usersByCompanyLatest && data.usersByCompanyLatest.length > 0 ? (
-            <section className="rounded-2xl border border-[rgba(29,127,229,0.15)] bg-[rgba(8,15,26,0.7)] p-5 shadow-sm sm:p-6">
-              <h2 className="text-lg font-semibold text-white">Usuarios por empresa (ultimo snapshot de cada servico)</h2>
-              <p className="mt-1 text-sm text-[#6b8aaa]">
-                Baseado na alocacao feita na planilha. Cadastre empresas no servico e atribua cada linha a uma empresa.
-              </p>
-              <div className="mt-6 grid gap-6 lg:grid-cols-3">
-                {data.usersByCompanyLatest.map((block) => (
-                  <div key={block.key} className="rounded-xl border border-[rgba(29,127,229,0.15)] bg-[rgba(8,15,26,0.7)]/40 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#1d7fe5]">{block.name}</p>
-                    <p className="mt-1 text-xs text-[#6b8aaa]">
-                      Competencia: {block.competence ?? "—"}
-                      {block.byCompany.length === 0 ? " — sem dados" : null}
-                    </p>
-                    <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1">
-                      {block.byCompany.map(({ label, count }) => {
-                        const pct = Math.round((count / maxUsersByCompanyBar) * 100);
-                        return (
-                          <div key={label}>
-                            <div className="mb-0.5 flex justify-between text-xs text-[#6b8aaa]">
-                              <span className="truncate pr-2" title={label}>
-                                {label}
-                              </span>
-                              <span className="shrink-0 font-medium text-[#6b8aaa]">{count}</span>
-                            </div>
-                            <div className="h-2 overflow-hidden rounded-full bg-[rgba(29,127,229,0.08)]">
-                              <div
-                                className="h-full rounded-full bg-violet-500/85"
-                                style={{ width: `${Math.max(pct, 2)}%` }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
 
           {sheetOpen ? (
             <div

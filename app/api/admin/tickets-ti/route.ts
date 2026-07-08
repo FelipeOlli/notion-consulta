@@ -19,13 +19,28 @@ type ScrumHubTotais = {
 type ScrumHubTicket = {
   id: number;
   nome: string;
+  descricao: string | null;
   status_nome: string;
   status_cor: string;
   nome_solicitante: string | null;
   prioridade: string | null;
   created_at: string;
+  prazo: string | null;
   concluido: number | boolean;
+  responsavel_nome: string | null;
+  tipo_nome: string | null;
+  projeto_nome: string | null;
 };
+
+function gerarSlug(nome: string): string {
+  return (nome ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .trim();
+}
 
 export async function GET() {
   const ok = await ensureModuleAccess("tickets_ti");
@@ -73,6 +88,10 @@ export async function GET() {
     };
     const allTickets: ScrumHubTicket[] = allJson?.data ?? [];
 
+    // URL base do frontend ScrumHub (mesmo algoritmo do backend)
+    const frontendBase = (apiUrl ?? "https://scrumhub.vercel.app")
+      .replace(/\/$/, "");
+
     return NextResponse.json({
       configured: true,
       status: statusData.map((s) => ({
@@ -85,16 +104,26 @@ export async function GET() {
         concluidos: Number(totais.tickets_concluidos),
         naoConcluidos: Number(totais.tickets_nao_concluidos),
       },
-      tickets: allTickets.map((t) => ({
-        id: t.id,
-        nome: t.nome,
-        statusNome: t.status_nome ?? "",
-        statusCor: t.status_cor || "#3b82f6",
-        solicitante: t.nome_solicitante ?? "",
-        prioridade: t.prioridade ?? "",
-        createdAt: t.created_at,
-        concluido: Boolean(t.concluido),
-      })),
+      tickets: allTickets.map((t) => {
+        const ticketSlug = `${gerarSlug(t.nome)}-${t.id}`;
+        const projetoSlug = gerarSlug(t.projeto_nome ?? "");
+        const url = `${frontendBase}/ticket/${ticketSlug}?slug=${projetoSlug}`;
+        return {
+          id: t.id,
+          nome: t.nome,
+          descricao: t.descricao ?? "",
+          statusNome: t.status_nome ?? "",
+          statusCor: t.status_cor || "#3b82f6",
+          solicitante: t.nome_solicitante ?? "",
+          prioridade: t.prioridade ?? "",
+          createdAt: t.created_at,
+          prazo: t.prazo ?? null,
+          concluido: Boolean(t.concluido),
+          responsavel: t.responsavel_nome ?? "",
+          tipo: t.tipo_nome ?? "",
+          url,
+        };
+      }),
     });
   } catch {
     return NextResponse.json(

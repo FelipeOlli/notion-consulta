@@ -42,7 +42,22 @@ export default async function AdminPage() {
     cards.push({
       href: "/admin/financeiro",
       title: "Financeiro",
-      description: "E-mails por servidor, colaboradores, custos e monitoramento por empresa.",
+      description: "Visão geral dos 3 serviços: usuários por mês, importação e planilhas.",
+    });
+    cards.push({
+      href: "/admin/financeiro/cf-com",
+      title: "CFCONTABILIDADE.COM",
+      description: "Usuários Google Workspace do servidor CFCONTABILIDADE.COM.",
+    });
+    cards.push({
+      href: "/admin/financeiro/cf-com-br",
+      title: "CFCONTABILIDADE.COM.BR",
+      description: "Usuários Google Workspace do servidor CFCONTABILIDADE.COM.BR.",
+    });
+    cards.push({
+      href: "/admin/financeiro/tim",
+      title: "Time Is Money",
+      description: "Colaboradores importados via CSV do Time Is Money.",
     });
   }
   if (modules.includes("usuarios")) {
@@ -130,7 +145,7 @@ export default async function AdminPage() {
         )}
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.map((card) => (
+          {cards.sort((a, b) => a.title.localeCompare(b.title, "pt-BR")).map((card) => (
             <Link key={card.href} href={card.href} className="glass-card group rounded-2xl p-6">
               <h2 className="text-lg font-semibold text-white transition-colors group-hover:text-[#4da3ff]">
                 {card.title}
