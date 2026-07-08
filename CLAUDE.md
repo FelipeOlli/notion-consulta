@@ -28,6 +28,7 @@
 | `nucleo_ti` | `/admin/nucleo-ti` | Controle de demandas do Núcleo TI (master-only, sem enum Prisma) |
 | `alterdata` | `/admin/alterdata` | Clientes Alterdata + credenciais (Nuvem/Pack/eContador/Passaporte) |
 | `dominio` | `/admin/dominio` | SSCs DOMÍNIO/ONVIO + aba Transbordo (tickets de migração por franquia) |
+| `tickets_ti` | `/admin/tickets-ti` | Chamados da equipe de TI via ScrumHub (iframe + notificações) |
 
 - Role `master` tem acesso a todos os módulos (`ALL_MODULES_FOR_MASTER` em `lib/modules.ts`)
 - Admin principal protegido: `LOCKED_PRIMARY_ADMIN_EMAIL` em `lib/locked-admin.ts`
@@ -97,7 +98,19 @@
 - API: `/api/admin/transbordo/` (todas as rotas usam `ensureModuleAccess("dominio")`)
 - Configurações (cores e opções de status) visíveis só para `master`; `CRED_LABELS` mapeia tipo→label em `alterdata-dashboard.tsx`
 
+## Tickets TI (`/admin/tickets-ti`)
+- Módulo `tickets_ti` (enum Prisma `TICKETS_TI`); migration `add_tickets_ti_module`
+- Env vars: `SCRUMHUB_API_URL`, `SCRUMHUB_API_KEY`, `SCRUMHUB_PROJETO_ID`, `SCRUMHUB_COMPANY_ID`
+- Proxy API: `GET /api/admin/tickets-ti` — busca stats + lista de tickets do ScrumHub
+- Notificações API: `GET/POST/DELETE /api/admin/tickets-ti/notifications` — últimos 30 dias, não concluídos/cancelados, cruzado com `NotificationRead` (kind `"ticket_ti"`)
+- Página `/admin/tickets-ti`: iframe do ScrumHub (`${SCRUMHUB_API_URL}/companies/${SCRUMHUB_COMPANY_ID}/tickets`), full-height
+- Home (`variant="home"`): métricas com filtro de mês + lista de chamados em aberto (ordenados do mais recente ao mais antigo, excluindo concluídos e cancelados); clique → `TicketDetailModal`
+- `TicketDetailModal`: status, prioridade, tipo, solicitante, responsável, data, prazo, descrição + botão "Abrir no ScrumHub ↗"
+- Sino (`HeaderNotificationsBell`): seção "Tickets TI" com `TicketDetailModal` completo ao clicar (mesmos campos, dados vindos da notifications API)
+- Auto-poll a cada 30s; browser Notification API para novos tickets
+- `isConcluido()`: filtra `t.concluido === true` OU `statusNome` contém "conclu" OU "cancelad"
+
 ## Sessões recentes
+- **2026-07-08** — Módulo Tickets TI: iframe ScrumHub na página full, modal de detalhes na home e no sino, notificações no bell com `TicketDetailModal` completo; sub-cards financeiro removidos da home; ordenação por data nos chamados em aberto
 - **2026-06-30** — Credencial Passaporte no Alterdata (enum `PASSAPORTE`, seção no modal, chip de filtro, `CRED_LABELS`); migration `add_passaporte_credencial`
 - **2026-06-29** — Transbordo como aba do módulo Domínio (`DominioTabs`); módulos Domínio e Transbordo commitados; fix truncamento Nome na tabela Alterdata; `ConfirmModal` substituindo `window.confirm` em links/usuários/financeiro/chips/nucleo-ti
-- **2026-06-29** — Edição inline de credenciais (PATCH `/api/admin/alterdata/contadores/[id]`); selo "acesso liberado" (campo `acessoLiberado` + migration); filtro multi-select de credenciais com AND; auto-save na edição de cliente
