@@ -24,6 +24,7 @@ type ScrumHubTicket = {
   nome_solicitante: string | null;
   prioridade: string | null;
   created_at: string;
+  concluido: number | boolean;
 };
 
 export async function GET() {
@@ -92,6 +93,7 @@ export async function GET() {
         solicitante: t.nome_solicitante ?? "",
         prioridade: t.prioridade ?? "",
         createdAt: t.created_at,
+        concluido: Boolean(t.concluido),
       })),
     });
   } catch {
