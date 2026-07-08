@@ -14,7 +14,18 @@ type ScrumHubTicket = {
   created_at: string;
   concluido: number | boolean;
   status_nome: string | null;
+  projeto_nome: string | null;
 };
+
+function gerarSlug(nome: string): string {
+  return (nome ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .trim();
+}
 
 export async function GET() {
   const ok = await ensureModuleAccess("tickets_ti");
@@ -55,14 +66,21 @@ export async function GET() {
     });
     const lidosSet = new Set(lidos.map((r) => r.refId));
 
+    const frontendBase = apiUrl.replace(/\/$/, "");
+
     return NextResponse.json({
-      tickets: recentes.map((t) => ({
-        id: t.id,
-        nome: t.nome,
-        solicitante: t.nome_solicitante ?? "",
-        createdAt: t.created_at,
-        lido: lidosSet.has(String(t.id)),
-      })),
+      tickets: recentes.map((t) => {
+        const ticketSlug = `${gerarSlug(t.nome)}-${t.id}`;
+        const projetoSlug = gerarSlug(t.projeto_nome ?? "");
+        return {
+          id: t.id,
+          nome: t.nome,
+          solicitante: t.nome_solicitante ?? "",
+          createdAt: t.created_at,
+          lido: lidosSet.has(String(t.id)),
+          url: `${frontendBase}/ticket/${ticketSlug}?slug=${projetoSlug}`,
+        };
+      }),
     });
   } catch {
     return NextResponse.json({ tickets: [] });

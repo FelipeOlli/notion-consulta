@@ -367,7 +367,9 @@ export function TicketsTiDashboard({
 
   // ── HOME ────────────────────────────────────────────────────────────────
   if (variant === "home") {
-    const abertos = tickets.filter((t) => !isConcluido(t));
+    const abertos = tickets
+      .filter((t) => !isConcluido(t))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return (
       <>

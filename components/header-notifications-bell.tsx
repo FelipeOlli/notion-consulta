@@ -19,6 +19,7 @@ type TicketNotif = {
   solicitante: string;
   createdAt: string;
   lido: boolean;
+  url: string;
 };
 
 interface ChipsData {
@@ -81,6 +82,31 @@ function UnreadIcon() {
   );
 }
 
+function IframeModal({ url, title, onClose }: { url: string; title?: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)" }}>
+      <div
+        className="flex flex-shrink-0 items-center justify-between gap-4 px-4 py-3"
+        style={{ background: "#0f172a", borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />
+          <p className="text-sm font-medium text-white truncate">{title ?? "ScrumHub"}</p>
+        </div>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+            Abrir em nova aba ↗
+          </a>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white transition" aria-label="Fechar">
+            ✕
+          </button>
+        </div>
+      </div>
+      <iframe src={url} title={title ?? "ScrumHub"} className="flex-1 w-full border-0" allow="clipboard-write" />
+    </div>
+  );
+}
+
 export function HeaderNotificationsBell() {
   const [data, setData] = useState<ChipsData | null>(null);
   const [certData, setCertData] = useState<CertificadosData | null>(null);
@@ -88,6 +114,8 @@ export function HeaderNotificationsBell() {
   const [dominioTotal, setDominioTotal] = useState(0);
   const [open, setOpen] = useState(false);
   const [unauthorized, setUnauthorized] = useState(false);
+  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
+  const [iframeTitle, setIframeTitle] = useState<string | undefined>(undefined);
   const ref = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -208,6 +236,14 @@ export function HeaderNotificationsBell() {
   const hasAny = hasChips || hasCerts || dominioTotal > 0 || hasTickets;
 
   return (
+    <>
+    {iframeUrl && (
+      <IframeModal
+        url={iframeUrl}
+        title={iframeTitle}
+        onClose={() => { setIframeUrl(null); setIframeTitle(undefined); }}
+      />
+    )}
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
@@ -258,10 +294,14 @@ export function HeaderNotificationsBell() {
                         className="border-b border-white/5 flex items-center"
                         style={{ opacity: ticket.lido ? 0.45 : 1 }}
                       >
-                        <Link
-                          href="/admin/tickets-ti"
-                          onClick={() => setOpen(false)}
-                          className="flex-1 flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors min-w-0"
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpen(false);
+                            setIframeTitle(`#${ticket.id} — ${ticket.nome}`);
+                            setIframeUrl(ticket.url);
+                          }}
+                          className="flex-1 flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors min-w-0 text-left"
                         >
                           <span
                             className="mt-0.5 w-2 h-2 rounded-full shrink-0"
@@ -276,7 +316,7 @@ export function HeaderNotificationsBell() {
                           <span className={`text-xs shrink-0 mt-0.5 ${ticket.lido ? "text-white/30" : "text-blue-400"}`}>
                             {formatRelative(ticket.createdAt)}
                           </span>
-                        </Link>
+                        </button>
                         {!ticket.lido ? (
                           <button
                             title="Marcar como lida"
@@ -460,5 +500,6 @@ export function HeaderNotificationsBell() {
         </div>
       )}
     </div>
+    </>
   );
 }
