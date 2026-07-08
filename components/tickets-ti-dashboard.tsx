@@ -80,7 +80,8 @@ function formatDateShort(iso: string | null | undefined): string {
 }
 
 function isConcluido(t: Ticket): boolean {
-  return t.concluido || t.statusNome.toLowerCase().includes("conclu");
+  const s = t.statusNome.toLowerCase();
+  return t.concluido || s.includes("conclu") || s.includes("cancelad");
 }
 
 // ── Modal com iframe do ScrumHub ─────────────────────────────────────────────
