@@ -44,21 +44,6 @@ export default async function AdminPage() {
       title: "Financeiro",
       description: "Visão geral dos 3 serviços: usuários por mês, importação e planilhas.",
     });
-    cards.push({
-      href: "/admin/financeiro/cf-com",
-      title: "CFCONTABILIDADE.COM",
-      description: "Usuários Google Workspace do servidor CFCONTABILIDADE.COM.",
-    });
-    cards.push({
-      href: "/admin/financeiro/cf-com-br",
-      title: "CFCONTABILIDADE.COM.BR",
-      description: "Usuários Google Workspace do servidor CFCONTABILIDADE.COM.BR.",
-    });
-    cards.push({
-      href: "/admin/financeiro/tim",
-      title: "Time Is Money",
-      description: "Colaboradores importados via CSV do Time Is Money.",
-    });
   }
   if (modules.includes("usuarios")) {
     cards.push({
