@@ -13,20 +13,27 @@ export default async function TicketsTiPage() {
   const modules: AppModule[] =
     session.role === "master" ? [...ALL_MODULES_FOR_MASTER] : (session.modules ?? []);
 
+  const apiUrl = (process.env.SCRUMHUB_API_URL ?? "").replace(/\/$/, "");
+  const companyId = process.env.SCRUMHUB_COMPANY_ID ?? "";
+  const scrumhubCompanyUrl =
+    apiUrl && companyId ? `${apiUrl}/companies/${companyId}/tickets` : undefined;
+
   return (
-    <main className="relative z-10 min-h-screen">
-      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="relative z-10 min-h-screen flex flex-col">
+      <div className="mx-auto w-full max-w-7xl px-4 pt-8 pb-4 sm:px-6 lg:px-8 flex-shrink-0">
         <AdminNav modules={modules} />
 
-        <header className="mt-8 mb-8">
+        <header className="mt-8 mb-6">
           <p className="section-label">TI</p>
           <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">Tickets TI</h1>
           <p className="mt-2 text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
             Acompanhamento de chamados da equipe de TI em tempo real.
           </p>
         </header>
+      </div>
 
-        <TicketsTiDashboard variant="full" />
+      <div className="flex-1 mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
+        <TicketsTiDashboard variant="full" scrumhubCompanyUrl={scrumhubCompanyUrl} />
       </div>
     </main>
   );

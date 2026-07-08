@@ -37,18 +37,18 @@ type ApiData = {
   tickets?: Ticket[];
 };
 
-const PRIORIDADE_LABEL: Record<string, string> = {
-  baixa: "Baixa",
-  media: "Média",
-  alta: "Alta",
-  urgente: "Urgente",
-};
-
 const PRIORIDADE_COLOR: Record<string, string> = {
   baixa: "#6b8aaa",
   media: "#f59e0b",
   alta: "#f97316",
   urgente: "#ef4444",
+};
+
+const PRIORIDADE_LABEL: Record<string, string> = {
+  baixa: "Baixa",
+  media: "Média",
+  alta: "Alta",
+  urgente: "Urgente",
 };
 
 function formatDate(iso: string | null | undefined): string {
@@ -83,138 +83,55 @@ function isConcluido(t: Ticket): boolean {
   return t.concluido || t.statusNome.toLowerCase().includes("conclu");
 }
 
-// ── Modal de detalhes do ticket ──────────────────────────────────────────────
-function TicketDetailModal({
-  ticket,
-  onClose,
-}: {
-  ticket: Ticket;
-  onClose: () => void;
-}) {
-  const pLower = (ticket.prioridade ?? "").toLowerCase();
-  const prioColor = PRIORIDADE_COLOR[pLower] ?? "#6b8aaa";
-  const prioLabel = PRIORIDADE_LABEL[pLower] ?? ticket.prioridade;
-
+// ── Modal com iframe do ScrumHub ─────────────────────────────────────────────
+function IframeModal({ url, title, onClose }: { url: string; title?: string; onClose: () => void }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      className="fixed inset-0 z-50 flex flex-col"
+      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)" }}
     >
+      {/* Barra de título */}
       <div
-        className="w-full max-w-lg rounded-2xl p-6 shadow-2xl"
+        className="flex flex-shrink-0 items-center justify-between gap-4 px-4 py-3"
         style={{
           background: "#0f172a",
-          border: "1px solid rgba(255,255,255,0.1)",
-          maxHeight: "90vh",
-          overflowY: "auto",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
         }}
       >
-        {/* Cabeçalho */}
-        <div className="mb-5 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="section-label mb-1">Ticket #{ticket.id}</p>
-            <h2 className="text-lg font-bold leading-snug text-white">{ticket.nome}</h2>
-          </div>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />
+          <p className="text-sm font-medium text-white truncate">
+            {title ?? "ScrumHub"}
+          </p>
+        </div>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs transition-colors"
+            style={{ color: "#3b82f6" }}
+          >
+            Abrir em nova aba ↗
+          </a>
           <button
             type="button"
             onClick={onClose}
-            className="flex-shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
+            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
             aria-label="Fechar"
           >
             ✕
           </button>
         </div>
-
-        {/* Badges */}
-        <div className="mb-5 flex flex-wrap gap-2">
-          <span
-            className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
-            style={{
-              background: `${ticket.statusCor}22`,
-              color: ticket.statusCor,
-              border: `1px solid ${ticket.statusCor}44`,
-            }}
-          >
-            {ticket.statusNome}
-          </span>
-          {prioLabel && (
-            <span
-              className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
-              style={{
-                background: `${prioColor}18`,
-                color: prioColor,
-                border: `1px solid ${prioColor}33`,
-              }}
-            >
-              {prioLabel}
-            </span>
-          )}
-          {ticket.tipo && (
-            <span
-              className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
-              style={{
-                background: "rgba(139,92,246,0.12)",
-                color: "#a78bfa",
-                border: "1px solid rgba(139,92,246,0.25)",
-              }}
-            >
-              {ticket.tipo}
-            </span>
-          )}
-        </div>
-
-        {/* Metadados */}
-        <dl className="mb-5 grid grid-cols-2 gap-3">
-          {ticket.solicitante && (
-            <div className="col-span-2 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
-              <dt className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Solicitante</dt>
-              <dd className="mt-0.5 text-sm font-medium text-white">{ticket.solicitante}</dd>
-            </div>
-          )}
-          {ticket.responsavel && (
-            <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
-              <dt className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Responsável</dt>
-              <dd className="mt-0.5 text-sm font-medium text-white">{ticket.responsavel}</dd>
-            </div>
-          )}
-          <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
-            <dt className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Aberto em</dt>
-            <dd className="mt-0.5 text-sm font-medium text-white">{formatDateShort(ticket.createdAt)}</dd>
-          </div>
-          {ticket.prazo && (
-            <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
-              <dt className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Prazo</dt>
-              <dd className="mt-0.5 text-sm font-medium text-white">{formatDateShort(ticket.prazo)}</dd>
-            </div>
-          )}
-        </dl>
-
-        {/* Descrição */}
-        {ticket.descricao && (
-          <div className="mb-5 rounded-xl p-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-            <p className="mb-1.5 text-xs font-semibold" style={{ color: "var(--onity-dark-text-muted)" }}>
-              Descrição
-            </p>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">
-              {ticket.descricao}
-            </p>
-          </div>
-        )}
-
-        {/* Botão abrir no ScrumHub */}
-        <a
-          href={ticket.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-primary flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold"
-        >
-          Abrir no ScrumHub ↗
-        </a>
       </div>
+
+      {/* iframe */}
+      <iframe
+        src={url}
+        title={title ?? "ScrumHub"}
+        className="flex-1 w-full border-0"
+        allow="clipboard-write"
+      />
     </div>
   );
 }
@@ -226,11 +143,7 @@ function TicketRow({ t, onClick }: { t: Ticket; onClick: () => void }) {
   const prioLabel = PRIORIDADE_LABEL[pLower] ?? t.prioridade;
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full text-left"
-    >
+    <button type="button" onClick={onClick} className="w-full text-left">
       <div
         className="flex items-start justify-between gap-3 rounded-xl p-3 transition-colors"
         style={{
@@ -282,13 +195,20 @@ function TicketRow({ t, onClick }: { t: Ticket; onClick: () => void }) {
 }
 
 // ── Dashboard principal ──────────────────────────────────────────────────────
-export function TicketsTiDashboard({ variant = "home" }: { variant?: "home" | "full" }) {
+export function TicketsTiDashboard({
+  variant = "home",
+  scrumhubCompanyUrl,
+}: {
+  variant?: "home" | "full";
+  scrumhubCompanyUrl?: string;
+}) {
   const [data, setData] = useState<ApiData | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [notifGranted, setNotifGranted] = useState(false);
   const [mes, setMes] = useState<string>("all");
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
+  const [iframeTitle, setIframeTitle] = useState<string | undefined>(undefined);
   const maxIdRef = useRef<number | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isFirst = useRef(true);
@@ -394,6 +314,11 @@ export function TicketsTiDashboard({ variant = "home" }: { variant?: "home" | "f
     return d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   }
 
+  function openTicket(t: Ticket) {
+    setIframeTitle(`#${t.id} — ${t.nome}`);
+    setIframeUrl(t.url);
+  }
+
   if (loading) {
     return (
       <div className="glass-card rounded-2xl p-6">
@@ -441,13 +366,16 @@ export function TicketsTiDashboard({ variant = "home" }: { variant?: "home" | "f
 
   // ── HOME ────────────────────────────────────────────────────────────────
   if (variant === "home") {
-    // Todos os tickets que NÃO são concluídos (por flag E por nome de status)
     const abertos = tickets.filter((t) => !isConcluido(t));
 
     return (
       <>
-        {selectedTicket && (
-          <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+        {iframeUrl && (
+          <IframeModal
+            url={iframeUrl}
+            title={iframeTitle}
+            onClose={() => { setIframeUrl(null); setIframeTitle(undefined); }}
+          />
         )}
 
         <div className="space-y-6">
@@ -479,10 +407,7 @@ export function TicketsTiDashboard({ variant = "home" }: { variant?: "home" | "f
             <div className="grid grid-cols-3 gap-4">
               <div
                 className="rounded-xl p-4 text-center"
-                style={{
-                  background: "rgba(245,158,11,0.08)",
-                  border: "1px solid rgba(245,158,11,0.2)",
-                }}
+                style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}
               >
                 <p className="text-2xl font-bold" style={{ color: "#f59e0b" }}>
                   {metricasMes.emAberto}
@@ -493,10 +418,7 @@ export function TicketsTiDashboard({ variant = "home" }: { variant?: "home" | "f
               </div>
               <div
                 className="rounded-xl p-4 text-center"
-                style={{
-                  background: "rgba(0,204,102,0.08)",
-                  border: "1px solid rgba(0,204,102,0.2)",
-                }}
+                style={{ background: "rgba(0,204,102,0.08)", border: "1px solid rgba(0,204,102,0.2)" }}
               >
                 <p className="text-2xl font-bold" style={{ color: "#00cc66" }}>
                   {metricasMes.concluidos}
@@ -507,10 +429,7 @@ export function TicketsTiDashboard({ variant = "home" }: { variant?: "home" | "f
               </div>
               <div
                 className="rounded-xl p-4 text-center"
-                style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                }}
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
               >
                 <p className="text-2xl font-bold text-white">{metricasMes.total}</p>
                 <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
@@ -539,7 +458,7 @@ export function TicketsTiDashboard({ variant = "home" }: { variant?: "home" | "f
             ) : (
               <div className="max-h-[420px] overflow-y-auto pr-1 space-y-2">
                 {abertos.map((t) => (
-                  <TicketRow key={t.id} t={t} onClick={() => setSelectedTicket(t)} />
+                  <TicketRow key={t.id} t={t} onClick={() => openTicket(t)} />
                 ))}
               </div>
             )}
@@ -549,14 +468,50 @@ export function TicketsTiDashboard({ variant = "home" }: { variant?: "home" | "f
     );
   }
 
-  // ── FULL (/admin/tickets-ti) ─────────────────────────────────────────────
+  // ── FULL (/admin/tickets-ti) — iframe do ScrumHub ───────────────────────
+  if (scrumhubCompanyUrl) {
+    return (
+      <>
+        {iframeUrl && (
+          <IframeModal
+            url={iframeUrl}
+            title={iframeTitle}
+            onClose={() => { setIframeUrl(null); setIframeTitle(undefined); }}
+          />
+        )}
+
+        {/* iframe ocupa toda a altura restante */}
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{
+            height: "calc(100vh - 260px)",
+            minHeight: "500px",
+            border: "1px solid rgba(255,255,255,0.1)",
+          }}
+        >
+          <iframe
+            src={scrumhubCompanyUrl}
+            title="ScrumHub — Tickets TI"
+            className="w-full h-full border-0"
+            allow="clipboard-write"
+          />
+        </div>
+      </>
+    );
+  }
+
+  // ── FULL sem URL configurada — dashboard original ────────────────────────
   const maxCount = Math.max(...status.map((s) => s.count), 1);
   const recentTickets = tickets.slice(0, 20);
 
   return (
     <>
-      {selectedTicket && (
-        <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+      {iframeUrl && (
+        <IframeModal
+          url={iframeUrl}
+          title={iframeTitle}
+          onClose={() => { setIframeUrl(null); setIframeTitle(undefined); }}
+        />
       )}
 
       <div className="space-y-6">
@@ -566,25 +521,15 @@ export function TicketsTiDashboard({ variant = "home" }: { variant?: "home" | "f
           <div className="grid grid-cols-3 gap-4">
             <div className="glass-card rounded-xl p-4 text-center">
               <p className="text-2xl font-bold text-white">{totais.total}</p>
-              <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
-                Total
-              </p>
+              <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Total</p>
             </div>
             <div className="glass-card rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold" style={{ color: "#00cc66" }}>
-                {totais.concluidos}
-              </p>
-              <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
-                Concluídos
-              </p>
+              <p className="text-2xl font-bold" style={{ color: "#00cc66" }}>{totais.concluidos}</p>
+              <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Concluídos</p>
             </div>
             <div className="glass-card rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold" style={{ color: "#f59e0b" }}>
-                {totais.naoConcluidos}
-              </p>
-              <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
-                Em aberto
-              </p>
+              <p className="text-2xl font-bold" style={{ color: "#f59e0b" }}>{totais.naoConcluidos}</p>
+              <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Em aberto</p>
             </div>
           </div>
         )}
@@ -624,7 +569,7 @@ export function TicketsTiDashboard({ variant = "home" }: { variant?: "home" | "f
             <p className="mb-4 text-sm font-semibold text-white">Chamados</p>
             <div className="space-y-2">
               {recentTickets.map((t) => (
-                <TicketRow key={t.id} t={t} onClick={() => setSelectedTicket(t)} />
+                <TicketRow key={t.id} t={t} onClick={() => openTicket(t)} />
               ))}
             </div>
           </div>
