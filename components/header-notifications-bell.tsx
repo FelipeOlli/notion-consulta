@@ -13,6 +13,14 @@ type CertNotif = {
   company: { legalName: string };
 };
 
+type TicketNotif = {
+  id: number;
+  nome: string;
+  solicitante: string;
+  createdAt: string;
+  lido: boolean;
+};
+
 interface ChipsData {
   vencidos: ChipWithEmpresa[];
   proximos: ChipWithEmpresa[];
@@ -21,6 +29,10 @@ interface ChipsData {
 interface CertificadosData {
   vencidos: CertNotif[];
   proximos: CertNotif[];
+}
+
+interface TicketsData {
+  tickets: TicketNotif[];
 }
 
 function diffDays(chip: ChipWithEmpresa): number {
@@ -38,6 +50,18 @@ function diffDaysCert(expiresAt: string): number {
   const venc = new Date(expiresAt);
   venc.setHours(0, 0, 0, 0);
   return Math.round((venc.getTime() - hoje.getTime()) / 86400000);
+}
+
+function formatRelative(iso: string): string {
+  const now = new Date();
+  const d = new Date(iso);
+  const diffMs = now.getTime() - d.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 60) return mins <= 1 ? "agora mesmo" : `há ${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs === 1 ? "há 1h" : `há ${hrs}h`;
+  const dias = Math.floor(hrs / 24);
+  return dias === 1 ? "há 1 dia" : `há ${dias} dias`;
 }
 
 function CheckIcon() {
@@ -60,16 +84,18 @@ function UnreadIcon() {
 export function HeaderNotificationsBell() {
   const [data, setData] = useState<ChipsData | null>(null);
   const [certData, setCertData] = useState<CertificadosData | null>(null);
+  const [ticketsData, setTicketsData] = useState<TicketsData | null>(null);
   const [dominioTotal, setDominioTotal] = useState(0);
   const [open, setOpen] = useState(false);
   const [unauthorized, setUnauthorized] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
-    const [chipsRes, dominioRes, certRes] = await Promise.all([
+    const [chipsRes, dominioRes, certRes, ticketsRes] = await Promise.all([
       fetch("/api/admin/chips/notifications"),
       fetch("/api/admin/dominio/notifications"),
       fetch("/api/admin/certificados/notifications"),
+      fetch("/api/admin/tickets-ti/notifications"),
     ]);
 
     if (chipsRes.status === 403) { setUnauthorized(true); return; }
@@ -79,6 +105,7 @@ export function HeaderNotificationsBell() {
       setDominioTotal((json as { total: number }).total ?? 0);
     }
     if (certRes.ok) setCertData(await certRes.json());
+    if (ticketsRes.ok) setTicketsData(await ticketsRes.json());
   }, []);
 
   useEffect(() => {
@@ -133,6 +160,28 @@ export function HeaderNotificationsBell() {
     }
   }
 
+  async function markTicketRead(id: number) {
+    await fetch("/api/admin/tickets-ti/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refId: String(id) }),
+    });
+    setTicketsData((prev) => prev ? {
+      tickets: prev.tickets.map((t) => t.id === id ? { ...t, lido: true } : t),
+    } : prev);
+  }
+
+  async function markTicketUnread(id: number) {
+    await fetch("/api/admin/tickets-ti/notifications", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refId: String(id) }),
+    });
+    setTicketsData((prev) => prev ? {
+      tickets: prev.tickets.map((t) => t.id === id ? { ...t, lido: false } : t),
+    } : prev);
+  }
+
   async function markDominioRead() {
     await fetch("/api/admin/dominio/notifications", { method: "PATCH" });
     setDominioTotal(0);
@@ -142,17 +191,21 @@ export function HeaderNotificationsBell() {
 
   const certVencidos = certData?.vencidos ?? [];
   const certProximos = certData?.proximos ?? [];
+  const tickets = ticketsData?.tickets ?? [];
+  const ticketsNaoLidos = tickets.filter((t) => !t.lido);
 
   const total =
     data.vencidos.filter((c) => !c.lido).length +
     data.proximos.filter((c) => !c.lido).length +
     dominioTotal +
     certVencidos.filter((c) => !c.lido).length +
-    certProximos.filter((c) => !c.lido).length;
+    certProximos.filter((c) => !c.lido).length +
+    ticketsNaoLidos.length;
 
   const hasChips = data.vencidos.length > 0 || data.proximos.length > 0;
   const hasCerts = certVencidos.length > 0 || certProximos.length > 0;
-  const hasAny = hasChips || hasCerts || dominioTotal > 0;
+  const hasTickets = tickets.length > 0;
+  const hasAny = hasChips || hasCerts || dominioTotal > 0 || hasTickets;
 
   return (
     <div ref={ref} className="relative">
@@ -190,6 +243,62 @@ export function HeaderNotificationsBell() {
             </div>
           ) : (
             <div className="max-h-80 overflow-y-auto">
+              {/* ── Tickets TI ─────────────────────────────────── */}
+              {hasTickets && (
+                <>
+                  <div className="px-4 py-1.5" style={{ background: "rgba(255,255,255,0.02)" }}>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30">Tickets TI</p>
+                  </div>
+                  {tickets
+                    .slice()
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .map((ticket) => (
+                      <div
+                        key={ticket.id}
+                        className="border-b border-white/5 flex items-center"
+                        style={{ opacity: ticket.lido ? 0.45 : 1 }}
+                      >
+                        <Link
+                          href="/admin/tickets-ti"
+                          onClick={() => setOpen(false)}
+                          className="flex-1 flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors min-w-0"
+                        >
+                          <span
+                            className="mt-0.5 w-2 h-2 rounded-full shrink-0"
+                            style={{ background: ticket.lido ? "rgba(255,255,255,0.2)" : "#3b82f6" }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white/85 truncate">{ticket.nome}</p>
+                            {ticket.solicitante && (
+                              <p className="text-xs text-white/40 truncate">{ticket.solicitante}</p>
+                            )}
+                          </div>
+                          <span className={`text-xs shrink-0 mt-0.5 ${ticket.lido ? "text-white/30" : "text-blue-400"}`}>
+                            {formatRelative(ticket.createdAt)}
+                          </span>
+                        </Link>
+                        {!ticket.lido ? (
+                          <button
+                            title="Marcar como lida"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); void markTicketRead(ticket.id); }}
+                            className="px-3 py-3 text-white/25 hover:text-white/70 transition-colors shrink-0"
+                          >
+                            <CheckIcon />
+                          </button>
+                        ) : (
+                          <button
+                            title="Marcar como não lida"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); void markTicketUnread(ticket.id); }}
+                            className="px-3 py-3 text-white/20 hover:text-blue-400 transition-colors shrink-0"
+                          >
+                            <UnreadIcon />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                </>
+              )}
+
               {/* ── Chips ──────────────────────────────────────── */}
               {hasChips && (
                 <div className="px-4 py-1.5" style={{ background: "rgba(255,255,255,0.02)" }}>
@@ -322,6 +431,15 @@ export function HeaderNotificationsBell() {
 
           {/* ── Footer ───────────────────────────────────────── */}
           <div className="px-4 py-3 border-t border-white/5 flex flex-col gap-1.5">
+            {hasTickets && (
+              <Link
+                href="/admin/tickets-ti"
+                onClick={() => setOpen(false)}
+                className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                Ver todos os tickets TI →
+              </Link>
+            )}
             <Link
               href="/admin/chips"
               onClick={() => setOpen(false)}
