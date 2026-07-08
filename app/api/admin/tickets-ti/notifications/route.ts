@@ -10,10 +10,16 @@ const JANELA_DIAS = 30;
 type ScrumHubTicket = {
   id: number;
   nome: string;
+  descricao: string | null;
   nome_solicitante: string | null;
   created_at: string;
+  prazo: string | null;
   concluido: number | boolean;
   status_nome: string | null;
+  status_cor: string | null;
+  prioridade: string | null;
+  responsavel_nome: string | null;
+  tipo_nome: string | null;
   projeto_nome: string | null;
 };
 
@@ -75,8 +81,15 @@ export async function GET() {
         return {
           id: t.id,
           nome: t.nome,
+          descricao: t.descricao ?? "",
           solicitante: t.nome_solicitante ?? "",
+          responsavel: t.responsavel_nome ?? "",
+          statusNome: t.status_nome ?? "",
+          statusCor: t.status_cor || "#3b82f6",
+          prioridade: t.prioridade ?? "",
+          tipo: t.tipo_nome ?? "",
           createdAt: t.created_at,
+          prazo: t.prazo ?? null,
           lido: lidosSet.has(String(t.id)),
           url: `${frontendBase}/ticket/${ticketSlug}?slug=${projetoSlug}`,
         };
