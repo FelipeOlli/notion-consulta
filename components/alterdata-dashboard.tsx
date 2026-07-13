@@ -401,8 +401,8 @@ export function AlterdataDashboard({ isMaster, currentEmail, notebookLmUrl }: Pr
             </button>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Telemetria:</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs shrink-0" style={{ color: "var(--onity-dark-text-muted)" }}>Telemetria:</span>
           {(["TODOS", "ATIVO", "INATIVO"] as const).map((t) => (
             <button
               key={t}
@@ -421,8 +421,8 @@ export function AlterdataDashboard({ isMaster, currentEmail, notebookLmUrl }: Pr
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Credencial:</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs shrink-0" style={{ color: "var(--onity-dark-text-muted)" }}>Credencial:</span>
           <button
             onClick={() => setFiltroCredenciais([])}
             className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
@@ -447,8 +447,8 @@ export function AlterdataDashboard({ isMaster, currentEmail, notebookLmUrl }: Pr
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Acesso liberado:</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs shrink-0" style={{ color: "var(--onity-dark-text-muted)" }}>Acesso liberado:</span>
           {(["TODOS", "SIM", "NAO"] as const).map((v) => (
             <button
               key={v}
@@ -467,7 +467,7 @@ export function AlterdataDashboard({ isMaster, currentEmail, notebookLmUrl }: Pr
             </button>
           ))}
         </div>
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {notebookLmUrl && (
             <a
               href={notebookLmUrl}
