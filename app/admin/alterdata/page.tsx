@@ -11,6 +11,7 @@ export default async function AlterdataPage() {
 
   const modules: AppModule[] = session.role === "master" ? [...ALL_MODULES_FOR_MASTER] : (session.modules ?? []);
   const isMaster = session.role === "master";
+  const notebookLmUrl = process.env.ALTERDATA_NOTEBOOKLM_URL ?? "";
 
   return (
     <main className="relative z-10 min-h-screen">
@@ -25,7 +26,7 @@ export default async function AlterdataPage() {
           </p>
         </header>
 
-        <AlterdataDashboard isMaster={isMaster} currentEmail={session.email} />
+        <AlterdataDashboard isMaster={isMaster} currentEmail={session.email} notebookLmUrl={notebookLmUrl} />
       </div>
     </main>
   );

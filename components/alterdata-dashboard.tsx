@@ -107,9 +107,10 @@ const EMPTY_FORM = {
 interface Props {
   isMaster: boolean;
   currentEmail: string;
+  notebookLmUrl?: string;
 }
 
-export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
+export function AlterdataDashboard({ isMaster, currentEmail, notebookLmUrl }: Props) {
   const [clientes, setClientes] = useState<ClienteComCredenciais[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState<AlterdataClienteStatus | "TODOS">("TODOS");
@@ -467,6 +468,16 @@ export function AlterdataDashboard({ isMaster, currentEmail }: Props) {
           ))}
         </div>
         <div className="flex items-center justify-end gap-2">
+          {notebookLmUrl && (
+            <a
+              href={notebookLmUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm px-3 py-2 rounded-lg border border-purple-500/30 text-purple-400 hover:text-purple-300 hover:border-purple-400/50 transition-colors whitespace-nowrap"
+            >
+              📓 Consultar no NotebookLM
+            </a>
+          )}
           {isMaster && (
             <>
               <a
