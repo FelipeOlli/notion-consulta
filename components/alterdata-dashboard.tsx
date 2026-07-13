@@ -376,7 +376,7 @@ export function AlterdataDashboard({ isMaster, currentEmail, notebookLmUrl }: Pr
   if (notebookLmUrl) {
     acoesSecundarias.push({
       key: "notebooklm",
-      label: "📓 Consultar no NotebookLM",
+      label: "🧠 Consultor IA",
       href: notebookLmUrl,
       external: true,
       className: "border-purple-500/30 text-purple-400 hover:text-purple-300 hover:border-purple-400/50",
