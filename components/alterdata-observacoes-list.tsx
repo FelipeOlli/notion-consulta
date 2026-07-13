@@ -203,6 +203,9 @@ export function AlterdataObservacoesList({ clienteId, currentEmail, onDirtyChang
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [confirmar, setConfirmar] = useState<{ acao: () => void; mensagem: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [textoEdicao, setTextoEdicao] = useState("");
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
   // Notifica o pai quando há texto ou arquivos não salvos (dirty)
   useEffect(() => {
@@ -269,6 +272,35 @@ export function AlterdataObservacoesList({ clienteId, currentEmail, onDirtyChang
   async function excluirAnexo(anexoId: string) {
     await fetch(`/api/admin/alterdata/observacoes/anexos/${anexoId}`, { method: "DELETE" });
     await carregar();
+  }
+
+  function iniciarEdicao(o: Observacao) {
+    setEditandoId(o.id);
+    setTextoEdicao(o.texto);
+  }
+
+  function cancelarEdicao() {
+    setEditandoId(null);
+    setTextoEdicao("");
+  }
+
+  async function salvarEdicao(id: string) {
+    if (!textoEdicao.trim()) return;
+    setSalvandoEdicao(true);
+    const res = await fetch(`/api/admin/alterdata/observacoes/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texto: textoEdicao }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Erro ao salvar." }));
+      alert(err.message ?? "Erro ao salvar.");
+    } else {
+      setEditandoId(null);
+      setTextoEdicao("");
+      await carregar();
+    }
+    setSalvandoEdicao(false);
   }
 
   return (
@@ -346,29 +378,74 @@ export function AlterdataObservacoesList({ clienteId, currentEmail, onDirtyChang
         ) : (
           obs.map((o) => (
             <div key={o.id} className="glass-card p-3 rounded-xl">
-              <div className="flex items-start gap-2">
-                {o.texto && (
-                  <p className="flex-1 text-sm text-white/85 whitespace-pre-wrap break-words">{o.texto}</p>
-                )}
-                {o.authorEmail === currentEmail && (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmar({ acao: () => excluir(o.id), mensagem: "Excluir esta observação?" })}
-                    disabled={excluindoId === o.id}
-                    className="shrink-0 text-red-400/50 hover:text-red-400 transition-colors disabled:opacity-40 mt-0.5"
-                    title="Excluir observação"
-                  >
-                    {excluindoId === o.id ? (
-                      <span className="text-xs">...</span>
-                    ) : (
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    )}
-                  </button>
-                )}
-              </div>
+              {editandoId === o.id ? (
+                <div className="space-y-2">
+                  <AutoResizeTextarea
+                    className="ds-input w-full text-sm"
+                    value={textoEdicao}
+                    onChange={setTextoEdicao}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) salvarEdicao(o.id);
+                      if (e.key === "Escape") cancelarEdicao();
+                    }}
+                  />
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={cancelarEdicao}
+                      className="text-xs px-3 py-1.5 rounded-lg link-muted"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => salvarEdicao(o.id)}
+                      disabled={salvandoEdicao || !textoEdicao.trim()}
+                      className="text-xs px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors disabled:opacity-40"
+                    >
+                      {salvandoEdicao ? "Salvando..." : "Salvar"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2">
+                  {o.texto && (
+                    <p className="flex-1 text-sm text-white/85 whitespace-pre-wrap break-words">{o.texto}</p>
+                  )}
+                  {o.authorEmail === currentEmail && (
+                    <div className="flex items-center gap-2 shrink-0 mt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => iniciarEdicao(o)}
+                        className="text-white/40 hover:text-white transition-colors"
+                        title="Editar observação"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmar({ acao: () => excluir(o.id), mensagem: "Excluir esta observação?" })}
+                        disabled={excluindoId === o.id}
+                        className="text-red-400/50 hover:text-red-400 transition-colors disabled:opacity-40"
+                        title="Excluir observação"
+                      >
+                        {excluindoId === o.id ? (
+                          <span className="text-xs">...</span>
+                        ) : (
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Anexos da observação */}
               {o.anexos.length > 0 && (
