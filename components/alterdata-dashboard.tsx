@@ -120,6 +120,13 @@ export function AlterdataDashboard({ isMaster, currentEmail, notebookLmUrl }: Pr
     setFiltroCredenciais((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]);
   const [filtroAcesso, setFiltroAcesso] = useState<"TODOS" | "SIM" | "NAO">("TODOS");
   const [busca, setBusca] = useState("");
+  const [filtrosMobileAbertos, setFiltrosMobileAbertos] = useState(false);
+  const [acoesMobileAbertas, setAcoesMobileAbertas] = useState(false);
+  const filtrosAtivos =
+    (filtroStatus !== "TODOS" ? 1 : 0) +
+    (filtroTelemetria !== "TODOS" ? 1 : 0) +
+    (filtroCredenciais.length > 0 ? 1 : 0) +
+    (filtroAcesso !== "TODOS" ? 1 : 0);
 
   const [formAberto, setFormAberto] = useState(false);
   const [editando, setEditando] = useState<AlterdataCliente | null>(null);
@@ -355,6 +362,56 @@ export function AlterdataDashboard({ isMaster, currentEmail, notebookLmUrl }: Pr
     setSincronizando(false);
   }
 
+  type AcaoSecundaria = {
+    key: string;
+    label: string;
+    href?: string;
+    external?: boolean;
+    onClick?: () => void;
+    disabled?: boolean;
+    className: string;
+  };
+
+  const acoesSecundarias: AcaoSecundaria[] = [];
+  if (notebookLmUrl) {
+    acoesSecundarias.push({
+      key: "notebooklm",
+      label: "📓 Consultar no NotebookLM",
+      href: notebookLmUrl,
+      external: true,
+      className: "border-purple-500/30 text-purple-400 hover:text-purple-300 hover:border-purple-400/50",
+    });
+  }
+  if (isMaster) {
+    acoesSecundarias.push(
+      {
+        key: "template",
+        label: "Baixar template",
+        href: "/api/admin/alterdata/clientes/template",
+        className: "border-white/10 text-white/60 hover:text-white hover:border-white/20",
+      },
+      {
+        key: "export",
+        label: "Exportar xlsx",
+        href: "/api/admin/alterdata/clientes/export",
+        className: "border-white/10 text-white/60 hover:text-white hover:border-white/20",
+      },
+      {
+        key: "sync",
+        label: sincronizando ? "Sincronizando..." : "↻ Sincronizar Sheets",
+        onClick: sincronizar,
+        disabled: sincronizando,
+        className: "border-purple-500/30 text-purple-400 hover:text-purple-300 hover:border-purple-400/50",
+      },
+      {
+        key: "import",
+        label: "Importar xlsx",
+        onClick: () => { setImportAberto(true); setImportResultado(null); },
+        className: "border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50",
+      }
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Dashboard de custos */}
@@ -401,6 +458,65 @@ export function AlterdataDashboard({ isMaster, currentEmail, notebookLmUrl }: Pr
             </button>
           )}
         </div>
+        {/* Controles compactos — só mobile */}
+        <div className="flex flex-wrap items-center gap-2 sm:hidden">
+          <button
+            onClick={() => setFiltrosMobileAbertos((v) => !v)}
+            className={`text-sm px-3 py-2 rounded-lg border transition-colors whitespace-nowrap ${
+              filtrosAtivos > 0
+                ? "bg-blue-500/20 text-blue-400 border-blue-500/40"
+                : "border-white/10 text-white/60 hover:text-white hover:border-white/20"
+            }`}
+          >
+            ☷ Filtros{filtrosAtivos > 0 ? ` (${filtrosAtivos})` : ""}
+          </button>
+          {acoesSecundarias.length > 0 && (
+            <button
+              onClick={() => setAcoesMobileAbertas((v) => !v)}
+              className="text-sm px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors whitespace-nowrap"
+            >
+              ⋯ Ações
+            </button>
+          )}
+          <button
+            onClick={abrirNovo}
+            className="text-sm px-3 py-2 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors whitespace-nowrap"
+          >
+            + Novo cliente
+          </button>
+        </div>
+
+        {/* Menu de ações — só mobile, expansível */}
+        {acoesMobileAbertas && (
+          <div className="flex flex-col gap-2 sm:hidden">
+            {acoesSecundarias.map((a) =>
+              a.href ? (
+                <a
+                  key={a.key}
+                  href={a.href}
+                  target={a.external ? "_blank" : undefined}
+                  rel={a.external ? "noopener noreferrer" : undefined}
+                  onClick={() => setAcoesMobileAbertas(false)}
+                  className={`text-sm px-3 py-2 rounded-lg border text-center transition-colors ${a.className}`}
+                >
+                  {a.label}
+                </a>
+              ) : (
+                <button
+                  key={a.key}
+                  onClick={() => { a.onClick?.(); setAcoesMobileAbertas(false); }}
+                  disabled={a.disabled}
+                  className={`text-sm px-3 py-2 rounded-lg border transition-colors disabled:opacity-50 ${a.className}`}
+                >
+                  {a.label}
+                </button>
+              )
+            )}
+          </div>
+        )}
+
+        {/* Filtros — colapsáveis no mobile, sempre visíveis a partir de sm */}
+        <div className={`${filtrosMobileAbertos ? "flex" : "hidden"} sm:flex flex-col gap-3`}>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs shrink-0" style={{ color: "var(--onity-dark-text-muted)" }}>Telemetria:</span>
           {(["TODOS", "ATIVO", "INATIVO"] as const).map((t) => (
@@ -467,45 +583,31 @@ export function AlterdataDashboard({ isMaster, currentEmail, notebookLmUrl }: Pr
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-          {notebookLmUrl && (
-            <a
-              href={notebookLmUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm px-3 py-2 rounded-lg border border-purple-500/30 text-purple-400 hover:text-purple-300 hover:border-purple-400/50 transition-colors whitespace-nowrap"
-            >
-              📓 Consultar no NotebookLM
-            </a>
-          )}
-          {isMaster && (
-            <>
+        </div>
+
+        {/* Barra de ações — só a partir de sm (mobile usa os controles compactos acima) */}
+        <div className="hidden sm:flex flex-wrap items-center gap-2 sm:justify-end">
+          {acoesSecundarias.map((a) =>
+            a.href ? (
               <a
-                href="/api/admin/alterdata/clientes/template"
-                className="text-sm px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors whitespace-nowrap"
+                key={a.key}
+                href={a.href}
+                target={a.external ? "_blank" : undefined}
+                rel={a.external ? "noopener noreferrer" : undefined}
+                className={`text-sm px-3 py-2 rounded-lg border transition-colors whitespace-nowrap ${a.className}`}
               >
-                Baixar template
+                {a.label}
               </a>
-              <a
-                href="/api/admin/alterdata/clientes/export"
-                className="text-sm px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-colors whitespace-nowrap"
-              >
-                Exportar xlsx
-              </a>
+            ) : (
               <button
-                onClick={sincronizar}
-                disabled={sincronizando}
-                className="text-sm px-3 py-2 rounded-lg border border-purple-500/30 text-purple-400 hover:text-purple-300 hover:border-purple-400/50 transition-colors whitespace-nowrap disabled:opacity-50"
+                key={a.key}
+                onClick={a.onClick}
+                disabled={a.disabled}
+                className={`text-sm px-3 py-2 rounded-lg border transition-colors whitespace-nowrap disabled:opacity-50 ${a.className}`}
               >
-                {sincronizando ? "Sincronizando..." : "↻ Sincronizar Sheets"}
+                {a.label}
               </button>
-              <button
-                onClick={() => { setImportAberto(true); setImportResultado(null); }}
-                className="text-sm px-3 py-2 rounded-lg border border-blue-500/30 text-blue-400 hover:text-blue-300 hover:border-blue-400/50 transition-colors whitespace-nowrap"
-              >
-                Importar xlsx
-              </button>
-            </>
+            )
           )}
           <button
             onClick={abrirNovo}
