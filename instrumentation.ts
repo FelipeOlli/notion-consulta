@@ -16,4 +16,11 @@ export async function register() {
       error
     );
   }
+
+  try {
+    const { startAlterdataAutoSync } = await import("@/lib/alterdata-auto-sync");
+    startAlterdataAutoSync();
+  } catch (error) {
+    console.error("[instrumentation] Falha ao iniciar auto-sync do Alterdata.", error);
+  }
 }

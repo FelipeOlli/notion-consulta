@@ -573,3 +573,10 @@ model IungoRamal {
 
   @@index([status])
 }
+
+model SyncSchedule {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  lastRunAt DateTime?
+  updatedAt DateTime  @updatedAt
+}

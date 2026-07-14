@@ -355,11 +355,16 @@ export function AlterdataDashboard({ isMaster, currentEmail, notebookLmUrl }: Pr
     setSincronizando(true);
     setSyncResultado(null);
     setSyncDetalhesAbertos(false);
-    const res = await fetch("/api/admin/alterdata/clientes/sync", { method: "POST" });
-    const data = await res.json();
-    setSyncResultado(data);
-    if (data.ok) await carregar();
-    setSincronizando(false);
+    try {
+      const res = await fetch("/api/admin/alterdata/clientes/sync", { method: "POST" });
+      const data = await res.json();
+      setSyncResultado(data);
+      if (data.ok) await carregar();
+    } catch {
+      setSyncResultado({ ok: false, message: "Erro de conexão ao sincronizar. Tente novamente." });
+    } finally {
+      setSincronizando(false);
+    }
   }
 
   type AcaoSecundaria = {
