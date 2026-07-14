@@ -84,6 +84,10 @@ function isConcluido(t: Ticket): boolean {
   return t.concluido || s.includes("conclu") || s.includes("cancelad");
 }
 
+function isPendente(t: Ticket): boolean {
+  return t.statusNome.toLowerCase().includes("pendente");
+}
+
 // ── Modal de detalhes do ticket ──────────────────────────────────────────────
 function TicketDetailModal({ ticket, onClose }: { ticket: Ticket; onClose: () => void }) {
   const pLower = (ticket.prioridade ?? "").toLowerCase();
@@ -330,7 +334,8 @@ export function TicketsTiDashboard({
             return chave === mes;
           });
     return {
-      emAberto: filtrados.filter((t) => !isConcluido(t)).length,
+      emAberto: filtrados.filter((t) => !isConcluido(t) && !isPendente(t)).length,
+      pendentes: filtrados.filter((t) => !isConcluido(t) && isPendente(t)).length,
       concluidos: filtrados.filter((t) => isConcluido(t)).length,
       total: filtrados.length,
     };
@@ -429,7 +434,7 @@ export function TicketsTiDashboard({
               </select>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div
                 className="rounded-xl p-4 text-center"
                 style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}
@@ -439,6 +444,17 @@ export function TicketsTiDashboard({
                 </p>
                 <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
                   Em aberto
+                </p>
+              </div>
+              <div
+                className="rounded-xl p-4 text-center"
+                style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
+              >
+                <p className="text-2xl font-bold" style={{ color: "#ef4444" }}>
+                  {metricasMes.pendentes}
+                </p>
+                <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
+                  Pendente
                 </p>
               </div>
               <div
