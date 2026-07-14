@@ -46,14 +46,24 @@ export async function GET() {
   }
 
   try {
-    const res = await fetch(
-      `${apiUrl}/tickets-pai/projeto/${projetoId}/all?aprovado=1`,
-      { headers: { "X-API-Key": apiKey }, cache: "no-store" }
-    );
+    const [res, resExternos] = await Promise.all([
+      fetch(`${apiUrl}/tickets-pai/projeto/${projetoId}/all?aprovado=1`, {
+        headers: { "X-API-Key": apiKey },
+        cache: "no-store",
+      }),
+      // Tickets Externos: pedidos ainda não aprovados, ficam fora de aprovado=1
+      fetch(`${apiUrl}/tickets-pai/projeto/${projetoId}/all?aprovado=0`, {
+        headers: { "X-API-Key": apiKey },
+        cache: "no-store",
+      }),
+    ]);
     if (!res.ok) return NextResponse.json({ tickets: [] });
 
-    const json = await res.json();
-    const todos: ScrumHubTicket[] = json?.data ?? [];
+    const [json, jsonExternos] = await Promise.all([
+      res.json(),
+      resExternos.ok ? resExternos.json() : Promise.resolve({ data: [] }),
+    ]);
+    const todos: ScrumHubTicket[] = [...(json?.data ?? []), ...(jsonExternos?.data ?? [])];
 
     // Apenas tickets dos últimos JANELA_DIAS dias e não concluídos
     const corte = new Date();
@@ -64,36 +74,66 @@ export async function GET() {
       return new Date(t.created_at) >= corte;
     });
 
+    const frontendBase = apiUrl.replace(/\/$/, "");
+
+    const ticketsRecentes = recentes.map((t) => {
+      const ticketSlug = `${gerarSlug(t.nome)}-${t.id}`;
+      const projetoSlug = gerarSlug(t.projeto_nome ?? "");
+      return {
+        id: t.id,
+        nome: t.nome,
+        descricao: t.descricao ?? "",
+        solicitante: t.nome_solicitante ?? "",
+        responsavel: t.responsavel_nome ?? "",
+        statusNome: t.status_nome ?? "",
+        statusCor: t.status_cor || "#3b82f6",
+        prioridade: t.prioridade ?? "",
+        tipo: t.tipo_nome ?? "",
+        createdAt: t.created_at,
+        prazo: t.prazo ?? null,
+        url: `${frontendBase}/ticket/${ticketSlug}?slug=${projetoSlug}`,
+      };
+    });
+
+    // Alertas persistidos pelo job de servidor (lib/tickets-ti-pendente-check.ts):
+    // cobre tickets que ficaram "Pendente" e já foram resolvidos antes de alguém
+    // abrir o painel — a API do ScrumHub não os retorna mais como pendentes.
+    const idsRecentes = new Set(ticketsRecentes.map((t) => t.id));
+    const alertasPendentes = await prisma.ticketTiPendenteAlerta.findMany({
+      where: { ticketId: { notIn: Array.from(idsRecentes) } },
+      orderBy: { detectedAt: "desc" },
+    });
+
+    const ticketsPendentesPersistidos = alertasPendentes.map((a) => ({
+      id: a.ticketId,
+      nome: a.nome,
+      descricao: "",
+      solicitante: a.solicitante,
+      responsavel: a.responsavel,
+      statusNome: a.statusNome,
+      statusCor: "#ef4444",
+      prioridade: "",
+      tipo: "",
+      createdAt: a.detectedAt.toISOString(),
+      prazo: null,
+      url: a.url,
+    }));
+
+    const todosTickets = [...ticketsRecentes, ...ticketsPendentesPersistidos];
+
     // Cruzar com NotificationRead
-    const ids = recentes.map((t) => String(t.id));
+    const ids = todosTickets.map((t) => String(t.id));
     const lidos = await prisma.notificationRead.findMany({
       where: { kind: KIND, refId: { in: ids } },
       select: { refId: true },
     });
     const lidosSet = new Set(lidos.map((r) => r.refId));
 
-    const frontendBase = apiUrl.replace(/\/$/, "");
-
     return NextResponse.json({
-      tickets: recentes.map((t) => {
-        const ticketSlug = `${gerarSlug(t.nome)}-${t.id}`;
-        const projetoSlug = gerarSlug(t.projeto_nome ?? "");
-        return {
-          id: t.id,
-          nome: t.nome,
-          descricao: t.descricao ?? "",
-          solicitante: t.nome_solicitante ?? "",
-          responsavel: t.responsavel_nome ?? "",
-          statusNome: t.status_nome ?? "",
-          statusCor: t.status_cor || "#3b82f6",
-          prioridade: t.prioridade ?? "",
-          tipo: t.tipo_nome ?? "",
-          createdAt: t.created_at,
-          prazo: t.prazo ?? null,
-          lido: lidosSet.has(String(t.id)),
-          url: `${frontendBase}/ticket/${ticketSlug}?slug=${projetoSlug}`,
-        };
-      }),
+      tickets: todosTickets.map((t) => ({
+        ...t,
+        lido: lidosSet.has(String(t.id)),
+      })),
     });
   } catch {
     return NextResponse.json({ tickets: [] });

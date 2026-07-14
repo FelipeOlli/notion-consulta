@@ -23,4 +23,11 @@ export async function register() {
   } catch (error) {
     console.error("[instrumentation] Falha ao iniciar auto-sync do Alterdata.", error);
   }
+
+  try {
+    const { startTicketsTiPendenteCheck } = await import("@/lib/tickets-ti-pendente-check");
+    startTicketsTiPendenteCheck();
+  } catch (error) {
+    console.error("[instrumentation] Falha ao iniciar checagem de tickets TI pendentes.", error);
+  }
 }

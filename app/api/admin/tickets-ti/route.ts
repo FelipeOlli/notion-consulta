@@ -60,12 +60,17 @@ export async function GET() {
   };
 
   try {
-    const [statsRes, allRes] = await Promise.all([
+    const [statsRes, allRes, externosRes] = await Promise.all([
       fetch(`${apiUrl}/tickets-pai/projeto/${projetoId}/stats`, {
         headers,
         cache: "no-store",
       }),
       fetch(`${apiUrl}/tickets-pai/projeto/${projetoId}/all?aprovado=1`, {
+        headers,
+        cache: "no-store",
+      }),
+      // Tickets Externos: pedidos ainda não aprovados, ficam fora de aprovado=1
+      fetch(`${apiUrl}/tickets-pai/projeto/${projetoId}/all?aprovado=0`, {
         headers,
         cache: "no-store",
       }),
@@ -78,7 +83,11 @@ export async function GET() {
       );
     }
 
-    const [statsJson, allJson] = await Promise.all([statsRes.json(), allRes.json()]);
+    const [statsJson, allJson, externosJson] = await Promise.all([
+      statsRes.json(),
+      allRes.json(),
+      externosRes.ok ? externosRes.json() : Promise.resolve({ data: [] }),
+    ]);
 
     const statusData: ScrumHubStatus[] = statsJson?.data?.status ?? [];
     const totais: ScrumHubTotais = statsJson?.data?.totais ?? {
@@ -86,7 +95,10 @@ export async function GET() {
       tickets_concluidos: 0,
       tickets_nao_concluidos: 0,
     };
-    const allTickets: ScrumHubTicket[] = allJson?.data ?? [];
+    const allTickets: ScrumHubTicket[] = [
+      ...(allJson?.data ?? []),
+      ...(externosJson?.data ?? []),
+    ];
 
     // URL base do frontend ScrumHub (mesmo algoritmo do backend)
     const frontendBase = (apiUrl ?? "https://scrumhub.vercel.app")

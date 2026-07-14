@@ -580,3 +580,14 @@ model SyncSchedule {
   lastRunAt DateTime?
   updatedAt DateTime  @updatedAt
 }
+
+model TicketTiPendenteAlerta {
+  id          String   @id @default(cuid())
+  ticketId    Int      @unique
+  nome        String
+  solicitante String
+  responsavel String
+  statusNome  String
+  url         String
+  detectedAt  DateTime @default(now())
+}
