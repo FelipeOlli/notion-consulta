@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import type { Chip, ChipEmpresa } from "@prisma/client";
+import { ScrumhubTicketIframeModal } from "./scrumhub-ticket-iframe-modal";
 
 type ChipWithEmpresa = Chip & { empresa: ChipEmpresa; lido: boolean };
 
@@ -100,6 +101,7 @@ function TicketDetailModal({ ticket, onClose }: { ticket: TicketNotif; onClose: 
   const pLower = (ticket.prioridade ?? "").toLowerCase();
   const prioColor = PRIO_COLOR[pLower] ?? "#6b8aaa";
   const prioLabel = PRIO_LABEL[pLower] ?? ticket.prioridade;
+  const [showIframe, setShowIframe] = useState(false);
 
   function fmtShort(iso: string | null | undefined) {
     if (!iso) return "—";
@@ -178,10 +180,19 @@ function TicketDetailModal({ ticket, onClose }: { ticket: TicketNotif; onClose: 
           </div>
         )}
 
-        <a href={ticket.url} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold" style={{ background: "linear-gradient(135deg,#3b82f6,#8b5cf6)", color: "#fff" }}>
+        <button
+          type="button"
+          onClick={() => setShowIframe(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold"
+          style={{ background: "linear-gradient(135deg,#3b82f6,#8b5cf6)", color: "#fff" }}
+        >
           Abrir no ScrumHub ↗
-        </a>
+        </button>
       </div>
+
+      {showIframe && (
+        <ScrumhubTicketIframeModal url={ticket.url} onClose={() => setShowIframe(false)} />
+      )}
     </div>
   );
 }
