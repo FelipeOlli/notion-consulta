@@ -7,8 +7,7 @@ import type { AlterdataClienteStatus, AlterdataTelemetria } from "@prisma/client
 const VALID_STATUS: AlterdataClienteStatus[] = [
   "ATIVO",
   "INATIVO",
-  "INADIMPLENTE",
-  "CONGELADO",
+  "EM_CANCELAMENTO",
   "DISTRATADO",
   "EM_ANDAMENTO",
 ];

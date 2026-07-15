@@ -43,8 +43,7 @@ enum AlterdataClienteStatus {
   ATIVO
   EM_ANDAMENTO
   INATIVO
-  INADIMPLENTE
-  CONGELADO
+  EM_CANCELAMENTO
   DISTRATADO
 }
 
@@ -590,4 +589,15 @@ model TicketTiPendenteAlerta {
   statusNome  String
   url         String
   detectedAt  DateTime @default(now())
+}
+
+model GoogleOAuthToken {
+  id           String    @id @default(cuid())
+  name         String    @unique
+  googleEmail  String?
+  refreshToken String
+  accessToken  String?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }

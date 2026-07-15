@@ -36,8 +36,7 @@ export async function GET() {
     ["Status válidos para a coluna Status:"],
     ["ATIVO"],
     ["INATIVO"],
-    ["INADIMPLENTE"],
-    ["CONGELADO"],
+    ["EM_CANCELAMENTO"],
     ["DISTRATADO"],
   ]);
   XLSX.utils.book_append_sheet(wb, wsStatus, "Status Válidos");

@@ -14,8 +14,7 @@ const STATUS_LABELS: Record<AlterdataClienteStatus, string> = {
   ATIVO: "Ativo",
   EM_ANDAMENTO: "Em Andamento",
   INATIVO: "Inativo",
-  INADIMPLENTE: "Inadimplente",
-  CONGELADO: "Congelado",
+  EM_CANCELAMENTO: "Em cancelamento",
   DISTRATADO: "Distratado",
 };
 
@@ -23,13 +22,12 @@ const STATUS_COLORS: Record<AlterdataClienteStatus, string> = {
   ATIVO: "bg-emerald-500",
   EM_ANDAMENTO: "bg-yellow-500",
   INATIVO: "bg-slate-500",
-  INADIMPLENTE: "bg-red-500",
-  CONGELADO: "bg-blue-500",
+  EM_CANCELAMENTO: "bg-red-500",
   DISTRATADO: "bg-orange-500",
 };
 
 const ACTIVE_STATUSES: AlterdataClienteStatus[] = ["ATIVO"];
-const ALL_STATUSES: AlterdataClienteStatus[] = ["ATIVO", "EM_ANDAMENTO", "INATIVO", "INADIMPLENTE", "CONGELADO", "DISTRATADO"];
+const ALL_STATUSES: AlterdataClienteStatus[] = ["ATIVO", "EM_ANDAMENTO", "INATIVO", "EM_CANCELAMENTO", "DISTRATADO"];
 
 interface Props {
   clientes: AlterdataCliente[];

@@ -14,8 +14,7 @@ const STATUS_LABELS: Record<AlterdataClienteStatus, string> = {
   ATIVO: "Ativo",
   EM_ANDAMENTO: "Em Andamento",
   INATIVO: "Inativo",
-  INADIMPLENTE: "Inadimplente",
-  CONGELADO: "Congelado",
+  EM_CANCELAMENTO: "Em cancelamento",
   DISTRATADO: "Distratado",
 };
 
@@ -23,8 +22,7 @@ const STATUS_COLORS: Record<AlterdataClienteStatus, string> = {
   ATIVO: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
   EM_ANDAMENTO: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   INATIVO: "bg-slate-500/20 text-slate-400 border-slate-500/30",
-  INADIMPLENTE: "bg-red-500/20 text-red-400 border-red-500/30",
-  CONGELADO: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  EM_CANCELAMENTO: "bg-red-500/20 text-red-400 border-red-500/30",
   DISTRATADO: "bg-orange-500/20 text-orange-400 border-orange-500/30",
 };
 
@@ -32,8 +30,7 @@ const STATUS_DOT: Record<AlterdataClienteStatus, string> = {
   ATIVO: "bg-emerald-400",
   EM_ANDAMENTO: "bg-yellow-400",
   INATIVO: "bg-slate-400",
-  INADIMPLENTE: "bg-red-400",
-  CONGELADO: "bg-blue-400",
+  EM_CANCELAMENTO: "bg-red-400",
   DISTRATADO: "bg-orange-400",
 };
 
@@ -41,12 +38,11 @@ const CARD_ACCENT: Record<AlterdataClienteStatus, string> = {
   ATIVO: "border-emerald-500/40",
   EM_ANDAMENTO: "border-yellow-500/40",
   INATIVO: "border-slate-500/40",
-  INADIMPLENTE: "border-red-500/40",
-  CONGELADO: "border-blue-500/40",
+  EM_CANCELAMENTO: "border-red-500/40",
   DISTRATADO: "border-orange-500/40",
 };
 
-const ALL_STATUS: AlterdataClienteStatus[] = ["ATIVO", "EM_ANDAMENTO", "INATIVO", "INADIMPLENTE", "CONGELADO", "DISTRATADO"];
+const ALL_STATUS: AlterdataClienteStatus[] = ["ATIVO", "EM_ANDAMENTO", "INATIVO", "EM_CANCELAMENTO", "DISTRATADO"];
 
 const TELEMETRIA_LABELS: Record<AlterdataTelemetria, string> = {
   ATIVO: "Ativo",
@@ -148,6 +144,7 @@ export function AlterdataDashboard({ isMaster, currentEmail, notebookLmUrl }: Pr
   const [importResultado, setImportResultado] = useState<{ inserted: number; updated: number; errors: string[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [oauthStatus, setOauthStatus] = useState<{ connected: boolean; email?: string } | null>(null);
   const [sincronizando, setSincronizando] = useState(false);
   const [syncResultado, setSyncResultado] = useState<{
     ok: boolean;
@@ -172,6 +169,26 @@ export function AlterdataDashboard({ isMaster, currentEmail, notebookLmUrl }: Pr
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  // Status da conexão OAuth (Google) e feedback do redirect de callback — só master.
+  useEffect(() => {
+    if (!isMaster) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const oauth = params.get("oauth");
+    if (oauth === "success") {
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (oauth === "error") {
+      alert(params.get("message") ?? "Erro ao conectar com o Google.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+
+    fetch("/api/admin/alterdata/oauth/status")
+      .then((res) => res.json())
+      .then((data) => setOauthStatus(data))
+      .catch(() => setOauthStatus(null));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMaster]);
 
   const contagens = ALL_STATUS.reduce<Record<AlterdataClienteStatus, number>>((acc, s) => {
     acc[s] = clientes.filter((c) => c.status === s).length;
@@ -407,6 +424,16 @@ export function AlterdataDashboard({ isMaster, currentEmail, notebookLmUrl }: Pr
         onClick: sincronizar,
         disabled: sincronizando,
         className: "border-purple-500/30 text-purple-400 hover:text-purple-300 hover:border-purple-400/50",
+      },
+      {
+        key: "google-oauth",
+        label: oauthStatus?.connected
+          ? `✅ ${oauthStatus.email ?? "Google conectado"} (reconectar)`
+          : "🔗 Conectar Google",
+        href: "/api/admin/alterdata/oauth/start",
+        className: oauthStatus?.connected
+          ? "border-emerald-500/30 text-emerald-400 hover:text-emerald-300 hover:border-emerald-400/50"
+          : "border-white/10 text-white/60 hover:text-white hover:border-white/20",
       },
       {
         key: "import",
