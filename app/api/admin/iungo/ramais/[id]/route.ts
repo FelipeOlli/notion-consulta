@@ -11,7 +11,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const { id } = await params;
   const body = await req.json();
-  const { ramal, status, login, senha, numero, funcionarios } = body;
+  const { ramal, status, login, senha, numero, funcionarios, backupSincronizado } = body;
 
   const data: Record<string, unknown> = {};
   if (ramal !== undefined) data.ramal = String(ramal).trim();
@@ -20,6 +20,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (senha !== undefined) data.senha = String(senha).trim();
   if (numero !== undefined) data.numero = numero ? String(numero).trim() : null;
   if (funcionarios !== undefined) data.funcionarios = Array.isArray(funcionarios) ? funcionarios.map(String) : [];
+  if (backupSincronizado !== undefined) data.backupSincronizado = Boolean(backupSincronizado);
 
   const atualizado = await prisma.iungoRamal.update({
     where: { id },

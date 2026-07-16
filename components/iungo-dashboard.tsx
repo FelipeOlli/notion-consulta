@@ -11,6 +11,7 @@ const EMPTY_FORM = {
   senha: "",
   numero: "",
   funcionarios: [] as string[],
+  backupSincronizado: false,
 };
 
 type Form = typeof EMPTY_FORM;
@@ -22,6 +23,7 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
   // Filtros
   const [filtroStatus, setFiltroStatus] = useState<IungoStatus | "TODOS">("TODOS");
   const [filtroVinculo, setFiltroVinculo] = useState<"TODOS" | "LIVRES" | "OCUPADOS">("TODOS");
+  const [filtroBackup, setFiltroBackup] = useState<"TODOS" | "SIM" | "NAO">("TODOS");
   const [busca, setBusca] = useState("");
   const [sortField, setSortField] = useState<"RAMAL" | "STATUS" | "FUNCIONARIO">("RAMAL");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -114,6 +116,7 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
       senha: ramal.senha,
       numero: ramal.numero ?? "",
       funcionarios: ramal.funcionarios as string[],
+      backupSincronizado: ramal.backupSincronizado,
     });
     setNovoFuncionario("");
     setErro(null);
@@ -186,6 +189,8 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
     const nFuncionarios = (r.funcionarios as string[]).length;
     if (filtroVinculo === "LIVRES" && nFuncionarios > 0) return false;
     if (filtroVinculo === "OCUPADOS" && nFuncionarios === 0) return false;
+    if (filtroBackup === "SIM" && !r.backupSincronizado) return false;
+    if (filtroBackup === "NAO" && r.backupSincronizado) return false;
     if (busca) {
       const q = busca.toLowerCase();
       const funcionariosStr = (r.funcionarios as string[]).join(" ").toLowerCase();
@@ -247,6 +252,16 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
           <option value="TODOS">Todos os ramais</option>
           <option value="LIVRES">Livres (sem funcionário)</option>
           <option value="OCUPADOS">Ocupados</option>
+        </select>
+
+        <select
+          value={filtroBackup}
+          onChange={(e) => setFiltroBackup(e.target.value as "TODOS" | "SIM" | "NAO")}
+          className="ds-input"
+        >
+          <option value="TODOS">Todos (backup)</option>
+          <option value="SIM">Com backup sincronizado</option>
+          <option value="NAO">Sem backup sincronizado</option>
         </select>
 
         <button
@@ -383,6 +398,23 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
               )}
             </div>
 
+            {/* Toggle backup sincronizado */}
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={form.backupSincronizado}
+                  onChange={(e) => setForm((f) => ({ ...f, backupSincronizado: e.target.checked }))}
+                />
+                <div className={`w-9 h-5 rounded-full transition-colors ${form.backupSincronizado ? "bg-emerald-500" : "bg-white/15"}`} />
+                <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${form.backupSincronizado ? "translate-x-4" : "translate-x-0"}`} />
+              </div>
+              <span className="text-xs" style={{ color: form.backupSincronizado ? "#4ade80" : "var(--onity-dark-text-muted)" }}>
+                Backup sincronizado
+              </span>
+            </label>
+
             {erro && <p className="text-red-400 text-sm">{erro}</p>}
 
             <div className="flex gap-3">
@@ -477,7 +509,17 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
                   className="border-b transition-colors"
                   style={{ borderColor: "rgba(148,163,184,0.08)" }}
                 >
-                  <td className="px-4 py-3 font-mono font-semibold text-white">{r.ramal}</td>
+                  <td className="px-4 py-3 font-mono font-semibold text-white">
+                    <span className="inline-flex items-center gap-1.5">
+                      {r.ramal}
+                      {r.backupSincronizado && (
+                        <svg className="shrink-0 w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="currentColor" aria-label="Backup sincronizado">
+                          <title>Backup sincronizado</title>
+                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.06-1.06L10.94 12.69l-1.69-1.69a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.06 0l4.06-4.124z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"

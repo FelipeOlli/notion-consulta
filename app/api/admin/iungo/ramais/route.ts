@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { ramal, status, login, senha, numero, funcionarios } = body;
+  const { ramal, status, login, senha, numero, funcionarios, backupSincronizado } = body;
 
   if (!ramal || !login || !senha) {
     return NextResponse.json({ message: "Ramal, login e senha são obrigatórios." }, { status: 400 });
@@ -36,6 +36,7 @@ export async function POST(req: Request) {
       senha: String(senha).trim(),
       numero: numero ? String(numero).trim() : null,
       funcionarios: Array.isArray(funcionarios) ? funcionarios.map(String) : [],
+      backupSincronizado: Boolean(backupSincronizado),
     },
   });
 

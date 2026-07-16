@@ -560,15 +560,16 @@ model TransbordoComment {
 }
 
 model IungoRamal {
-  id           String      @id @default(cuid())
-  ramal        String      @unique
-  status       IungoStatus @default(ATIVO)
-  login        String
-  senha        String
-  numero       String?
-  funcionarios String[]    @default([])
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id                 String      @id @default(cuid())
+  ramal              String      @unique
+  status             IungoStatus @default(ATIVO)
+  login              String
+  senha              String
+  numero             String?
+  funcionarios       String[]    @default([])
+  backupSincronizado Boolean     @default(false)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
   @@index([status])
 }
