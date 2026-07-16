@@ -747,7 +747,7 @@ export function AlterdataDashboard({ isMaster, currentEmail, notebookLmUrl }: Pr
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-white/60 text-xs max-w-[160px] truncate">{c.unidade ?? "—"}</td>
+                    <td className="px-4 py-3 text-white text-xs max-w-[160px] truncate">{c.unidade ?? "—"}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border ${STATUS_COLORS[c.status]}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[c.status]}`} />
