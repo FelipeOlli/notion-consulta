@@ -45,6 +45,7 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
   const [erro, setErro] = useState<string | null>(null);
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const skipAutoSave = useRef(false);
+  const ramalInputRef = useRef<HTMLInputElement>(null);
 
   // Input de funcionário a adicionar
   const [novoFuncionario, setNovoFuncionario] = useState("");
@@ -122,6 +123,10 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
     setErro(null);
     setAutoSaveStatus("idle");
     setFormAberto(true);
+    setTimeout(() => {
+      ramalInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      ramalInputRef.current?.focus();
+    }, 0);
   };
 
   const fecharForm = () => {
@@ -301,6 +306,7 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
                   Ramal *
                 </label>
                 <input
+                  ref={ramalInputRef}
                   className="ds-input w-full"
                   value={form.ramal}
                   onChange={(e) => setForm((f) => ({ ...f, ramal: e.target.value }))}
@@ -513,7 +519,7 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
                     <span className="inline-flex items-center gap-1.5">
                       {r.ramal}
                       {r.backupSincronizado && (
-                        <svg className="shrink-0 w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="currentColor" aria-label="Backup sincronizado">
+                        <svg className="shrink-0 w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="currentColor" aria-label="Backup sincronizado">
                           <title>Backup sincronizado</title>
                           <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.06-1.06L10.94 12.69l-1.69-1.69a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.06 0l4.06-4.124z" clipRule="evenodd" />
                         </svg>
