@@ -67,7 +67,16 @@ function DonutStat({ data }: { data: { name: string; value: number; color: strin
   return (
     <ResponsiveContainer width="100%" height={140}>
       <PieChart>
-        <Pie data={data} dataKey="value" nameKey="name" innerRadius={40} outerRadius={62} paddingAngle={2} stroke="none">
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="name"
+          innerRadius={40}
+          outerRadius={62}
+          paddingAngle={2}
+          stroke="none"
+          isAnimationActive={false}
+        >
           {data.map((d) => (
             <Cell key={d.name} fill={d.color} />
           ))}
@@ -85,22 +94,12 @@ export function TvDashboard() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const clockRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      await fetch("/api/admin/monitors/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{}",
-      });
-    } catch {
-      // segue para buscar o estado mais recente mesmo se a checagem falhar
-    }
-
+  // Carga inicial: só GET, rápido — não espera nenhuma checagem de conexão.
+  const loadInitial = useCallback(async () => {
     const [monitorsRes, ticketsRes] = await Promise.all([
       fetch("/api/admin/monitors"),
       fetch("/api/admin/tickets-ti"),
     ]);
-
     if (monitorsRes.ok) {
       const json = await monitorsRes.json();
       setMonitors(json.data ?? []);
@@ -111,13 +110,54 @@ export function TvDashboard() {
     setLastUpdated(new Date());
   }, []);
 
+  // Atualiza só os tickets (rápido, não depende da checagem de conexões).
+  const refreshTickets = useCallback(async () => {
+    const res = await fetch("/api/admin/tickets-ti");
+    if (res.ok) setTicketsData(await res.json());
+    setLastUpdated(new Date());
+  }, []);
+
+  // Dispara a checagem real das conexões e aplica o resultado direto no estado local,
+  // sem refazer um GET /monitors — mesmo padrão de admin-monitor-dashboard.tsx.
+  const refreshMonitors = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/monitors/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      const results: { id: string; lastStatus: MonitorStatus; lastPing: number | null; lastChecked: string }[] =
+        json.data ?? [];
+      if (results.length === 0) return;
+      setMonitors((prev) =>
+        prev.map((m) => {
+          const r = results.find((x) => x.id === m.id);
+          if (!r) return m;
+          return {
+            ...m,
+            lastStatus: r.lastStatus,
+            // DOWN reinicia a contagem de tempo ativo; UP mantém o lastDownAt anterior.
+            lastDownAt: r.lastStatus === "DOWN" ? r.lastChecked : m.lastDownAt,
+          };
+        })
+      );
+    } catch {
+      // silencioso — próximo tick tenta de novo
+    }
+  }, []);
+
   useEffect(() => {
-    void load();
-    pollRef.current = setInterval(() => void load(), 30_000);
+    void loadInitial();
+    pollRef.current = setInterval(() => {
+      void refreshTickets();
+      void refreshMonitors();
+    }, 30_000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [load]);
+  }, [loadInitial, refreshTickets, refreshMonitors]);
 
   useEffect(() => {
     clockRef.current = setInterval(() => setNow(new Date()), 1000);
@@ -145,7 +185,11 @@ export function TvDashboard() {
             <h1 className="mt-2 text-3xl font-bold text-white lg:text-4xl">Modo TV</h1>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <Link href="/admin" className="link-muted text-sm">
+            <Link
+              href="/admin"
+              className="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition text-[#6b8aaa] hover:text-white"
+              style={{ background: "rgba(8,15,26,0.5)", border: "1px solid rgba(29,127,229,0.15)" }}
+            >
               Desativar Modo TV
             </Link>
             <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
