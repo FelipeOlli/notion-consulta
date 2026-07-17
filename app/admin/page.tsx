@@ -114,7 +114,18 @@ export default async function AdminPage() {
               Escolha abaixo o módulo autorizado para o seu usuário.
             </p>
           </header>
-          <PortalHeader />
+          <div className="flex items-center gap-3">
+            {isMaster && (
+              <Link
+                href="/admin/tv"
+                className="rounded-lg px-3 py-1.5 text-sm font-medium transition hover:bg-white/10"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "#e2e8f0" }}
+              >
+                📺 Ativar Modo TV
+              </Link>
+            )}
+            <PortalHeader />
+          </div>
         </div>
 
         {modules.includes("monitoramento") && (
