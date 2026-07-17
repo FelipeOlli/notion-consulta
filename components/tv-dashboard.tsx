@@ -199,57 +199,41 @@ export function TvDashboard() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Conexões */}
-          <div className="glass-card rounded-2xl p-6">
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <h2 className="text-xl font-bold text-white">Conexões ativas</h2>
-              <span className="text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
-                {monitoresAtivos.length} monitoradas
-              </span>
-            </div>
-
-            <DonutStat
-              data={[
-                { name: "Online", value: upCount, color: STATUS_COLOR.UP },
-                { name: "Offline", value: downCount, color: STATUS_COLOR.DOWN },
-                { name: "Aguardando", value: pendingCount, color: STATUS_COLOR.PENDING },
-              ]}
-            />
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {monitoresAtivos.map((m) => (
-                <div
-                  key={m.id}
-                  className="rounded-xl p-4"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-semibold text-white">{m.name}</p>
-                    <span
-                      className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium"
-                      style={{
-                        background: `${STATUS_COLOR[m.lastStatus]}22`,
-                        color: STATUS_COLOR[m.lastStatus],
-                        border: `1px solid ${STATUS_COLOR[m.lastStatus]}44`,
-                      }}
-                    >
-                      {STATUS_LABEL[m.lastStatus]}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
-                    {m.lastStatus === "UP" ? formatUptime(m.lastDownAt ?? m.createdAt) : "—"}
-                  </p>
-                </div>
-              ))}
-              {monitoresAtivos.length === 0 && (
-                <p className="text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
-                  Nenhuma conexão ativa monitorada.
-                </p>
-              )}
-            </div>
+        {/* Conexões — linha única no topo */}
+        <div className="glass-card mb-6 rounded-2xl p-5">
+          <div className="mb-3 flex items-center justify-between gap-4">
+            <h2 className="text-lg font-bold text-white">Conexões ativas</h2>
+            <span className="text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
+              {upCount} online · {downCount} offline{pendingCount > 0 ? ` · ${pendingCount} aguardando` : ""}
+            </span>
           </div>
 
+          <div className="flex flex-wrap gap-3">
+            {monitoresAtivos.map((m) => (
+              <div
+                key={m.id}
+                className="flex items-center gap-2 rounded-xl px-4 py-2"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+              >
+                <span
+                  className="inline-block size-2.5 shrink-0 rounded-full"
+                  style={{ background: STATUS_COLOR[m.lastStatus], boxShadow: m.lastStatus === "UP" ? `0 0 6px ${STATUS_COLOR[m.lastStatus]}` : undefined }}
+                />
+                <p className="text-sm font-semibold text-white">{m.name}</p>
+                <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
+                  {m.lastStatus === "UP" ? formatUptime(m.lastDownAt ?? m.createdAt) : STATUS_LABEL[m.lastStatus]}
+                </p>
+              </div>
+            ))}
+            {monitoresAtivos.length === 0 && (
+              <p className="text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
+                Nenhuma conexão ativa monitorada.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
           {/* Tickets */}
           <div className="glass-card rounded-2xl p-6">
             <div className="mb-4 flex items-center justify-between gap-4">
@@ -303,6 +287,16 @@ export function TvDashboard() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Espaço reservado para a próxima métrica */}
+          <div
+            className="glass-card flex min-h-[300px] items-center justify-center rounded-2xl p-6"
+            style={{ border: "1px dashed rgba(255,255,255,0.12)" }}
+          >
+            <p className="text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
+              Em breve — próxima métrica
+            </p>
           </div>
         </div>
       </div>
