@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ScrumhubTicketIframeModal } from "./scrumhub-ticket-iframe-modal";
 
 type StatusItem = {
   nome: string;
@@ -103,7 +102,6 @@ function TicketDetailModal({
   const pLower = (ticket.prioridade ?? "").toLowerCase();
   const prioColor = PRIORIDADE_COLOR[pLower] ?? "#6b8aaa";
   const prioLabel = PRIORIDADE_LABEL[pLower] ?? ticket.prioridade;
-  const [showIframe, setShowIframe] = useState(false);
 
   return (
     <div
@@ -172,21 +170,15 @@ function TicketDetailModal({
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={() => setShowIframe(true)}
+        <a
+          href={companyTicketsUrl ?? ticket.url}
+          target="_blank"
+          rel="noopener noreferrer"
           className="btn-primary flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold"
         >
           Abrir no ScrumHub ↗
-        </button>
+        </a>
       </div>
-
-      {showIframe && (
-        <ScrumhubTicketIframeModal
-          url={companyTicketsUrl ?? ticket.url}
-          onClose={() => setShowIframe(false)}
-        />
-      )}
     </div>
   );
 }
