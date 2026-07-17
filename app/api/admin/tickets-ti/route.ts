@@ -103,9 +103,14 @@ export async function GET() {
     // URL base do frontend ScrumHub (mesmo algoritmo do backend)
     const frontendBase = (apiUrl ?? "https://scrumhub.vercel.app")
       .replace(/\/$/, "");
+    const scrumhubCompanyId = process.env.SCRUMHUB_COMPANY_ID;
+    const companyTicketsUrl = scrumhubCompanyId
+      ? `${frontendBase}/companies/${scrumhubCompanyId}/tickets`
+      : undefined;
 
     return NextResponse.json({
       configured: true,
+      companyTicketsUrl,
       status: statusData.map((s) => ({
         nome: s.status_nome,
         cor: s.status_cor || "#3b82f6",

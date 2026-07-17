@@ -129,7 +129,13 @@ export async function GET() {
     });
     const lidosSet = new Set(lidos.map((r) => r.refId));
 
+    const scrumhubCompanyId = process.env.SCRUMHUB_COMPANY_ID;
+    const companyTicketsUrl = scrumhubCompanyId
+      ? `${frontendBase}/companies/${scrumhubCompanyId}/tickets`
+      : undefined;
+
     return NextResponse.json({
+      companyTicketsUrl,
       tickets: todosTickets.map((t) => ({
         ...t,
         lido: lidosSet.has(String(t.id)),

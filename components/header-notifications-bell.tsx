@@ -42,6 +42,7 @@ interface CertificadosData {
 
 interface TicketsData {
   tickets: TicketNotif[];
+  companyTicketsUrl?: string;
 }
 
 function diffDays(chip: ChipWithEmpresa): number {
@@ -97,7 +98,15 @@ const PRIO_LABEL: Record<string, string> = {
   baixa: "Baixa", media: "Média", alta: "Alta", urgente: "Urgente",
 };
 
-function TicketDetailModal({ ticket, onClose }: { ticket: TicketNotif; onClose: () => void }) {
+function TicketDetailModal({
+  ticket,
+  companyTicketsUrl,
+  onClose,
+}: {
+  ticket: TicketNotif;
+  companyTicketsUrl?: string;
+  onClose: () => void;
+}) {
   const pLower = (ticket.prioridade ?? "").toLowerCase();
   const prioColor = PRIO_COLOR[pLower] ?? "#6b8aaa";
   const prioLabel = PRIO_LABEL[pLower] ?? ticket.prioridade;
@@ -191,7 +200,10 @@ function TicketDetailModal({ ticket, onClose }: { ticket: TicketNotif; onClose: 
       </div>
 
       {showIframe && (
-        <ScrumhubTicketIframeModal url={ticket.url} onClose={() => setShowIframe(false)} />
+        <ScrumhubTicketIframeModal
+          url={companyTicketsUrl ?? ticket.url}
+          onClose={() => setShowIframe(false)}
+        />
       )}
     </div>
   );
@@ -329,6 +341,7 @@ export function HeaderNotificationsBell() {
     {selectedNotifTicket && (
       <TicketDetailModal
         ticket={selectedNotifTicket}
+        companyTicketsUrl={ticketsData?.companyTicketsUrl}
         onClose={() => setSelectedNotifTicket(null)}
       />
     )}

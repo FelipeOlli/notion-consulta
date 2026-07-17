@@ -36,6 +36,7 @@ type ApiData = {
   status?: StatusItem[];
   totais?: Totais;
   tickets?: Ticket[];
+  companyTicketsUrl?: string;
 };
 
 const PRIORIDADE_COLOR: Record<string, string> = {
@@ -90,7 +91,15 @@ function isPendente(t: Ticket): boolean {
 }
 
 // ── Modal de detalhes do ticket ──────────────────────────────────────────────
-function TicketDetailModal({ ticket, onClose }: { ticket: Ticket; onClose: () => void }) {
+function TicketDetailModal({
+  ticket,
+  companyTicketsUrl,
+  onClose,
+}: {
+  ticket: Ticket;
+  companyTicketsUrl?: string;
+  onClose: () => void;
+}) {
   const pLower = (ticket.prioridade ?? "").toLowerCase();
   const prioColor = PRIORIDADE_COLOR[pLower] ?? "#6b8aaa";
   const prioLabel = PRIORIDADE_LABEL[pLower] ?? ticket.prioridade;
@@ -173,7 +182,10 @@ function TicketDetailModal({ ticket, onClose }: { ticket: Ticket; onClose: () =>
       </div>
 
       {showIframe && (
-        <ScrumhubTicketIframeModal url={ticket.url} onClose={() => setShowIframe(false)} />
+        <ScrumhubTicketIframeModal
+          url={companyTicketsUrl ?? ticket.url}
+          onClose={() => setShowIframe(false)}
+        />
       )}
     </div>
   );
@@ -415,7 +427,11 @@ export function TicketsTiDashboard({
     return (
       <>
         {selectedTicket && (
-          <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+          <TicketDetailModal
+            ticket={selectedTicket}
+            companyTicketsUrl={data.companyTicketsUrl}
+            onClose={() => setSelectedTicket(null)}
+          />
         )}
 
         <div className="space-y-6">
@@ -524,7 +540,11 @@ export function TicketsTiDashboard({
     return (
       <>
         {selectedTicket && (
-          <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+          <TicketDetailModal
+            ticket={selectedTicket}
+            companyTicketsUrl={data.companyTicketsUrl}
+            onClose={() => setSelectedTicket(null)}
+          />
         )}
 
         {/* iframe ocupa toda a altura restante */}
@@ -554,7 +574,11 @@ export function TicketsTiDashboard({
   return (
     <>
       {selectedTicket && (
-        <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+        <TicketDetailModal
+          ticket={selectedTicket}
+          companyTicketsUrl={data.companyTicketsUrl}
+          onClose={() => setSelectedTicket(null)}
+        />
       )}
 
       <div className="space-y-6">
