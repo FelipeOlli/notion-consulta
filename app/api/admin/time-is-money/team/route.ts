@@ -34,8 +34,15 @@ export async function GET() {
         }))
         .sort((a, b) => a.fullName.localeCompare(b.fullName, "pt-BR")),
     });
-  } catch {
-    return NextResponse.json({ message: "Erro ao conectar à API do Time is Money." }, { status: 502 });
+  } catch (err) {
+    console.error("[time-is-money/team] falha na API:", err);
+    return NextResponse.json(
+      {
+        message: "Erro ao conectar à API do Time is Money.",
+        detail: err instanceof Error ? err.message : String(err),
+      },
+      { status: 502 }
+    );
   }
 }
 

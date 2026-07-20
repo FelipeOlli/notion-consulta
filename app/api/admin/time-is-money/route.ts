@@ -101,7 +101,14 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({ configured: true, from, to, team });
-  } catch {
-    return NextResponse.json({ message: "Erro ao conectar à API do Time is Money." }, { status: 502 });
+  } catch (err) {
+    console.error("[time-is-money] falha na API:", err);
+    return NextResponse.json(
+      {
+        message: "Erro ao conectar à API do Time is Money.",
+        detail: err instanceof Error ? err.message : String(err),
+      },
+      { status: 502 }
+    );
   }
 }

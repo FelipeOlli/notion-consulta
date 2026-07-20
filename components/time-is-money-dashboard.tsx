@@ -249,16 +249,26 @@ export function TimeIsMoneyDashboard({
   const [data, setData] = useState<ApiData | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/time-is-money");
-      if (!res.ok) return;
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setErrorStatus(res.status);
+        setErrorDetail(body?.detail ?? null);
+        return;
+      }
       const json: ApiData = await res.json();
       setData(json);
+      setErrorStatus(null);
+      setErrorDetail(null);
       setLastUpdated(new Date());
     } catch {
-      // falha silenciosa no poll
+      setErrorStatus(-1);
+      setErrorDetail(null);
     } finally {
       setLoading(false);
     }
@@ -278,7 +288,44 @@ export function TimeIsMoneyDashboard({
     );
   }
 
-  if (!data || !data.configured) {
+  // Sem dados carregados ainda (primeira carga falhou) — distingue a causa em vez de
+  // sempre culpar as env vars, que podem estar corretas (ver detalhe no card).
+  if (!data) {
+    if (errorStatus === 403) {
+      return (
+        <div className="glass-card rounded-2xl p-6">
+          <p className="section-label mb-1">Time is Money</p>
+          <p className="text-sm text-yellow-400">Sem permissão para acessar este módulo.</p>
+        </div>
+      );
+    }
+    if (errorStatus !== null) {
+      return (
+        <div className="glass-card rounded-2xl p-6">
+          <p className="section-label mb-1">Time is Money</p>
+          <p className="text-sm text-yellow-400">
+            Não foi possível conectar à API do Time is Money (status {errorStatus === -1 ? "de rede" : errorStatus}).
+            Verifique se o servidor tem acesso de saída a{" "}
+            <code className="font-mono text-xs">tim-api-prod2.prod.timeismoney.tec.br</code> e se a{" "}
+            <code className="font-mono text-xs">TIM_API_KEY</code> é válida.
+          </p>
+          {errorDetail && (
+            <p className="mt-2 font-mono text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
+              {errorDetail}
+            </p>
+          )}
+        </div>
+      );
+    }
+    return (
+      <div className="glass-card rounded-2xl p-6">
+        <p className="section-label mb-1">Time is Money</p>
+        <p className="text-sm text-yellow-400">Nenhum dado retornado pela API.</p>
+      </div>
+    );
+  }
+
+  if (!data.configured) {
     return (
       <div className="glass-card rounded-2xl p-6">
         <p className="section-label mb-1">Time is Money</p>
