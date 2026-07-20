@@ -21,6 +21,7 @@ const descriptions: Record<AppModule, string> = {
   iungo: "Ramais PABX: status, credenciais, telefones e funcionários vinculados.",
   monitoramento: "Monitoramento de disponibilidade de IPs, HTTP/TCP/PING.",
   tickets_ti: "Acompanhe chamados da equipe de TI: gráfico por status e notificação de ticket novo.",
+  time_is_money: "Monitoramento da equipe via Time is Money: tempo ativo/ocioso, produtividade e status por pessoa.",
 };
 
 export const moduleHrefs: Record<AppModule, string> = {
@@ -36,6 +37,7 @@ export const moduleHrefs: Record<AppModule, string> = {
   iungo: "/admin/iungo",
   monitoramento: "/admin",
   tickets_ti: "/admin/tickets-ti",
+  time_is_money: "/admin/time-is-money",
 };
 
 export function getPortalCardsForModules(modules: AppModule[]): PortalModuleCard[] {

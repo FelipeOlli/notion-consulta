@@ -29,6 +29,7 @@
 | `alterdata` | `/admin/alterdata` | Clientes Alterdata + credenciais (Nuvem/Pack/eContador/Passaporte) |
 | `dominio` | `/admin/dominio` | SSCs DOMÍNIO/ONVIO + aba Transbordo (tickets de migração por franquia) |
 | `tickets_ti` | `/admin/tickets-ti` | Chamados da equipe de TI via ScrumHub (iframe + notificações) |
+| `time_is_money` | `/admin/time-is-money` | Monitoramento de produtividade/status da equipe via API Time is Money (separado do serviço CSV do Financeiro) |
 
 - Role `master` tem acesso a todos os módulos (`ALL_MODULES_FOR_MASTER` em `lib/modules.ts`)
 - Admin principal protegido: `LOCKED_PRIMARY_ADMIN_EMAIL` em `lib/locked-admin.ts`
@@ -110,7 +111,18 @@
 - Auto-poll a cada 30s; browser Notification API para novos tickets
 - `isConcluido()`: filtra `t.concluido === true` OU `statusNome` contém "conclu" OU "cancelad"
 
+## Time is Money (`/admin/time-is-money`)
+- Módulo `time_is_money` (enum Prisma `TIME_IS_MONEY`); migration `add_time_is_money_module`. **Não é o mesmo domínio do serviço "Time Is Money" (CSV) do Financeiro** — este consome a API oficial da plataforma, isolado.
+- Env vars: `TIM_API_URL`, `TIM_API_KEY` — base da API na **raiz** (sem prefixo `/api`), auth via header `x-api-key`
+- Client da API: `lib/tim-api.ts` — `listClients()` (`GET /clients`), `getConsolidatedForClient()` (`GET /consolidated/client`, produtividade diária), `getMonitoredClients()` (lê/seeda `TimMonitoredClient`)
+- Model `TimMonitoredClient`: equipe monitorada, configurável na UI (não fixa no código); seed inicial (`TIM_TEAM_SEED`) com André Palmeiro, Pedro Freitas e Gabriel Rozzato
+- Proxy API: `GET /api/admin/time-is-money` — produtividade diária + status (online heurístico por `lastActivity` < 10min) de cada membro monitorado, período `from`/`to` (default 7 dias)
+- Gestão de equipe: `GET/POST/DELETE /api/admin/time-is-money/team` — POST/DELETE restritos a `session.role === "master"`
+- Página `/admin/time-is-money` (`variant="full"`): cards por pessoa + tabela diária + painel "Gerenciar equipe" (só master); Home (`variant="home"`): só os cards
+- Componente: `components/time-is-money-dashboard.tsx`; auto-poll 30s
+- Classificação produtivo/improdutivo da API vem majoritariamente *undefined* (metas não configuradas na plataforma) — painel prioriza ativo/ocioso/custo/última atividade
+
 ## Sessões recentes
+- **2026-07-20** — Módulo Time is Money: monitoramento de equipe (André, Pedro, Gabriel) via API oficial da plataforma, isolado do serviço CSV do Financeiro; equipe configurável na UI (`TimMonitoredClient`); card + página + widget na home
 - **2026-07-08** — Módulo Tickets TI: iframe ScrumHub na página full, modal de detalhes na home e no sino, notificações no bell com `TicketDetailModal` completo; sub-cards financeiro removidos da home; ordenação por data nos chamados em aberto
 - **2026-06-30** — Credencial Passaporte no Alterdata (enum `PASSAPORTE`, seção no modal, chip de filtro, `CRED_LABELS`); migration `add_passaporte_credencial`
-- **2026-06-29** — Transbordo como aba do módulo Domínio (`DominioTabs`); módulos Domínio e Transbordo commitados; fix truncamento Nome na tabela Alterdata; `ConfirmModal` substituindo `window.confirm` em links/usuários/financeiro/chips/nucleo-ti

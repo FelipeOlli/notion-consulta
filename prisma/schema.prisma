@@ -20,6 +20,7 @@ enum AppModule {
   IUNGO
   MONITORAMENTO
   TICKETS_TI
+  TIME_IS_MONEY
 }
 
 enum IungoStatus {
@@ -590,6 +591,16 @@ model TicketTiPendenteAlerta {
   statusNome  String
   url         String
   detectedAt  DateTime @default(now())
+}
+
+/** Colaborador da plataforma Time is Money monitorado no módulo (equipe configurável na UI). */
+model TimMonitoredClient {
+  id        String   @id @default(cuid())
+  /** uuid do cliente na API do Time is Money. */
+  clientId  String   @unique
+  fullName  String
+  email     String?
+  createdAt DateTime @default(now())
 }
 
 model GoogleOAuthToken {
