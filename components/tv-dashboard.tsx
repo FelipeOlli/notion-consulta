@@ -21,6 +21,7 @@ type Ticket = {
   statusNome: string;
   solicitante: string;
   concluido: boolean;
+  createdAt: string;
 };
 
 type TicketsApiData = {
@@ -173,7 +174,9 @@ export function TvDashboard() {
 
   const tickets = ticketsData?.tickets ?? [];
   const emAberto = tickets.filter((t) => !isConcluido(t) && !isPendente(t)).length;
-  const pendentesTickets = tickets.filter((t) => !isConcluido(t) && isPendente(t));
+  const pendentesTickets = tickets
+    .filter((t) => !isConcluido(t) && isPendente(t))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   const concluidos = tickets.filter((t) => isConcluido(t)).length;
 
   return (
