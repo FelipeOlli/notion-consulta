@@ -14,7 +14,7 @@ export default async function DominioPage() {
   const modules: AppModule[] =
     session.role === "master" ? [...ALL_MODULES_FOR_MASTER] : (session.modules ?? []);
 
-  const [sscs, tickets, badgeColors, statusOptions] = await Promise.all([
+  const [sscs, tickets, badgeColors, statusOptions, sistemaOrigemOptions] = await Promise.all([
     prisma.dominioSsc.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -30,6 +30,7 @@ export default async function DominioPage() {
     }),
     prisma.transbordoBadgeColor.findMany({ orderBy: { label: "asc" } }),
     prisma.transbordoStatusOption.findMany({ orderBy: { sortOrder: "asc" } }),
+    prisma.transbordoSistemaOrigemOption.findMany({ orderBy: { label: "asc" } }),
   ]);
 
   const ticketsSerialized = tickets.map((t) => ({
@@ -52,6 +53,11 @@ export default async function DominioPage() {
     createdAt: s.createdAt.toISOString(),
   }));
 
+  const sistemaOrigemOptionsSerialized = sistemaOrigemOptions.map((s) => ({
+    ...s,
+    createdAt: s.createdAt.toISOString(),
+  }));
+
   return (
     <main className="relative z-10 min-h-screen">
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -70,6 +76,7 @@ export default async function DominioPage() {
           initialTickets={ticketsSerialized}
           initialBadgeColors={colorsSerialized}
           initialStatusOptions={statusSerialized}
+          initialSistemaOrigemOptions={sistemaOrigemOptionsSerialized}
           isMaster={session.role === "master"}
         />
       </div>
