@@ -55,10 +55,17 @@ interface Ticket {
   _count: { comments: number };
 }
 
+interface SistemaOrigemOption {
+  id: number;
+  label: string;
+  createdAt: string;
+}
+
 interface Props {
   initialTickets: Ticket[];
   initialBadgeColors: BadgeColor[];
   initialStatusOptions: StatusOption[];
+  initialSistemaOrigemOptions: SistemaOrigemOption[];
   isMaster: boolean;
 }
 
@@ -77,11 +84,13 @@ export function TransbordoDashboard({
   initialTickets,
   initialBadgeColors,
   initialStatusOptions,
+  initialSistemaOrigemOptions,
   isMaster,
 }: Props) {
   const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
   const [badgeColors, setBadgeColors] = useState<BadgeColor[]>(initialBadgeColors);
   const [statusOptions, setStatusOptions] = useState<StatusOption[]>(initialStatusOptions);
+  const [sistemaOrigemOptions, setSistemaOrigemOptions] = useState<SistemaOrigemOption[]>(initialSistemaOrigemOptions);
 
   // form ticket
   const [formOpen, setFormOpen] = useState(false);
@@ -102,12 +111,15 @@ export function TransbordoDashboard({
   const [newColor, setNewColor] = useState({ label: "", hexValue: "#3b82f6" });
   const [statusForm, setStatusForm] = useState(false);
   const [newStatus, setNewStatus] = useState({ label: "", value: "", sortOrder: "0" });
+  const [origemForm, setOrigemForm] = useState(false);
+  const [newOrigem, setNewOrigem] = useState({ label: "" });
 
   // confirm delete
   const [deleteTicket, setDeleteTicket] = useState<Ticket | null>(null);
   const [deleteComment, setDeleteComment] = useState<Comment | null>(null);
   const [deleteColor, setDeleteColor] = useState<BadgeColor | null>(null);
   const [deleteStatus, setDeleteStatus] = useState<StatusOption | null>(null);
+  const [deleteOrigem, setDeleteOrigem] = useState<SistemaOrigemOption | null>(null);
 
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -342,6 +354,27 @@ export function TransbordoDashboard({
     setDeleteStatus(null);
   }
 
+  // sistema origem options
+  async function createOrigemOption() {
+    if (!newOrigem.label.trim()) return;
+    const res = await fetch("/api/admin/transbordo/sistema-origem-options", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newOrigem),
+    });
+    const opt: SistemaOrigemOption = await res.json();
+    setSistemaOrigemOptions((prev) => [...prev, opt].sort((a, b) => a.label.localeCompare(b.label)));
+    setNewOrigem({ label: "" });
+    setOrigemForm(false);
+  }
+
+  async function confirmDeleteOrigem() {
+    if (!deleteOrigem) return;
+    await fetch(`/api/admin/transbordo/sistema-origem-options/${deleteOrigem.id}`, { method: "DELETE" });
+    setSistemaOrigemOptions((prev) => prev.filter((s) => s.id !== deleteOrigem.id));
+    setDeleteOrigem(null);
+  }
+
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
@@ -399,9 +432,9 @@ export function TransbordoDashboard({
                 onChange={(e) => setForm((f) => ({ ...f, sistemaOrigem: e.target.value }))}
               >
                 <option value="">— selecionar —</option>
-                {SYSTEMS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
+                {sistemaOrigemOptions.map((s) => (
+                  <option key={s.id} value={s.label}>
+                    {s.label}
                   </option>
                 ))}
               </select>
@@ -411,16 +444,16 @@ export function TransbordoDashboard({
               <label className="block text-xs mb-1" style={{ color: MUTED }}>
                 Sistemas envolvidos
               </label>
-              <div className="flex gap-3">
-                {SYSTEMS.map((s) => (
-                  <label key={s} className="flex items-center gap-1.5 cursor-pointer text-sm text-white/80">
+              <div className="flex flex-wrap gap-3">
+                {sistemaOrigemOptions.map((s) => (
+                  <label key={s.id} className="flex items-center gap-1.5 cursor-pointer text-sm text-white/80">
                     <input
                       type="checkbox"
-                      checked={form.systems.includes(s)}
-                      onChange={() => toggleSystem(s)}
+                      checked={form.systems.includes(s.label)}
+                      onChange={() => toggleSystem(s.label)}
                       className="accent-blue-500"
                     />
-                    {s}
+                    {s.label}
                   </label>
                 ))}
               </div>
@@ -636,180 +669,280 @@ export function TransbordoDashboard({
         </div>
       )}
 
-      {/* ── Config panel (master only) ── */}
+      {/* ── Config modal (master only) ── */}
       {isMaster && configOpen && (
-        <div className="glass-card rounded-xl p-5 mb-6 space-y-5">
-          <h3 className="text-sm font-semibold text-white">Configurações do módulo</h3>
-
-          {/* Badge Colors */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium" style={{ color: MUTED }}>
-                Cores de badge
-              </span>
+        <div
+          className="fixed inset-0 z-[50] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setConfigOpen(false);
+          }}
+        >
+          <div className="glass-panel w-full max-w-5xl rounded-2xl p-6 space-y-6 max-h-[90vh] overflow-y-auto flex flex-col">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
+              <h3 className="text-lg font-semibold text-white">Configurações do módulo</h3>
               <button
-                className="text-xs link-accent"
-                onClick={() => setColorForm((v) => !v)}
+                className="text-white/60 hover:text-white text-2xl font-semibold leading-none"
+                onClick={() => setConfigOpen(false)}
               >
-                + Nova cor
+                ×
               </button>
             </div>
 
-            {colorForm && (
-              <div className="glass-card rounded-lg p-3 mb-3 flex flex-wrap items-end gap-3">
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Label
-                  </label>
-                  <input
-                    className="ds-input text-sm"
-                    value={newColor.label}
-                    onChange={(e) => setNewColor((c) => ({ ...c, label: e.target.value }))}
-                    placeholder="ex: Verde"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Cor
-                  </label>
-                  <input
-                    type="color"
-                    className="h-9 w-14 rounded cursor-pointer border-0 bg-transparent"
-                    value={newColor.hexValue}
-                    onChange={(e) => setNewColor((c) => ({ ...c, hexValue: e.target.value }))}
-                  />
-                </div>
-                <button
-                  className="btn-primary text-xs px-3 py-2"
-                  onClick={createColor}
-                  disabled={!newColor.label.trim()}
-                >
-                  Criar
-                </button>
-                <button
-                  className="link-muted text-xs px-3 py-2"
-                  onClick={() => setColorForm(false)}
-                >
-                  Cancelar
-                </button>
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-              {badgeColors.map((c) => (
-                <div
-                  key={c.id}
-                  className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium"
-                  style={{ background: c.hexValue + "22", color: c.hexValue, border: `1px solid ${c.hexValue}44` }}
-                >
-                  <span
-                    className="inline-block w-2 h-2 rounded-full"
-                    style={{ background: c.hexValue }}
-                  />
-                  {c.label}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 overflow-y-auto py-2 flex-1 pr-1">
+              {/* Badge Colors */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <span className="text-xs font-semibold text-white/80 uppercase tracking-wider">
+                    Cores de badge
+                  </span>
                   <button
-                    className="ml-1 opacity-60 hover:opacity-100 transition-opacity"
-                    onClick={() => setDeleteColor(c)}
-                    title="Excluir"
+                    className="text-xs link-accent"
+                    onClick={() => setColorForm((v) => !v)}
                   >
-                    ×
+                    + Nova cor
                   </button>
                 </div>
-              ))}
-              {badgeColors.length === 0 && (
-                <span className="text-xs" style={{ color: MUTED }}>
-                  Nenhuma cor cadastrada.
-                </span>
-              )}
-            </div>
-          </div>
 
-          {/* Status Options */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium" style={{ color: MUTED }}>
-                Opções de status
-              </span>
+                {colorForm && (
+                  <div className="glass-card rounded-lg p-3 space-y-3">
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                        Label
+                      </label>
+                      <input
+                        className="ds-input text-sm w-full"
+                        value={newColor.label}
+                        onChange={(e) => setNewColor((c) => ({ ...c, label: e.target.value }))}
+                        placeholder="ex: Verde"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                        Cor
+                      </label>
+                      <input
+                        type="color"
+                        className="h-9 w-full rounded cursor-pointer border-0 bg-transparent"
+                        value={newColor.hexValue}
+                        onChange={(e) => setNewColor((c) => ({ ...c, hexValue: e.target.value }))}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        className="btn-primary text-xs px-3 py-2 flex-1"
+                        onClick={createColor}
+                        disabled={!newColor.label.trim()}
+                      >
+                        Criar
+                      </button>
+                      <button
+                        className="link-muted text-xs px-3 py-2 border border-white/10 rounded-lg"
+                        onClick={() => setColorForm(false)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2 max-h-[250px] overflow-y-auto pr-1">
+                  {badgeColors.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium"
+                      style={{ background: c.hexValue + "22", color: c.hexValue, border: `1px solid ${c.hexValue}44` }}
+                    >
+                      <span
+                        className="inline-block w-2 h-2 rounded-full"
+                        style={{ background: c.hexValue }}
+                      />
+                      {c.label}
+                      <button
+                        className="ml-1 opacity-60 hover:opacity-100 transition-opacity"
+                        onClick={() => setDeleteColor(c)}
+                        title="Excluir"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {badgeColors.length === 0 && (
+                    <span className="text-xs" style={{ color: MUTED }}>
+                      Nenhuma cor cadastrada.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Status Options */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <span className="text-xs font-semibold text-white/80 uppercase tracking-wider">
+                    Opções de status
+                  </span>
+                  <button
+                    className="text-xs link-accent"
+                    onClick={() => setStatusForm((v) => !v)}
+                  >
+                    + Nova opção
+                  </button>
+                </div>
+
+                {statusForm && (
+                  <div className="glass-card rounded-lg p-3 space-y-3">
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                        Label
+                      </label>
+                      <input
+                        className="ds-input text-sm w-full"
+                        value={newStatus.label}
+                        onChange={(e) => setNewStatus((s) => ({ ...s, label: e.target.value }))}
+                        placeholder="ex: T1 - Em análise"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                        Valor (opcional)
+                      </label>
+                      <input
+                        className="ds-input text-sm w-full"
+                        value={newStatus.value}
+                        onChange={(e) => setNewStatus((s) => ({ ...s, value: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                        Ordem
+                      </label>
+                      <input
+                        type="number"
+                        className="ds-input text-sm w-full"
+                        value={newStatus.sortOrder}
+                        onChange={(e) => setNewStatus((s) => ({ ...s, sortOrder: e.target.value }))}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        className="btn-primary text-xs px-3 py-2 flex-1"
+                        onClick={createStatusOption}
+                        disabled={!newStatus.label.trim()}
+                      >
+                        Criar
+                      </button>
+                      <button
+                        className="link-muted text-xs px-3 py-2 border border-white/10 rounded-lg"
+                        onClick={() => setStatusForm(false)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1 max-h-[250px] overflow-y-auto pr-1">
+                  {statusOptions.map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between rounded-lg px-3 py-2 text-xs"
+                      style={{ background: "rgba(255,255,255,.04)" }}
+                    >
+                      <span className="text-white/80">{s.label}</span>
+                      <button
+                        className="opacity-60 hover:opacity-100 transition-opacity text-red-400"
+                        onClick={() => setDeleteStatus(s)}
+                        title="Excluir"
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  ))}
+                  {statusOptions.length === 0 && (
+                    <span className="text-xs" style={{ color: MUTED }}>
+                      Nenhuma opção cadastrada.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Sistemas de Origem */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <span className="text-xs font-semibold text-white/80 uppercase tracking-wider">
+                    Sistemas de Origem
+                  </span>
+                  <button
+                    className="text-xs link-accent"
+                    onClick={() => setOrigemForm((v) => !v)}
+                  >
+                    + Novo sistema
+                  </button>
+                </div>
+
+                {origemForm && (
+                  <div className="glass-card rounded-lg p-3 space-y-3">
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                        Nome
+                      </label>
+                      <input
+                        className="ds-input text-sm w-full"
+                        value={newOrigem.label}
+                        onChange={(e) => setNewOrigem({ label: e.target.value })}
+                        placeholder="ex: Domínio"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        className="btn-primary text-xs px-3 py-2 flex-1"
+                        onClick={createOrigemOption}
+                        disabled={!newOrigem.label.trim()}
+                      >
+                        Criar
+                      </button>
+                      <button
+                        className="link-muted text-xs px-3 py-2 border border-white/10 rounded-lg"
+                        onClick={() => setOrigemForm(false)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1 max-h-[250px] overflow-y-auto pr-1">
+                  {sistemaOrigemOptions.map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between rounded-lg px-3 py-2 text-xs"
+                      style={{ background: "rgba(255,255,255,.04)" }}
+                    >
+                      <span className="text-white/80">{s.label}</span>
+                      <button
+                        className="opacity-60 hover:opacity-100 transition-opacity text-red-400"
+                        onClick={() => setDeleteOrigem(s)}
+                        title="Excluir"
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  ))}
+                  {sistemaOrigemOptions.length === 0 && (
+                    <span className="text-xs" style={{ color: MUTED }}>
+                      Nenhum sistema cadastrado.
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-white/10 shrink-0">
               <button
-                className="text-xs link-accent"
-                onClick={() => setStatusForm((v) => !v)}
+                className="btn-primary text-sm px-5 py-2"
+                onClick={() => setConfigOpen(false)}
               >
-                + Nova opção
+                Fechar
               </button>
-            </div>
-
-            {statusForm && (
-              <div className="glass-card rounded-lg p-3 mb-3 flex flex-wrap items-end gap-3">
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Label
-                  </label>
-                  <input
-                    className="ds-input text-sm"
-                    value={newStatus.label}
-                    onChange={(e) => setNewStatus((s) => ({ ...s, label: e.target.value }))}
-                    placeholder="ex: T1 - Em análise"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Valor (opcional)
-                  </label>
-                  <input
-                    className="ds-input text-sm"
-                    value={newStatus.value}
-                    onChange={(e) => setNewStatus((s) => ({ ...s, value: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Ordem
-                  </label>
-                  <input
-                    type="number"
-                    className="ds-input text-sm w-20"
-                    value={newStatus.sortOrder}
-                    onChange={(e) => setNewStatus((s) => ({ ...s, sortOrder: e.target.value }))}
-                  />
-                </div>
-                <button
-                  className="btn-primary text-xs px-3 py-2"
-                  onClick={createStatusOption}
-                  disabled={!newStatus.label.trim()}
-                >
-                  Criar
-                </button>
-                <button
-                  className="link-muted text-xs px-3 py-2"
-                  onClick={() => setStatusForm(false)}
-                >
-                  Cancelar
-                </button>
-              </div>
-            )}
-
-            <div className="space-y-1">
-              {statusOptions.map((s) => (
-                <div
-                  key={s.id}
-                  className="flex items-center justify-between rounded-lg px-3 py-2 text-xs"
-                  style={{ background: "rgba(255,255,255,.04)" }}
-                >
-                  <span className="text-white/80">{s.label}</span>
-                  <button
-                    className="opacity-60 hover:opacity-100 transition-opacity text-red-400"
-                    onClick={() => setDeleteStatus(s)}
-                    title="Excluir"
-                  >
-                    Excluir
-                  </button>
-                </div>
-              ))}
-              {statusOptions.length === 0 && (
-                <span className="text-xs" style={{ color: MUTED }}>
-                  Nenhuma opção cadastrada.
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -1124,6 +1257,13 @@ export function TransbordoDashboard({
           mensagem={`Excluir opção de status "${deleteStatus.label}"?`}
           onConfirm={confirmDeleteStatus}
           onCancel={() => setDeleteStatus(null)}
+        />
+      )}
+      {deleteOrigem && (
+        <ConfirmModal
+          mensagem={`Excluir sistema de origem "${deleteOrigem.label}"?`}
+          onConfirm={confirmDeleteOrigem}
+          onCancel={() => setDeleteOrigem(null)}
         />
       )}
     </>

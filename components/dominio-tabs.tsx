@@ -49,12 +49,19 @@ interface Ticket {
   _count: { comments: number };
 }
 
+interface SistemaOrigemOption {
+  id: number;
+  label: string;
+  createdAt: string;
+}
+
 interface Props {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   initialSscs: any[];
   initialTickets: Ticket[];
   initialBadgeColors: BadgeColor[];
   initialStatusOptions: StatusOption[];
+  initialSistemaOrigemOptions: SistemaOrigemOption[];
   isMaster: boolean;
 }
 
@@ -70,6 +77,7 @@ export function DominioTabs({
   initialTickets,
   initialBadgeColors,
   initialStatusOptions,
+  initialSistemaOrigemOptions,
   isMaster,
 }: Props) {
   const [tab, setTab] = useState<Tab>("ssc");
@@ -111,6 +119,7 @@ export function DominioTabs({
           initialTickets={initialTickets}
           initialBadgeColors={initialBadgeColors}
           initialStatusOptions={initialStatusOptions}
+          initialSistemaOrigemOptions={initialSistemaOrigemOptions}
           isMaster={isMaster}
         />
       )}
