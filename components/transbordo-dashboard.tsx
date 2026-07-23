@@ -355,179 +355,207 @@ export function TransbordoDashboard({
         </span>
       </div>
 
-      {/* ── Formulário colapsável ── */}
+      {/* ── Modal Pop-up Novo/Editar Ticket ── */}
       {formOpen && (
-        <div className="glass-card rounded-xl p-5 mb-6 space-y-4">
-          <h3 className="text-sm font-semibold text-white">
-            {editing ? "Editar Ticket" : "Novo Ticket"}
-          </h3>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                Franquia *
-              </label>
-              <input
-                className="ds-input w-full"
-                value={form.franchiseName}
-                onChange={(e) => setForm((f) => ({ ...f, franchiseName: e.target.value }))}
-                placeholder="Nome da franquia"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                Sistema de Origem
-              </label>
-              <select
-                className="ds-input w-full"
-                value={form.sistemaOrigem}
-                onChange={(e) => setForm((f) => ({ ...f, sistemaOrigem: e.target.value }))}
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setFormOpen(false);
+              setEditing(null);
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200"
+            style={{
+              background: "#0f172a",
+              border: "1px solid rgba(255,255,255,.12)",
+            }}
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="text-base font-semibold text-white">
+                {editing ? "Editar Ticket" : "Novo Ticket"}
+              </h3>
+              <button
+                className="text-white/60 hover:text-white text-xl leading-none transition-colors px-1"
+                onClick={() => {
+                  setFormOpen(false);
+                  setEditing(null);
+                }}
+                title="Fechar"
               >
-                <option value="">— selecionar —</option>
-                {SYSTEMS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+                ×
+              </button>
             </div>
 
-            <div>
-              <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                Status
-              </label>
-              <input
-                className="ds-input w-full"
-                value={form.status}
-                onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                placeholder="ex: T0 - Coleta inicial de dados"
-                list="status-options-list"
-              />
-              <datalist id="status-options-list">
-                {statusOptions.filter((s) => s.isActive).map((s) => (
-                  <option key={s.id} value={s.label} />
-                ))}
-              </datalist>
-            </div>
-
-            <div>
-              <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                Cor do badge
-              </label>
-              <select
-                className="ds-input w-full"
-                value={form.statusColorId}
-                onChange={(e) => setForm((f) => ({ ...f, statusColorId: e.target.value }))}
-              >
-                <option value="">— nenhuma —</option>
-                {badgeColors.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label} ({c.hexValue})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                Nº Empresas
-              </label>
-              <input
-                type="number"
-                className="ds-input w-full"
-                value={form.companies}
-                onChange={(e) => setForm((f) => ({ ...f, companies: e.target.value }))}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                SSC
-              </label>
-              <input
-                className="ds-input w-full"
-                value={form.ssc}
-                onChange={(e) => setForm((f) => ({ ...f, ssc: e.target.value }))}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                Tempo de Migração
-              </label>
-              <input
-                className="ds-input w-full"
-                value={form.tempoMigracao}
-                onChange={(e) => setForm((f) => ({ ...f, tempoMigracao: e.target.value }))}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                Lembrete
-              </label>
-              <input
-                type="date"
-                className="ds-input w-full"
-                value={form.lembrete}
-                onChange={(e) => setForm((f) => ({ ...f, lembrete: e.target.value }))}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                Agendado
-              </label>
-              <input
-                type="date"
-                className="ds-input w-full"
-                value={form.agendado}
-                onChange={(e) => setForm((f) => ({ ...f, agendado: e.target.value }))}
-              />
-            </div>
-
-            {form.status === "Transbordo concluído" && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                  Data de Conclusão
+                  Franquia *
+                </label>
+                <input
+                  className="ds-input w-full"
+                  value={form.franchiseName}
+                  onChange={(e) => setForm((f) => ({ ...f, franchiseName: e.target.value }))}
+                  placeholder="Nome da franquia"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                  Sistema de Origem
+                </label>
+                <select
+                  className="ds-input w-full"
+                  value={form.sistemaOrigem}
+                  onChange={(e) => setForm((f) => ({ ...f, sistemaOrigem: e.target.value }))}
+                >
+                  <option value="">— selecionar —</option>
+                  {SYSTEMS.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                  Status
+                </label>
+                <input
+                  className="ds-input w-full"
+                  value={form.status}
+                  onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+                  placeholder="ex: T0 - Coleta inicial de dados"
+                  list="status-options-list"
+                />
+                <datalist id="status-options-list">
+                  {statusOptions.filter((s) => s.isActive).map((s) => (
+                    <option key={s.id} value={s.label} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div>
+                <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                  Cor do badge
+                </label>
+                <select
+                  className="ds-input w-full"
+                  value={form.statusColorId}
+                  onChange={(e) => setForm((f) => ({ ...f, statusColorId: e.target.value }))}
+                >
+                  <option value="">— nenhuma —</option>
+                  {badgeColors.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label} ({c.hexValue})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                  Nº Empresas
+                </label>
+                <input
+                  type="number"
+                  className="ds-input w-full"
+                  value={form.companies}
+                  onChange={(e) => setForm((f) => ({ ...f, companies: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                  SSC
+                </label>
+                <input
+                  className="ds-input w-full"
+                  value={form.ssc}
+                  onChange={(e) => setForm((f) => ({ ...f, ssc: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                  Tempo de Migração
+                </label>
+                <input
+                  className="ds-input w-full"
+                  value={form.tempoMigracao}
+                  onChange={(e) => setForm((f) => ({ ...f, tempoMigracao: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                  Lembrete
                 </label>
                 <input
                   type="date"
                   className="ds-input w-full"
-                  value={form.dConcluido}
-                  onChange={(e) => setForm((f) => ({ ...f, dConcluido: e.target.value }))}
+                  value={form.lembrete}
+                  onChange={(e) => setForm((f) => ({ ...f, lembrete: e.target.value }))}
                 />
               </div>
-            )}
-          </div>
 
-          <div>
-            <label className="block text-xs mb-1" style={{ color: MUTED }}>
-              Solicitação
-            </label>
-            <textarea
-              className="ds-input w-full"
-              rows={2}
-              value={form.solicitacao}
-              onChange={(e) => setForm((f) => ({ ...f, solicitacao: e.target.value }))}
-            />
-          </div>
+              <div>
+                <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                  Agendado
+                </label>
+                <input
+                  type="date"
+                  className="ds-input w-full"
+                  value={form.agendado}
+                  onChange={(e) => setForm((f) => ({ ...f, agendado: e.target.value }))}
+                />
+              </div>
 
-          <div className="flex justify-end gap-3 pt-1">
-            <button
-              className="link-muted text-sm px-4 py-2"
-              onClick={() => { setFormOpen(false); setEditing(null); }}
-            >
-              Cancelar
-            </button>
-            <button
-              className="btn-primary text-sm px-5 py-2"
-              onClick={saveTicket}
-              disabled={saving || !form.franchiseName.trim()}
-            >
-              {saving ? "Salvando…" : editing ? "Salvar alterações" : "Criar ticket"}
-            </button>
+              {form.status === "Transbordo concluído" && (
+                <div>
+                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                    Data de Conclusão
+                  </label>
+                  <input
+                    type="date"
+                    className="ds-input w-full"
+                    value={form.dConcluido}
+                    onChange={(e) => setForm((f) => ({ ...f, dConcluido: e.target.value }))}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                Solicitação
+              </label>
+              <textarea
+                className="ds-input w-full"
+                rows={2}
+                value={form.solicitacao}
+                onChange={(e) => setForm((f) => ({ ...f, solicitacao: e.target.value }))}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-white/10">
+              <button
+                className="link-muted text-sm px-4 py-2"
+                onClick={() => { setFormOpen(false); setEditing(null); }}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn-primary text-sm px-5 py-2"
+                onClick={saveTicket}
+                disabled={saving || !form.franchiseName.trim()}
+              >
+                {saving ? "Salvando…" : editing ? "Salvar alterações" : "Criar ticket"}
+              </button>
+            </div>
           </div>
         </div>
       )}
