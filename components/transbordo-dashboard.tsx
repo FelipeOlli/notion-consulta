@@ -128,7 +128,7 @@ export function TransbordoDashboard({
     franchiseName: "",
     sistemaOrigem: "",
     systems: [] as string[],
-    status: "T0 - Coleta inicial de dados",
+    status: "",
     statusColorId: "" as string,
     progress: "0",
     companies: "",
@@ -463,18 +463,18 @@ export function TransbordoDashboard({
               <label className="block text-xs mb-1" style={{ color: MUTED }}>
                 Status
               </label>
-              <input
+              <select
                 className="ds-input w-full"
                 value={form.status}
                 onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                placeholder="ex: T0 - Coleta inicial de dados"
-                list="status-options-list"
-              />
-              <datalist id="status-options-list">
+              >
+                <option value="">— selecionar —</option>
                 {statusOptions.filter((s) => s.isActive).map((s) => (
-                  <option key={s.id} value={s.label} />
+                  <option key={s.id} value={s.label}>
+                    {s.label}
+                  </option>
                 ))}
-              </datalist>
+              </select>
             </div>
 
             <div>
