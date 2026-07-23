@@ -119,6 +119,7 @@ export function DominioTabs({
           initialTickets={initialTickets}
           initialBadgeColors={initialBadgeColors}
           initialStatusOptions={initialStatusOptions}
+          initialSistemaOrigemOptions={initialSistemaOrigemOptions}
           isMaster={isMaster}
         />
       )}
