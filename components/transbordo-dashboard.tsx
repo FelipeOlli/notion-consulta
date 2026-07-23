@@ -99,10 +99,11 @@ export function TransbordoDashboard({
 
   // form ticket
   const [formOpen, setFormOpen] = useState(false);
+  const [modalTab, setModalTab] = useState<"dados" | "comentarios">("dados");
   const [editing, setEditing] = useState<Ticket | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // detail drawer
+  // detail drawer & comments
   const [selected, setSelected] = useState<Ticket | null>(null);
   const [drawerTab, setDrawerTab] = useState<"detalhes" | "comentarios">("detalhes");
   const [comments, setComments] = useState<Comment[]>([]);
@@ -125,6 +126,7 @@ export function TransbordoDashboard({
   const [deleteStatus, setDeleteStatus] = useState<StatusOption | null>(null);
 
   const fileRef = useRef<HTMLInputElement>(null);
+  const modalFileRef = useRef<HTMLInputElement>(null);
 
   // form fields
   const emptyForm = {
@@ -145,10 +147,14 @@ export function TransbordoDashboard({
   function openCreate() {
     setForm(emptyForm);
     setEditing(null);
+    setModalTab("dados");
+    setComments([]);
+    setCommentText("");
+    setCommentFiles([]);
     setFormOpen(true);
   }
 
-  function openEdit(t: Ticket) {
+  async function openEdit(t: Ticket, initialTab: "dados" | "comentarios" = "dados") {
     setForm({
       franchiseName: t.franchiseName,
       sistemaOrigem: t.sistemaOrigem ?? "",
@@ -163,7 +169,19 @@ export function TransbordoDashboard({
       dConcluido: t.dConcluido ? t.dConcluido.substring(0, 10) : "",
     });
     setEditing(t);
+    setModalTab(initialTab);
+    setCommentText("");
+    setCommentFiles([]);
     setFormOpen(true);
+
+    setLoadingComments(true);
+    try {
+      const res = await fetch(`/api/admin/transbordo/${t.id}/comments`);
+      const data: Comment[] = await res.json();
+      setComments(data);
+    } finally {
+      setLoadingComments(false);
+    }
   }
 
   async function saveTicket() {
@@ -184,6 +202,8 @@ export function TransbordoDashboard({
         dConcluido: form.status === "Transbordo concluído" ? (form.dConcluido || null) : null,
       };
 
+      let targetTicketId = editing?.id;
+
       if (editing) {
         const res = await fetch(`/api/admin/transbordo/${editing.id}`, {
           method: "PATCH",
@@ -200,10 +220,43 @@ export function TransbordoDashboard({
           body: JSON.stringify(payload),
         });
         const created: Ticket = await res.json();
+        targetTicketId = created.id;
         setTickets((prev) => [created, ...prev]);
       }
+
+      // Enviar comentário com anexos se preenchido no formulário de criação/edição
+      if (targetTicketId && (commentText.trim() || commentFiles.length > 0)) {
+        let resC: Response;
+        if (commentFiles.length > 0) {
+          const fd = new FormData();
+          fd.append("content", commentText.trim() || "Anexo adicionado");
+          commentFiles.forEach((f) => fd.append("attachments", f));
+          resC = await fetch(`/api/admin/transbordo/${targetTicketId}/comments`, {
+            method: "POST",
+            body: fd,
+          });
+        } else {
+          resC = await fetch(`/api/admin/transbordo/${targetTicketId}/comments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content: commentText.trim() }),
+          });
+        }
+        const createdComment: Comment = await resC.json();
+        setComments((prev) => [...prev, createdComment]);
+        setTickets((prev) =>
+          prev.map((t) =>
+            t.id === targetTicketId
+              ? { ...t, _count: { comments: t._count.comments + 1 } }
+              : t
+          )
+        );
+      }
+
       setFormOpen(false);
       setEditing(null);
+      setCommentText("");
+      setCommentFiles([]);
     } finally {
       setSaving(false);
     }
@@ -389,157 +442,291 @@ export function TransbordoDashboard({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
-                <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                  Franquia *
-                </label>
-                <input
-                  className="ds-input w-full"
-                  value={form.franchiseName}
-                  onChange={(e) => setForm((f) => ({ ...f, franchiseName: e.target.value }))}
-                  placeholder="Nome da franquia"
-                />
-              </div>
+            {/* Abas do Modal Pop-up */}
+            <div className="flex border-b border-white/10 gap-4 text-xs font-medium">
+              <button
+                type="button"
+                className={`pb-2 transition-colors relative ${
+                  modalTab === "dados"
+                    ? "text-blue-400 border-b-2 border-blue-400 font-semibold"
+                    : "text-white/60 hover:text-white"
+                }`}
+                onClick={() => setModalTab("dados")}
+              >
+                Dados do Ticket
+              </button>
+              <button
+                type="button"
+                className={`pb-2 transition-colors relative ${
+                  modalTab === "comentarios"
+                    ? "text-blue-400 border-b-2 border-blue-400 font-semibold"
+                    : "text-white/60 hover:text-white"
+                }`}
+                onClick={() => setModalTab("comentarios")}
+              >
+                Comentários {editing ? `(${comments.length})` : ""}
+              </button>
+            </div>
 
-              <div>
-                <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                  Sistema de Origem
-                </label>
-                <select
-                  className="ds-input w-full"
-                  value={form.sistemaOrigem}
-                  onChange={(e) => setForm((f) => ({ ...f, sistemaOrigem: e.target.value }))}
-                >
-                  <option value="">— selecionar —</option>
-                  {SYSTEMS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* Conteúdo Aba Dados do Ticket */}
+            {modalTab === "dados" && (
+              <>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      Franquia *
+                    </label>
+                    <input
+                      className="ds-input w-full"
+                      value={form.franchiseName}
+                      onChange={(e) => setForm((f) => ({ ...f, franchiseName: e.target.value }))}
+                      placeholder="Nome da franquia"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                  Status
-                </label>
-                <input
-                  className="ds-input w-full"
-                  value={form.status}
-                  onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                  placeholder="ex: T0 - Coleta inicial de dados"
-                  list="status-options-list"
-                />
-                <datalist id="status-options-list">
-                  {statusOptions.filter((s) => s.isActive).map((s) => (
-                    <option key={s.id} value={s.label} />
-                  ))}
-                </datalist>
-              </div>
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      Sistema de Origem
+                    </label>
+                    <select
+                      className="ds-input w-full"
+                      value={form.sistemaOrigem}
+                      onChange={(e) => setForm((f) => ({ ...f, sistemaOrigem: e.target.value }))}
+                    >
+                      <option value="">— selecionar —</option>
+                      {SYSTEMS.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div>
-                <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                  Cor do badge
-                </label>
-                <select
-                  className="ds-input w-full"
-                  value={form.statusColorId}
-                  onChange={(e) => setForm((f) => ({ ...f, statusColorId: e.target.value }))}
-                >
-                  <option value="">— nenhuma —</option>
-                  {badgeColors.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label} ({c.hexValue})
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      Status
+                    </label>
+                    <input
+                      className="ds-input w-full"
+                      value={form.status}
+                      onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+                      placeholder="ex: T0 - Coleta inicial de dados"
+                      list="status-options-list"
+                    />
+                    <datalist id="status-options-list">
+                      {statusOptions.filter((s) => s.isActive).map((s) => (
+                        <option key={s.id} value={s.label} />
+                      ))}
+                    </datalist>
+                  </div>
 
-              <div>
-                <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                  Nº Empresas
-                </label>
-                <input
-                  type="number"
-                  className="ds-input w-full"
-                  value={form.companies}
-                  onChange={(e) => setForm((f) => ({ ...f, companies: e.target.value }))}
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      Cor do badge
+                    </label>
+                    <select
+                      className="ds-input w-full"
+                      value={form.statusColorId}
+                      onChange={(e) => setForm((f) => ({ ...f, statusColorId: e.target.value }))}
+                    >
+                      <option value="">— nenhuma —</option>
+                      {badgeColors.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.label} ({c.hexValue})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div>
-                <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                  SSC
-                </label>
-                <input
-                  className="ds-input w-full"
-                  value={form.ssc}
-                  onChange={(e) => setForm((f) => ({ ...f, ssc: e.target.value }))}
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      Nº Empresas
+                    </label>
+                    <input
+                      type="number"
+                      className="ds-input w-full"
+                      value={form.companies}
+                      onChange={(e) => setForm((f) => ({ ...f, companies: e.target.value }))}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                  Tempo de Migração
-                </label>
-                <input
-                  className="ds-input w-full"
-                  value={form.tempoMigracao}
-                  onChange={(e) => setForm((f) => ({ ...f, tempoMigracao: e.target.value }))}
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      SSC
+                    </label>
+                    <input
+                      className="ds-input w-full"
+                      value={form.ssc}
+                      onChange={(e) => setForm((f) => ({ ...f, ssc: e.target.value }))}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                  Lembrete
-                </label>
-                <input
-                  type="date"
-                  className="ds-input w-full"
-                  value={form.lembrete}
-                  onChange={(e) => setForm((f) => ({ ...f, lembrete: e.target.value }))}
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      Tempo de Migração
+                    </label>
+                    <input
+                      className="ds-input w-full"
+                      value={form.tempoMigracao}
+                      onChange={(e) => setForm((f) => ({ ...f, tempoMigracao: e.target.value }))}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                  Agendado
-                </label>
-                <input
-                  type="date"
-                  className="ds-input w-full"
-                  value={form.agendado}
-                  onChange={(e) => setForm((f) => ({ ...f, agendado: e.target.value }))}
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      Lembrete
+                    </label>
+                    <input
+                      type="date"
+                      className="ds-input w-full"
+                      value={form.lembrete}
+                      onChange={(e) => setForm((f) => ({ ...f, lembrete: e.target.value }))}
+                    />
+                  </div>
 
-              {form.status === "Transbordo concluído" && (
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      Agendado
+                    </label>
+                    <input
+                      type="date"
+                      className="ds-input w-full"
+                      value={form.agendado}
+                      onChange={(e) => setForm((f) => ({ ...f, agendado: e.target.value }))}
+                    />
+                  </div>
+
+                  {form.status === "Transbordo concluído" && (
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                        Data de Conclusão
+                      </label>
+                      <input
+                        type="date"
+                        className="ds-input w-full"
+                        value={form.dConcluido}
+                        onChange={(e) => setForm((f) => ({ ...f, dConcluido: e.target.value }))}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Data de Conclusão
+                    Solicitação
                   </label>
-                  <input
-                    type="date"
+                  <textarea
                     className="ds-input w-full"
-                    value={form.dConcluido}
-                    onChange={(e) => setForm((f) => ({ ...f, dConcluido: e.target.value }))}
+                    rows={2}
+                    value={form.solicitacao}
+                    onChange={(e) => setForm((f) => ({ ...f, solicitacao: e.target.value }))}
                   />
                 </div>
-              )}
-            </div>
+              </>
+            )}
 
-            <div>
-              <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                Solicitação
-              </label>
-              <textarea
-                className="ds-input w-full"
-                rows={2}
-                value={form.solicitacao}
-                onChange={(e) => setForm((f) => ({ ...f, solicitacao: e.target.value }))}
-              />
-            </div>
+            {/* Conteúdo Aba Comentários */}
+            {modalTab === "comentarios" && (
+              <div className="space-y-4">
+                {editing && (
+                  <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                    {loadingComments && (
+                      <p className="text-xs" style={{ color: MUTED }}>Carregando comentários…</p>
+                    )}
+                    {!loadingComments && comments.length === 0 && (
+                      <p className="text-xs" style={{ color: MUTED }}>Nenhum comentário cadastrado ainda.</p>
+                    )}
+                    {comments.map((c) => (
+                      <div
+                        key={c.id}
+                        className="rounded-lg p-3 space-y-1 text-xs"
+                        style={{ background: "rgba(255,255,255,.04)" }}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-white/80 whitespace-pre-wrap flex-1">{c.content}</p>
+                          <button
+                            className="text-red-400/60 hover:text-red-400 transition-colors shrink-0"
+                            onClick={() => setDeleteComment(c)}
+                            title="Excluir comentário"
+                          >
+                            ×
+                          </button>
+                        </div>
+                        {c.attachments && c.attachments.length > 0 && (
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {c.attachments.map((a, i) => (
+                              <a
+                                key={i}
+                                href={a.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="link-accent text-xs underline"
+                              >
+                                {a.filename}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        <p style={{ color: MUTED }}>{formatDate(c.createdAt)}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Área para adicionar comentário e anexar documentos */}
+                <div className="glass-card rounded-xl p-4 space-y-3">
+                  <label className="block text-xs font-medium text-white/90">
+                    {editing ? "Adicionar Comentário / Anexo" : "Comentário Inicial / Anexar Documentos"}
+                  </label>
+                  <textarea
+                    className="ds-input w-full text-xs"
+                    rows={3}
+                    placeholder="Escreva um comentário ou observações sobre o ticket…"
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                  />
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/80 hover:text-white hover:border-white/30 transition-colors"
+                        onClick={() => modalFileRef.current?.click()}
+                      >
+                        📎 Anexar Documento(s)
+                      </button>
+                      <input
+                        ref={modalFileRef}
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => setCommentFiles(Array.from(e.target.files ?? []))}
+                      />
+                    </div>
+                  </div>
+
+                  {commentFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {commentFiles.map((f, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px]"
+                          style={{ background: "rgba(59,130,246,.15)", color: "#60a5fa", border: "1px solid rgba(59,130,246,.3)" }}
+                        >
+                          {f.name}
+                          <button
+                            type="button"
+                            className="text-red-400 hover:text-red-300 font-bold ml-1"
+                            onClick={() => setCommentFiles((files) => files.filter((_, i) => i !== idx))}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end gap-3 pt-3 border-t border-white/10">
               <button
