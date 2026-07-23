@@ -59,6 +59,8 @@ interface Props {
   initialTickets: Ticket[];
   initialBadgeColors: BadgeColor[];
   initialStatusOptions: StatusOption[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  initialSistemaOrigemOptions?: any[];
   isMaster: boolean;
 }
 
@@ -88,6 +90,7 @@ export function TransbordoDashboard({
   initialTickets,
   initialBadgeColors,
   initialStatusOptions,
+  initialSistemaOrigemOptions,
   isMaster,
 }: Props) {
   const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
