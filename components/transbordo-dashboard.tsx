@@ -442,22 +442,6 @@ export function TransbordoDashboard({
               </button>
             </div>
 
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <h3 className="text-base font-semibold text-white">
-                {editing ? "Editar Ticket" : "Novo Ticket"}
-              </h3>
-              <button
-                className="text-white/60 hover:text-white text-xl leading-none transition-colors px-1"
-                onClick={() => {
-                  setFormOpen(false);
-                  setEditing(null);
-                }}
-                title="Fechar"
-              >
-                ×
-              </button>
-            </div>
-
             {/* Formulário Unificado (Sem Abas) */}
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
