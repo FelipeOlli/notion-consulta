@@ -132,7 +132,7 @@ export function TransbordoDashboard({
   const emptyForm = {
     franchiseName: "",
     sistemaOrigem: "",
-    status: "T0 - Coleta inicial de dados",
+    status: "T0 - Coleta de dados",
     statusColorId: "" as string,
     companies: "",
     lembrete: "",
@@ -475,23 +475,25 @@ export function TransbordoDashboard({
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Status
-                  </label>
-                  <input
-                    className="ds-input w-full"
-                    value={form.status}
-                    onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                    placeholder="ex: T0 - Coleta inicial de dados"
-                    list="status-options-list"
-                  />
-                  <datalist id="status-options-list">
-                    {statusOptions.filter((s) => s.isActive).map((s) => (
-                      <option key={s.id} value={s.label} />
-                    ))}
-                  </datalist>
-                </div>
+                {editing && (
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      Status
+                    </label>
+                    <input
+                      className="ds-input w-full"
+                      value={form.status}
+                      onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+                      placeholder="ex: T0 - Coleta de dados"
+                      list="status-options-list"
+                    />
+                    <datalist id="status-options-list">
+                      {statusOptions.filter((s) => s.isActive).map((s) => (
+                        <option key={s.id} value={s.label} />
+                      ))}
+                    </datalist>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs mb-1" style={{ color: MUTED }}>
@@ -534,16 +536,6 @@ export function TransbordoDashboard({
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Tempo de Migração
-                  </label>
-                  <input
-                    className="ds-input w-full"
-                    value={form.tempoMigracao}
-                    onChange={(e) => setForm((f) => ({ ...f, tempoMigracao: e.target.value }))}
-                  />
-                </div>
 
                 <div>
                   <label className="block text-xs mb-1" style={{ color: MUTED }}>
