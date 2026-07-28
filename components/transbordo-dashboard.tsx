@@ -403,6 +403,14 @@ export function TransbordoDashboard({
             Configurações
           </button>
         )}
+        <button
+          className="text-sm px-4 py-2 rounded-lg border transition-colors border-red-500/30 text-red-400 bg-red-500/10 hover:bg-red-500/20"
+          onClick={() => {
+            if (tickets.length > 0) setDeleteTicket(tickets[0]);
+          }}
+        >
+          Excluir
+        </button>
         <span className="ml-auto text-xs" style={{ color: MUTED }}>
           {tickets.length} ticket{tickets.length !== 1 ? "s" : ""}
         </span>
@@ -901,17 +909,18 @@ export function TransbordoDashboard({
           {tickets.map((t) => {
             const color = t.statusColor;
             return (
-              <div key={t.id} className="glass-card rounded-xl p-4">
+              <div
+                key={t.id}
+                className="glass-card rounded-xl p-4 cursor-pointer hover:border-white/20 transition-all"
+                onClick={() => openTicket(t)}
+              >
                 <div className="flex flex-wrap items-start gap-3">
                   {/* info principal */}
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <button
-                        className="text-sm font-semibold text-white hover:text-blue-400 transition-colors text-left truncate max-w-[260px]"
-                        onClick={() => openTicket(t)}
-                      >
+                      <span className="text-sm font-semibold text-white truncate max-w-[260px]">
                         {t.franchiseName}
-                      </button>
+                      </span>
                       {/* badge de status */}
                       <span
                         className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
@@ -942,28 +951,6 @@ export function TransbordoDashboard({
                       <span>{formatDate(t.createdAt)}</span>
                     </div>
                   </div>
-
-                  {/* ações */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      className="text-xs link-muted"
-                      onClick={() => openTicket(t, "comentarios")}
-                    >
-                      {t._count.comments > 0 ? `${t._count.comments} comentário${t._count.comments !== 1 ? "s" : ""}` : "Comentários"}
-                    </button>
-                    <button
-                      className="text-xs link-accent"
-                      onClick={() => openEdit(t)}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                      onClick={() => setDeleteTicket(t)}
-                    >
-                      Excluir
-                    </button>
-                  </div>
                 </div>
               </div>
             );
@@ -982,16 +969,22 @@ export function TransbordoDashboard({
             style={{ background: "#0f172a", borderLeft: "1px solid rgba(255,255,255,.08)" }}
           >
             {/* header drawer */}
-            <div className="p-5 border-b border-white/10 space-y-3">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <h2 className="text-base font-semibold text-white truncate">
-                    {selected.franchiseName}
-                  </h2>
-                  <p className="text-xs mt-0.5" style={{ color: MUTED }}>
-                    {selected.status}
-                  </p>
-                </div>
+            <div className="p-5 border-b border-white/10 flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold text-white truncate">
+                  {selected.franchiseName}
+                </h2>
+                <p className="text-xs mt-0.5" style={{ color: MUTED }}>
+                  {selected.status}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  className="text-xs link-accent px-2 py-1 rounded hover:bg-white/5 transition-colors"
+                  onClick={() => openEdit(selected)}
+                >
+                  Editar
+                </button>
                 <button
                   className="link-muted text-lg leading-none shrink-0"
                   onClick={() => setSelected(null)}
@@ -999,31 +992,15 @@ export function TransbordoDashboard({
                   ×
                 </button>
               </div>
-
-              {/* Abas */}
-              <div className="flex border-b border-white/10 gap-4 text-xs font-medium pt-1">
-                <button
-                  className={`pb-2 transition-colors relative ${
-                    drawerTab === "detalhes" ? "text-blue-400 border-b-2 border-blue-400 font-semibold" : "text-white/60 hover:text-white"
-                  }`}
-                  onClick={() => setDrawerTab("detalhes")}
-                >
-                  Detalhes
-                </button>
-                <button
-                  className={`pb-2 transition-colors relative ${
-                    drawerTab === "comentarios" ? "text-blue-400 border-b-2 border-blue-400 font-semibold" : "text-white/60 hover:text-white"
-                  }`}
-                  onClick={() => setDrawerTab("comentarios")}
-                >
-                  Comentários ({selected._count.comments})
-                </button>
-              </div>
             </div>
 
-            {/* Conteúdo da aba Detalhes */}
-            {drawerTab === "detalhes" && (
-              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            {/* Conteúdo rolável */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-6">
+              {/* Informações da Migração */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-white/50">
+                  Informações da Migração
+                </h3>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-xs">
                   {[
                     ["Sistema origem", selected.sistemaOrigem],
@@ -1056,29 +1033,31 @@ export function TransbordoDashboard({
                   </div>
                 )}
               </div>
-            )}
 
-            {/* Conteúdo da aba Comentários */}
-            {drawerTab === "comentarios" && (
-              <>
-                <div className="flex-1 overflow-y-auto p-5 space-y-3">
-                  {loadingComments && (
-                    <p className="text-xs" style={{ color: MUTED }}>
-                      Carregando…
-                    </p>
-                  )}
+              {/* Mostruário de Comentários */}
+              <div className="pt-4 border-t border-white/10 space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-white/50">
+                  Comentários ({comments.length})
+                </h3>
 
-                  {!loadingComments && comments.length === 0 && (
-                    <p className="text-xs" style={{ color: MUTED }}>
-                      Nenhum comentário ainda.
-                    </p>
-                  )}
+                {loadingComments && (
+                  <p className="text-xs" style={{ color: MUTED }}>
+                    Carregando…
+                  </p>
+                )}
 
+                {!loadingComments && comments.length === 0 && (
+                  <p className="text-xs" style={{ color: MUTED }}>
+                    Nenhum comentário registrado.
+                  </p>
+                )}
+
+                <div className="space-y-3">
                   {comments.map((c) => (
                     <div
                       key={c.id}
                       className="rounded-lg p-3 space-y-1.5 text-xs"
-                      style={{ background: "rgba(255,255,255,.04)" }}
+                      style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.06)" }}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-white/80 whitespace-pre-wrap flex-1">{c.content}</p>
@@ -1109,51 +1088,51 @@ export function TransbordoDashboard({
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
 
-                {/* nova mensagem */}
-                <div
-                  className="p-4 border-t border-white/10 space-y-2"
-                  style={{ background: "rgba(15,23,42,.8)" }}
-                >
-                  <textarea
-                    className="ds-input w-full text-sm"
-                    rows={2}
-                    placeholder="Adicionar comentário…"
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
+            {/* Adicionar comentário no rodapé */}
+            <div
+              className="p-4 border-t border-white/10 space-y-2 shrink-0"
+              style={{ background: "rgba(15,23,42,.95)" }}
+            >
+              <textarea
+                className="ds-input w-full text-sm"
+                rows={2}
+                placeholder="Adicionar comentário…"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+              />
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    className="text-xs link-muted"
+                    onClick={() => fileRef.current?.click()}
+                  >
+                    Anexar
+                  </button>
+                  {commentFiles.length > 0 && (
+                    <span className="text-xs" style={{ color: MUTED }}>
+                      {commentFiles.length} arquivo{commentFiles.length !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => setCommentFiles(Array.from(e.target.files ?? []))}
                   />
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="text-xs link-muted"
-                        onClick={() => fileRef.current?.click()}
-                      >
-                        Anexar
-                      </button>
-                      {commentFiles.length > 0 && (
-                        <span className="text-xs" style={{ color: MUTED }}>
-                          {commentFiles.length} arquivo{commentFiles.length !== 1 ? "s" : ""}
-                        </span>
-                      )}
-                      <input
-                        ref={fileRef}
-                        type="file"
-                        multiple
-                        className="hidden"
-                        onChange={(e) => setCommentFiles(Array.from(e.target.files ?? []))}
-                      />
-                    </div>
-                    <button
-                      className="btn-primary text-xs px-4 py-2"
-                      onClick={sendComment}
-                      disabled={sendingComment || !commentText.trim()}
-                    >
-                      {sendingComment ? "Enviando…" : "Enviar"}
-                    </button>
-                  </div>
                 </div>
-              </>
-            )}
+                <button
+                  className="btn-primary text-xs px-4 py-2"
+                  onClick={sendComment}
+                  disabled={sendingComment || !commentText.trim()}
+                >
+                  {sendingComment ? "Enviando…" : "Enviar"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
