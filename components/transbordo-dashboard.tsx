@@ -18,6 +18,7 @@ interface StatusOption {
   value: string | null;
   sortOrder: number;
   isActive: boolean;
+  colorId?: number | null;
   createdAt: string;
 }
 
@@ -99,9 +100,19 @@ export function TransbordoDashboard({
 
   // form ticket
   const [formOpen, setFormOpen] = useState(false);
+  const [isClosingForm, setIsClosingForm] = useState(false);
   const [modalTab, setModalTab] = useState<"dados" | "comentarios">("dados");
   const [editing, setEditing] = useState<Ticket | null>(null);
   const [saving, setSaving] = useState(false);
+
+  function handleCloseForm() {
+    setIsClosingForm(true);
+    setTimeout(() => {
+      setFormOpen(false);
+      setEditing(null);
+      setIsClosingForm(false);
+    }, 240);
+  }
 
   // detail drawer & comments
   const [selected, setSelected] = useState<Ticket | null>(null);
@@ -122,7 +133,7 @@ export function TransbordoDashboard({
   const [sendingComment, setSendingComment] = useState(false);
 
   // inline editing no modal de detalhes
-  const [editingInlineField, setEditingInlineField] = useState<"ssc" | "companies" | "solicitacao" | null>(null);
+  const [editingInlineField, setEditingInlineField] = useState<"ssc" | "companies" | "solicitacao" | "lembrete" | "agendado" | null>(null);
   const [inlineValue, setInlineValue] = useState<string>("");
   const [showSistemaOrigemSelect, setShowSistemaOrigemSelect] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -172,7 +183,7 @@ export function TransbordoDashboard({
   const [newColor, setNewColor] = useState({ label: "", hexValue: "#3b82f6" });
   const [statusForm, setStatusForm] = useState(false);
   const [showDeleteStatusIcons, setShowDeleteStatusIcons] = useState(false);
-  const [newStatus, setNewStatus] = useState({ label: "", value: "", sortOrder: "0" });
+  const [newStatus, setNewStatus] = useState({ label: "", colorId: "" });
 
   const [sistemaOrigemForm, setSistemaOrigemForm] = useState(false);
   const [showDeleteSistemaOrigemIcons, setShowDeleteSistemaOrigemIcons] = useState(false);
@@ -427,12 +438,14 @@ export function TransbordoDashboard({
     const res = await fetch("/api/admin/transbordo/status-options", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newStatus, sortOrder: Number(newStatus.sortOrder) }),
+      body: JSON.stringify({ label: newStatus.label.trim(), colorId: newStatus.colorId ? Number(newStatus.colorId) : null }),
     });
-    const opt: StatusOption = await res.json();
-    setStatusOptions((prev) => [...prev, opt].sort((a, b) => a.sortOrder - b.sortOrder));
-    setNewStatus({ label: "", value: "", sortOrder: "0" });
-    setStatusForm(false);
+    if (res.ok) {
+      const opt: StatusOption = await res.json();
+      setStatusOptions((prev) => [...prev, opt]);
+      setNewStatus({ label: "", colorId: "" });
+      setStatusForm(false);
+    }
   }
 
   async function confirmDeleteStatus() {
@@ -471,7 +484,7 @@ export function TransbordoDashboard({
     <>
       {/* ── Toolbar ── */}
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <button className="btn-primary text-sm px-5 py-2" onClick={openCreate}>
+        <button className="btn-primary text-sm px-5 py-2 rounded-lg" onClick={openCreate}>
           + Novo Ticket
         </button>
         {isMaster && (
@@ -503,16 +516,19 @@ export function TransbordoDashboard({
       {/* ── Modal Pop-up Novo/Editar Ticket ── */}
       {formOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm ${
+            isClosingForm ? "animate-modal-overlay-out" : "animate-modal-overlay"
+          }`}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              setFormOpen(false);
-              setEditing(null);
+              handleCloseForm();
             }
           }}
         >
           <div
-            className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200"
+            className={`w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl p-6 space-y-4 shadow-2xl ${
+              isClosingForm ? "animate-modal-content-out" : "animate-modal-content"
+            }`}
             style={{
               background: "#0f172a",
               border: "1px solid rgba(255,255,255,.12)",
@@ -523,14 +539,11 @@ export function TransbordoDashboard({
                 {editing ? "Editar Ticket" : "Novo Ticket"}
               </h3>
               <button
-                className="text-white/60 hover:text-white text-xl leading-none transition-colors px-1"
-                onClick={() => {
-                  setFormOpen(false);
-                  setEditing(null);
-                }}
-                title="Fechar"
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-red-500/40 text-red-400 hover:border-red-500 hover:bg-red-500/10 hover:text-red-300 text-xl font-bold transition-all leading-none shrink-0"
+                onClick={handleCloseForm}
+                aria-label="Fechar"
               >
-                ×
+                ✕
               </button>
             </div>
 
@@ -589,24 +602,6 @@ export function TransbordoDashboard({
 
                 <div>
                   <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Cor do badge
-                  </label>
-                  <select
-                    className="ds-input w-full"
-                    value={form.statusColorId}
-                    onChange={(e) => setForm((f) => ({ ...f, statusColorId: e.target.value }))}
-                  >
-                    <option value="">— nenhuma —</option>
-                    {badgeColors.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.label} ({c.hexValue})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
                     Nº Empresas
                   </label>
                   <input
@@ -625,31 +620,6 @@ export function TransbordoDashboard({
                     className="ds-input w-full"
                     value={form.ssc}
                     onChange={(e) => setForm((f) => ({ ...f, ssc: e.target.value }))}
-                  />
-                </div>
-
-
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Lembrete
-                  </label>
-                  <input
-                    type="date"
-                    className="ds-input w-full"
-                    value={form.lembrete}
-                    onChange={(e) => setForm((f) => ({ ...f, lembrete: e.target.value }))}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Agendado
-                  </label>
-                  <input
-                    type="date"
-                    className="ds-input w-full"
-                    value={form.agendado}
-                    onChange={(e) => setForm((f) => ({ ...f, agendado: e.target.value }))}
                   />
                 </div>
 
@@ -784,13 +754,13 @@ export function TransbordoDashboard({
 
             <div className="flex justify-end gap-3 pt-3 border-t border-white/10">
               <button
-                className="link-muted text-sm px-4 py-2"
-                onClick={() => { setFormOpen(false); setEditing(null); }}
+                className="text-xs font-medium text-slate-300 border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl transition-all"
+                onClick={handleCloseForm}
               >
                 Cancelar
               </button>
               <button
-                className="btn-primary text-sm px-5 py-2"
+                className="btn-primary text-xs px-5 py-2 rounded-xl font-semibold transition-all shadow-md"
                 onClick={saveTicket}
                 disabled={saving || !form.franchiseName.trim()}
               >
@@ -953,7 +923,7 @@ export function TransbordoDashboard({
                 <div className="glass-card rounded-lg p-3 mb-3 flex flex-wrap items-end gap-3">
                   <div>
                     <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                      Label
+                      Nome do status
                     </label>
                     <input
                       className="ds-input text-sm"
@@ -964,24 +934,20 @@ export function TransbordoDashboard({
                   </div>
                   <div>
                     <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                      Valor (opcional)
+                      Cor da tag
                     </label>
-                    <input
+                    <select
                       className="ds-input text-sm"
-                      value={newStatus.value}
-                      onChange={(e) => setNewStatus((s) => ({ ...s, value: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                      Ordem
-                    </label>
-                    <input
-                      type="number"
-                      className="ds-input text-sm w-20"
-                      value={newStatus.sortOrder}
-                      onChange={(e) => setNewStatus((s) => ({ ...s, sortOrder: e.target.value }))}
-                    />
+                      value={newStatus.colorId}
+                      onChange={(e) => setNewStatus((s) => ({ ...s, colorId: e.target.value }))}
+                    >
+                      <option value="">— Selecionar cor —</option>
+                      {badgeColors.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.label} ({c.hexValue})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <button
                     className="btn-primary text-xs px-3 py-2 rounded-lg"
@@ -999,25 +965,35 @@ export function TransbordoDashboard({
                 </div>
               )}
 
-              <div className="space-y-1">
-                {statusOptions.map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex items-center justify-between rounded-lg px-3 py-2 text-xs"
-                    style={{ background: "rgba(255,255,255,.04)" }}
-                  >
-                    <span className="text-white/80">{s.label}</span>
-                    {showDeleteStatusIcons && (
-                      <button
-                        className="opacity-80 hover:opacity-100 transition-opacity text-red-400 font-medium"
-                        onClick={() => setDeleteStatus(s)}
-                        title="Excluir"
-                      >
-                        Excluir
-                      </button>
-                    )}
-                  </div>
-                ))}
+              <div className="flex flex-wrap gap-2">
+                {statusOptions.map((s) => {
+                  // busca cor associada no badgeColors se houver
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const matchedColor = badgeColors.find((c) => c.id === (s as any).colorId);
+                  const hex = matchedColor?.hexValue ?? "#3b82f6";
+                  return (
+                    <div
+                      key={s.id}
+                      className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium"
+                      style={{ background: hex + "22", color: hex, border: `1px solid ${hex}44` }}
+                    >
+                      <span
+                        className="inline-block w-2 h-2 rounded-full"
+                        style={{ background: hex }}
+                      />
+                      {s.label}
+                      {showDeleteStatusIcons && (
+                        <button
+                          className="ml-1 opacity-80 hover:opacity-100 transition-opacity text-red-400 font-bold"
+                          onClick={() => setDeleteStatus(s)}
+                          title="Excluir"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
                 {statusOptions.length === 0 && (
                   <span className="text-xs" style={{ color: MUTED }}>
                     Nenhuma opção cadastrada.
@@ -1122,7 +1098,10 @@ export function TransbordoDashboard({
       ) : (
         <div className="space-y-3">
           {tickets.map((t) => {
-            const color = t.statusColor;
+            // resolve a cor: t.statusColor ou pela cor associada ao status
+            const statusOpt = statusOptions.find((so) => so.label === t.status);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const matchedColor = t.statusColor ?? badgeColors.find((c) => c.id === (statusOpt as any)?.colorId);
             return (
               <div
                 key={t.id}
@@ -1140,11 +1119,11 @@ export function TransbordoDashboard({
                       <span
                         className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
                         style={
-                          color
+                          matchedColor
                             ? {
-                                background: color.hexValue + "22",
-                                color: color.hexValue,
-                                border: `1px solid ${color.hexValue}44`,
+                                background: matchedColor.hexValue + "22",
+                                color: matchedColor.hexValue,
+                                border: `1px solid ${matchedColor.hexValue}44`,
                               }
                             : {
                                 background: "rgba(148,163,184,.15)",
@@ -1163,7 +1142,18 @@ export function TransbordoDashboard({
                       {t.companies != null && <span>{t.companies} empresa{t.companies !== 1 ? "s" : ""}</span>}
                       {t.ssc && <span>SSC: {t.ssc}</span>}
                       <span>Total de dias: {calculateTotalDays(t.createdAt)}</span>
-                      <span>{formatDate(t.createdAt)}</span>
+                    </div>
+                  </div>
+
+                  {/* Lembrete & Agendado no canto direito */}
+                  <div className="flex flex-col items-end justify-center text-xs shrink-0 self-center gap-0.5" style={{ color: MUTED }}>
+                    <div>
+                      <span>Lembrete: </span>
+                      <span className="text-white/90 font-medium">{formatDate(t.lembrete)}</span>
+                    </div>
+                    <div>
+                      <span>Agendado: </span>
+                      <span className="text-white/90 font-medium">{formatDate(t.agendado)}</span>
                     </div>
                   </div>
                 </div>
@@ -1336,12 +1326,116 @@ export function TransbordoDashboard({
                     )}
                   </div>
 
+                  {/* Lembrete com Lápis/Input Date Inline */}
+                  <div>
+                    <span style={{ color: MUTED }}>Lembrete: </span>
+                    {editingInlineField === "lembrete" ? (
+                      <div className="inline-flex items-center gap-1.5 mt-0.5">
+                        <input
+                          type="date"
+                          className="ds-input px-2 py-0.5 text-xs"
+                          value={inlineValue}
+                          onChange={(e) => setInlineValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              void updateSingleField("lembrete", inlineValue || null);
+                            } else if (e.key === "Escape") {
+                              setEditingInlineField(null);
+                            }
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          className="p-1 inline-flex items-center justify-center rounded border border-emerald-500/50 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/30 hover:border-emerald-400 transition-all text-xs font-bold leading-none"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            void updateSingleField("lembrete", inlineValue || null);
+                          }}
+                          title="Salvar Lembrete"
+                        >
+                          ✓
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-white/80">{formatDate(selected.lembrete)}</span>
+                        <button
+                          type="button"
+                          className="ml-1.5 p-1 inline-flex items-center text-slate-300 hover:text-white transition-all rounded border border-white/20 bg-white/5 hover:bg-white/10"
+                          onClick={() => {
+                            setEditingInlineField("lembrete");
+                            setInlineValue(selected.lembrete ? selected.lembrete.substring(0, 10) : "");
+                            setShowSistemaOrigemSelect(false);
+                          }}
+                          title="Editar Lembrete"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Agendado com Lápis/Input Date Inline */}
+                  <div>
+                    <span style={{ color: MUTED }}>Agendado: </span>
+                    {editingInlineField === "agendado" ? (
+                      <div className="inline-flex items-center gap-1.5 mt-0.5">
+                        <input
+                          type="date"
+                          className="ds-input px-2 py-0.5 text-xs"
+                          value={inlineValue}
+                          onChange={(e) => setInlineValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              void updateSingleField("agendado", inlineValue || null);
+                            } else if (e.key === "Escape") {
+                              setEditingInlineField(null);
+                            }
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          className="p-1 inline-flex items-center justify-center rounded border border-emerald-500/50 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/30 hover:border-emerald-400 transition-all text-xs font-bold leading-none"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            void updateSingleField("agendado", inlineValue || null);
+                          }}
+                          title="Salvar Agendado"
+                        >
+                          ✓
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-white/80">{formatDate(selected.agendado)}</span>
+                        <button
+                          type="button"
+                          className="ml-1.5 p-1 inline-flex items-center text-slate-300 hover:text-white transition-all rounded border border-white/20 bg-white/5 hover:bg-white/10"
+                          onClick={() => {
+                            setEditingInlineField("agendado");
+                            setInlineValue(selected.agendado ? selected.agendado.substring(0, 10) : "");
+                            setShowSistemaOrigemSelect(false);
+                          }}
+                          title="Editar Agendado"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                      </>
+                    )}
+                  </div>
+
                   {/* Outros campos de apenas leitura */}
                   {[
                     ["Tempo de migração", selected.tempoMigracao],
                     ["Total de dias", `${calculateTotalDays(selected.createdAt)} dias`],
-                    ["Lembrete", formatDate(selected.lembrete)],
-                    ["Agendado", formatDate(selected.agendado)],
                     ["Data de conclusão", formatDate(selected.dConcluido)],
                     ["Criado em", formatDate(selected.createdAt)],
                   ]

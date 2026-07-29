@@ -507,20 +507,23 @@ model NotificationRead {
 // ─── Transbordo ────────────────────────────────────────────────────────────────
 
 model TransbordoBadgeColor {
-  id        Int                @id @default(autoincrement())
-  label     String
-  hexValue  String
-  tickets   TransbordoTicket[]
-  createdAt DateTime           @default(now())
+  id            Int                      @id @default(autoincrement())
+  label         String
+  hexValue      String
+  tickets       TransbordoTicket[]
+  statusOptions TransbordoStatusOption[]
+  createdAt     DateTime                 @default(now())
 }
 
 model TransbordoStatusOption {
-  id        Int      @id @default(autoincrement())
+  id        Int                  @id @default(autoincrement())
   label     String
   value     String?
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  sortOrder Int                  @default(0)
+  isActive  Boolean              @default(true)
+  colorId   Int?
+  color     TransbordoBadgeColor? @relation(fields: [colorId], references: [id], onDelete: SetNull)
+  createdAt DateTime             @default(now())
 }
 
 model TransbordoSistemaOrigemOption {

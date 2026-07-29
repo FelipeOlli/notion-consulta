@@ -36,6 +36,7 @@ export async function POST(req: Request) {
       value: body.value ?? null,
       sortOrder: body.sortOrder ? Number(body.sortOrder) : 0,
       isActive: body.isActive !== false,
+      colorId: body.colorId ? Number(body.colorId) : null,
     },
   });
 
