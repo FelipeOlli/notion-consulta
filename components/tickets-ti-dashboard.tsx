@@ -105,13 +105,13 @@ function TicketDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-modal-overlay"
       role="dialog"
       aria-modal="true"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-full max-w-lg rounded-2xl p-6 shadow-2xl"
+        className="w-full max-w-lg rounded-2xl p-6 shadow-2xl animate-modal-content"
         style={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", maxHeight: "90vh", overflowY: "auto" }}
       >
         <div className="mb-5 flex items-start justify-between gap-3">

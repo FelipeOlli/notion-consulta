@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ConfirmModal } from "@/components/confirm-modal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -105,6 +105,15 @@ export function TransbordoDashboard({
 
   // detail drawer & comments
   const [selected, setSelected] = useState<Ticket | null>(null);
+  const [isClosingModal, setIsClosingModal] = useState(false);
+
+  function handleCloseModal() {
+    setIsClosingModal(true);
+    setTimeout(() => {
+      setSelected(null);
+      setIsClosingModal(false);
+    }, 240);
+  }
   const [drawerTab, setDrawerTab] = useState<"detalhes" | "comentarios">("detalhes");
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -112,18 +121,70 @@ export function TransbordoDashboard({
   const [commentFiles, setCommentFiles] = useState<File[]>([]);
   const [sendingComment, setSendingComment] = useState(false);
 
+  // inline editing no modal de detalhes
+  const [editingInlineField, setEditingInlineField] = useState<"ssc" | "companies" | "solicitacao" | null>(null);
+  const [inlineValue, setInlineValue] = useState<string>("");
+  const [showSistemaOrigemSelect, setShowSistemaOrigemSelect] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [sistemaOrigemOptions, setSistemaOrigemOptions] = useState<any[]>(initialSistemaOrigemOptions ?? []);
+
+  useEffect(() => {
+    fetch("/api/admin/transbordo/sistema-origem-options")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setSistemaOrigemOptions(data))
+      .catch(() => {});
+  }, []);
+
+  async function updateSingleField(field: string, value: any) {
+    if (!selected) return;
+    try {
+      const res = await fetch(`/api/admin/transbordo/${selected.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: value }),
+      });
+      if (res.ok) {
+        const updated: Ticket = await res.json();
+        setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+        setSelected(updated);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setEditingInlineField(null);
+      setShowSistemaOrigemSelect(false);
+    }
+  }
+
   // config panel (master)
   const [configOpen, setConfigOpen] = useState(false);
+  const [isClosingConfigModal, setIsClosingConfigModal] = useState(false);
+
+  function handleCloseConfigModal() {
+    setIsClosingConfigModal(true);
+    setTimeout(() => {
+      setConfigOpen(false);
+      setIsClosingConfigModal(false);
+    }, 240);
+  }
   const [colorForm, setColorForm] = useState(false);
+  const [showDeleteColorIcons, setShowDeleteColorIcons] = useState(false);
   const [newColor, setNewColor] = useState({ label: "", hexValue: "#3b82f6" });
   const [statusForm, setStatusForm] = useState(false);
+  const [showDeleteStatusIcons, setShowDeleteStatusIcons] = useState(false);
   const [newStatus, setNewStatus] = useState({ label: "", value: "", sortOrder: "0" });
+
+  const [sistemaOrigemForm, setSistemaOrigemForm] = useState(false);
+  const [showDeleteSistemaOrigemIcons, setShowDeleteSistemaOrigemIcons] = useState(false);
+  const [newSistemaOrigem, setNewSistemaOrigem] = useState({ label: "" });
 
   // confirm delete
   const [deleteTicket, setDeleteTicket] = useState<Ticket | null>(null);
   const [deleteComment, setDeleteComment] = useState<Comment | null>(null);
   const [deleteColor, setDeleteColor] = useState<BadgeColor | null>(null);
   const [deleteStatus, setDeleteStatus] = useState<StatusOption | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [deleteSistemaOrigem, setDeleteSistemaOrigem] = useState<any | null>(null);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const modalFileRef = useRef<HTMLInputElement>(null);
@@ -379,6 +440,29 @@ export function TransbordoDashboard({
     await fetch(`/api/admin/transbordo/status-options/${deleteStatus.id}`, { method: "DELETE" });
     setStatusOptions((prev) => prev.filter((s) => s.id !== deleteStatus.id));
     setDeleteStatus(null);
+  }
+
+  // sistema origem options
+  async function createSistemaOrigem() {
+    if (!newSistemaOrigem.label.trim()) return;
+    const res = await fetch("/api/admin/transbordo/sistema-origem-options", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: newSistemaOrigem.label.trim() }),
+    });
+    if (res.ok) {
+      const opt = await res.json();
+      setSistemaOrigemOptions((prev) => [...prev, opt].sort((a, b) => a.label.localeCompare(b.label)));
+      setNewSistemaOrigem({ label: "" });
+      setSistemaOrigemForm(false);
+    }
+  }
+
+  async function confirmDeleteSistemaOrigem() {
+    if (!deleteSistemaOrigem) return;
+    await fetch(`/api/admin/transbordo/sistema-origem-options/${deleteSistemaOrigem.id}`, { method: "DELETE" });
+    setSistemaOrigemOptions((prev) => prev.filter((s) => s.id !== deleteSistemaOrigem.id));
+    setDeleteSistemaOrigem(null);
   }
 
   // ─── Render ──────────────────────────────────────────────────────────────────
@@ -717,180 +801,311 @@ export function TransbordoDashboard({
         </div>
       )}
 
-      {/* ── Config panel (master only) ── */}
+      {/* ── Modal de Configurações (master only) ── */}
       {isMaster && configOpen && (
-        <div className="glass-card rounded-xl p-5 mb-6 space-y-5">
-          <h3 className="text-sm font-semibold text-white">Configurações do módulo</h3>
-
-          {/* Badge Colors */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium" style={{ color: MUTED }}>
-                Cores de badge
-              </span>
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm ${
+            isClosingConfigModal ? "animate-modal-overlay-out" : "animate-modal-overlay"
+          }`}
+          onClick={(e) => { if (e.target === e.currentTarget) handleCloseConfigModal(); }}
+        >
+          <div
+            className={`w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl p-6 space-y-6 shadow-2xl ${
+              isClosingConfigModal ? "animate-modal-content-out" : "animate-modal-content"
+            }`}
+            style={{ background: "#0f172a", border: "1px solid rgba(255,255,255,.1)" }}
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <h3 className="text-base font-semibold text-white">Configurações do módulo</h3>
               <button
-                className="text-xs link-accent"
-                onClick={() => setColorForm((v) => !v)}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-red-500/40 text-red-400 hover:border-red-500 hover:bg-red-500/10 hover:text-red-300 text-xl font-bold transition-all leading-none shrink-0"
+                onClick={handleCloseConfigModal}
+                aria-label="Fechar"
               >
-                + Nova cor
+                ✕
               </button>
             </div>
 
-            {colorForm && (
-              <div className="glass-card rounded-lg p-3 mb-3 flex flex-wrap items-end gap-3">
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Label
-                  </label>
-                  <input
-                    className="ds-input text-sm"
-                    value={newColor.label}
-                    onChange={(e) => setNewColor((c) => ({ ...c, label: e.target.value }))}
-                    placeholder="ex: Verde"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Cor
-                  </label>
-                  <input
-                    type="color"
-                    className="h-9 w-14 rounded cursor-pointer border-0 bg-transparent"
-                    value={newColor.hexValue}
-                    onChange={(e) => setNewColor((c) => ({ ...c, hexValue: e.target.value }))}
-                  />
-                </div>
-                <button
-                  className="btn-primary text-xs px-3 py-2"
-                  onClick={createColor}
-                  disabled={!newColor.label.trim()}
-                >
-                  Criar
-                </button>
-                <button
-                  className="link-muted text-xs px-3 py-2"
-                  onClick={() => setColorForm(false)}
-                >
-                  Cancelar
-                </button>
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-              {badgeColors.map((c) => (
-                <div
-                  key={c.id}
-                  className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium"
-                  style={{ background: c.hexValue + "22", color: c.hexValue, border: `1px solid ${c.hexValue}44` }}
-                >
-                  <span
-                    className="inline-block w-2 h-2 rounded-full"
-                    style={{ background: c.hexValue }}
-                  />
-                  {c.label}
+            {/* Badge Colors */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-medium" style={{ color: MUTED }}>
+                  Cores de badge
+                </span>
+                <div className="flex items-center gap-2">
                   <button
-                    className="ml-1 opacity-60 hover:opacity-100 transition-opacity"
-                    onClick={() => setDeleteColor(c)}
-                    title="Excluir"
+                    className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-all border ${
+                      showDeleteColorIcons
+                        ? "text-red-400 border-red-500/60 bg-red-500/20 hover:bg-red-500/30"
+                        : "text-red-400 border-red-500/40 bg-red-500/10 hover:bg-red-500/20 hover:border-red-400"
+                    }`}
+                    onClick={() => setShowDeleteColorIcons((v) => !v)}
                   >
-                    ×
+                    {showDeleteColorIcons ? "Concluir" : "Excluir cor"}
+                  </button>
+                  <button
+                    className="text-xs font-medium text-blue-400 border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 hover:border-blue-400 px-2.5 py-1 rounded-lg transition-all"
+                    onClick={() => setColorForm((v) => !v)}
+                  >
+                    + Nova cor
                   </button>
                 </div>
-              ))}
-              {badgeColors.length === 0 && (
-                <span className="text-xs" style={{ color: MUTED }}>
-                  Nenhuma cor cadastrada.
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Status Options */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium" style={{ color: MUTED }}>
-                Opções de status
-              </span>
-              <button
-                className="text-xs link-accent"
-                onClick={() => setStatusForm((v) => !v)}
-              >
-                + Nova opção
-              </button>
-            </div>
-
-            {statusForm && (
-              <div className="glass-card rounded-lg p-3 mb-3 flex flex-wrap items-end gap-3">
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Label
-                  </label>
-                  <input
-                    className="ds-input text-sm"
-                    value={newStatus.label}
-                    onChange={(e) => setNewStatus((s) => ({ ...s, label: e.target.value }))}
-                    placeholder="ex: T1 - Em análise"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Valor (opcional)
-                  </label>
-                  <input
-                    className="ds-input text-sm"
-                    value={newStatus.value}
-                    onChange={(e) => setNewStatus((s) => ({ ...s, value: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: MUTED }}>
-                    Ordem
-                  </label>
-                  <input
-                    type="number"
-                    className="ds-input text-sm w-20"
-                    value={newStatus.sortOrder}
-                    onChange={(e) => setNewStatus((s) => ({ ...s, sortOrder: e.target.value }))}
-                  />
-                </div>
-                <button
-                  className="btn-primary text-xs px-3 py-2"
-                  onClick={createStatusOption}
-                  disabled={!newStatus.label.trim()}
-                >
-                  Criar
-                </button>
-                <button
-                  className="link-muted text-xs px-3 py-2"
-                  onClick={() => setStatusForm(false)}
-                >
-                  Cancelar
-                </button>
               </div>
-            )}
 
-            <div className="space-y-1">
-              {statusOptions.map((s) => (
-                <div
-                  key={s.id}
-                  className="flex items-center justify-between rounded-lg px-3 py-2 text-xs"
-                  style={{ background: "rgba(255,255,255,.04)" }}
-                >
-                  <span className="text-white/80">{s.label}</span>
+              {colorForm && (
+                <div className="glass-card rounded-lg p-3 mb-3 flex flex-wrap items-end gap-3">
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      Label
+                    </label>
+                    <input
+                      className="ds-input text-sm"
+                      value={newColor.label}
+                      onChange={(e) => setNewColor((c) => ({ ...c, label: e.target.value }))}
+                      placeholder="ex: Verde"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      Cor
+                    </label>
+                    <input
+                      type="color"
+                      className="h-9 w-14 rounded cursor-pointer border-0 bg-transparent"
+                      value={newColor.hexValue}
+                      onChange={(e) => setNewColor((c) => ({ ...c, hexValue: e.target.value }))}
+                    />
+                  </div>
                   <button
-                    className="opacity-60 hover:opacity-100 transition-opacity text-red-400"
-                    onClick={() => setDeleteStatus(s)}
-                    title="Excluir"
+                    className="btn-primary text-xs px-3 py-2 rounded-lg"
+                    onClick={createColor}
+                    disabled={!newColor.label.trim()}
                   >
-                    Excluir
+                    Criar
+                  </button>
+                  <button
+                    className="link-muted text-xs px-3 py-2"
+                    onClick={() => setColorForm(false)}
+                  >
+                    Cancelar
                   </button>
                 </div>
-              ))}
-              {statusOptions.length === 0 && (
-                <span className="text-xs" style={{ color: MUTED }}>
-                  Nenhuma opção cadastrada.
-                </span>
               )}
+
+              <div className="flex flex-wrap gap-2">
+                {badgeColors.map((c) => (
+                  <div
+                    key={c.id}
+                    className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium"
+                    style={{ background: c.hexValue + "22", color: c.hexValue, border: `1px solid ${c.hexValue}44` }}
+                  >
+                    <span
+                      className="inline-block w-2 h-2 rounded-full"
+                      style={{ background: c.hexValue }}
+                    />
+                    {c.label}
+                    {showDeleteColorIcons && (
+                      <button
+                        className="ml-1 opacity-80 hover:opacity-100 transition-opacity text-red-400 font-bold"
+                        onClick={() => setDeleteColor(c)}
+                        title="Excluir"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {badgeColors.length === 0 && (
+                  <span className="text-xs" style={{ color: MUTED }}>
+                    Nenhuma cor cadastrada.
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Status Options */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-medium" style={{ color: MUTED }}>
+                  Opções de status
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-all border ${
+                      showDeleteStatusIcons
+                        ? "text-red-400 border-red-500/60 bg-red-500/20 hover:bg-red-500/30"
+                        : "text-red-400 border-red-500/40 bg-red-500/10 hover:bg-red-500/20 hover:border-red-400"
+                    }`}
+                    onClick={() => setShowDeleteStatusIcons((v) => !v)}
+                  >
+                    {showDeleteStatusIcons ? "Concluir" : "Excluir status"}
+                  </button>
+                  <button
+                    className="text-xs font-medium text-blue-400 border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 hover:border-blue-400 px-2.5 py-1 rounded-lg transition-all"
+                    onClick={() => setStatusForm((v) => !v)}
+                  >
+                    + Novo status
+                  </button>
+                </div>
+              </div>
+
+              {statusForm && (
+                <div className="glass-card rounded-lg p-3 mb-3 flex flex-wrap items-end gap-3">
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      Label
+                    </label>
+                    <input
+                      className="ds-input text-sm"
+                      value={newStatus.label}
+                      onChange={(e) => setNewStatus((s) => ({ ...s, label: e.target.value }))}
+                      placeholder="ex: T1 - Em análise"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      Valor (opcional)
+                    </label>
+                    <input
+                      className="ds-input text-sm"
+                      value={newStatus.value}
+                      onChange={(e) => setNewStatus((s) => ({ ...s, value: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      Ordem
+                    </label>
+                    <input
+                      type="number"
+                      className="ds-input text-sm w-20"
+                      value={newStatus.sortOrder}
+                      onChange={(e) => setNewStatus((s) => ({ ...s, sortOrder: e.target.value }))}
+                    />
+                  </div>
+                  <button
+                    className="btn-primary text-xs px-3 py-2 rounded-lg"
+                    onClick={createStatusOption}
+                    disabled={!newStatus.label.trim()}
+                  >
+                    Criar
+                  </button>
+                  <button
+                    className="link-muted text-xs px-3 py-2"
+                    onClick={() => setStatusForm(false)}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                {statusOptions.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between rounded-lg px-3 py-2 text-xs"
+                    style={{ background: "rgba(255,255,255,.04)" }}
+                  >
+                    <span className="text-white/80">{s.label}</span>
+                    {showDeleteStatusIcons && (
+                      <button
+                        className="opacity-80 hover:opacity-100 transition-opacity text-red-400 font-medium"
+                        onClick={() => setDeleteStatus(s)}
+                        title="Excluir"
+                      >
+                        Excluir
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {statusOptions.length === 0 && (
+                  <span className="text-xs" style={{ color: MUTED }}>
+                    Nenhuma opção cadastrada.
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Sistemas Origem Options */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-medium" style={{ color: MUTED }}>
+                  Sistemas origem disponíveis
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-all border ${
+                      showDeleteSistemaOrigemIcons
+                        ? "text-red-400 border-red-500/60 bg-red-500/20 hover:bg-red-500/30"
+                        : "text-red-400 border-red-500/40 bg-red-500/10 hover:bg-red-500/20 hover:border-red-400"
+                    }`}
+                    onClick={() => setShowDeleteSistemaOrigemIcons((v) => !v)}
+                  >
+                    {showDeleteSistemaOrigemIcons ? "Concluir" : "Excluir sistema"}
+                  </button>
+                  <button
+                    className="text-xs font-medium text-blue-400 border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 hover:border-blue-400 px-2.5 py-1 rounded-lg transition-all"
+                    onClick={() => setSistemaOrigemForm((v) => !v)}
+                  >
+                    + Novo Sistema
+                  </button>
+                </div>
+              </div>
+
+              {sistemaOrigemForm && (
+                <div className="glass-card rounded-lg p-3 mb-3 flex flex-wrap items-end gap-3">
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: MUTED }}>
+                      Nome do Sistema
+                    </label>
+                    <input
+                      className="ds-input text-sm"
+                      value={newSistemaOrigem.label}
+                      onChange={(e) => setNewSistemaOrigem({ label: e.target.value })}
+                      placeholder="ex: Alterdata / Domínio"
+                    />
+                  </div>
+                  <button
+                    className="btn-primary text-xs px-3 py-2 rounded-lg"
+                    onClick={createSistemaOrigem}
+                    disabled={!newSistemaOrigem.label.trim()}
+                  >
+                    Criar
+                  </button>
+                  <button
+                    className="link-muted text-xs px-3 py-2"
+                    onClick={() => setSistemaOrigemForm(false)}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                {sistemaOrigemOptions.map((so) => (
+                  <div
+                    key={so.id}
+                    className="flex items-center justify-between rounded-lg px-3 py-2 text-xs"
+                    style={{ background: "rgba(255,255,255,.04)" }}
+                  >
+                    <span className="text-white/80">{so.label}</span>
+                    {showDeleteSistemaOrigemIcons && (
+                      <button
+                        className="opacity-80 hover:opacity-100 transition-opacity text-red-400 font-medium"
+                        onClick={() => setDeleteSistemaOrigem(so)}
+                        title="Excluir"
+                      >
+                        Excluir
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {sistemaOrigemOptions.length === 0 && (
+                  <span className="text-xs" style={{ color: MUTED }}>
+                    Nenhum sistema origem cadastrado.
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -958,15 +1173,19 @@ export function TransbordoDashboard({
         </div>
       )}
 
-      {/* ── Drawer de detalhes / comentários ── */}
+      {/* ── Modal de detalhes / comentários ── */}
       {selected && (
         <div
-          className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) setSelected(null); }}
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm ${
+            isClosingModal ? "animate-modal-overlay-out" : "animate-modal-overlay"
+          }`}
+          onClick={(e) => { if (e.target === e.currentTarget) handleCloseModal(); }}
         >
           <div
-            className="w-full max-w-lg flex flex-col overflow-hidden"
-            style={{ background: "#0f172a", borderLeft: "1px solid rgba(255,255,255,.08)" }}
+            className={`w-full max-w-2xl flex flex-col overflow-hidden rounded-2xl shadow-2xl ${
+              isClosingModal ? "animate-modal-content-out" : "animate-modal-content"
+            }`}
+            style={{ background: "#0f172a", border: "1px solid rgba(255,255,255,.1)", maxHeight: "90vh" }}
           >
             {/* header drawer */}
             <div className="p-5 border-b border-white/10 flex items-start justify-between gap-4">
@@ -980,16 +1199,11 @@ export function TransbordoDashboard({
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  className="text-xs link-accent px-2 py-1 rounded hover:bg-white/5 transition-colors"
-                  onClick={() => openEdit(selected)}
+                  className="flex items-center justify-center w-8 h-8 rounded-lg border border-red-500/40 text-red-400 hover:border-red-500 hover:bg-red-500/10 hover:text-red-300 text-xl font-bold transition-all leading-none shrink-0"
+                  onClick={handleCloseModal}
+                  aria-label="Fechar"
                 >
-                  Editar
-                </button>
-                <button
-                  className="link-muted text-lg leading-none shrink-0"
-                  onClick={() => setSelected(null)}
-                >
-                  ×
+                  ✕
                 </button>
               </div>
             </div>
@@ -1001,11 +1215,129 @@ export function TransbordoDashboard({
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-white/50">
                   Informações da Migração
                 </h3>
+
                 <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-xs">
+                  {/* Sistema Origem com Lápis/Dropdown */}
+                  <div className="relative">
+                    <span style={{ color: MUTED }}>Sistema origem: </span>
+                    <span className="text-white/80">{selected.sistemaOrigem || "—"}</span>
+                    <button
+                      type="button"
+                      className="ml-1.5 p-1 inline-flex items-center text-slate-300 hover:text-white transition-all rounded border border-white/20 bg-white/5 hover:bg-white/10"
+                      onClick={() => {
+                        setShowSistemaOrigemSelect((v) => !v);
+                        setEditingInlineField(null);
+                      }}
+                      title="Alterar Sistema Origem"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </button>
+                    {showSistemaOrigemSelect && (
+                      <div className="absolute left-0 top-full mt-1 z-30 w-48 rounded-xl p-2 shadow-2xl border border-white/10 bg-slate-900 space-y-1">
+                        <p className="text-[10px] uppercase font-semibold text-slate-400 px-2 py-1">Selecionar Sistema</p>
+                        {sistemaOrigemOptions.length === 0 && (
+                          <p className="text-xs px-2 py-1 text-slate-400">Nenhum sistema configurado</p>
+                        )}
+                        {sistemaOrigemOptions.map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            className="w-full text-left px-2 py-1 text-xs rounded hover:bg-white/10 text-white transition-colors"
+                            onClick={() => updateSingleField("sistemaOrigem", opt.label)}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Empresas com Lápis/Input Inline */}
+                  <div>
+                    <span style={{ color: MUTED }}>Empresas: </span>
+                    {editingInlineField === "companies" ? (
+                      <input
+                        type="number"
+                        className="ds-input w-24 px-2 py-0.5 text-xs ml-1"
+                        value={inlineValue}
+                        onChange={(e) => setInlineValue(e.target.value)}
+                        onBlur={() => setEditingInlineField(null)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void updateSingleField("companies", inlineValue ? Number(inlineValue) : null);
+                          } else if (e.key === "Escape") {
+                            setEditingInlineField(null);
+                          }
+                        }}
+                        autoFocus
+                      />
+                    ) : (
+                      <>
+                        <span className="text-white/80">{selected.companies ?? "—"}</span>
+                        <button
+                          type="button"
+                          className="ml-1.5 p-1 inline-flex items-center text-slate-300 hover:text-white transition-all rounded border border-white/20 bg-white/5 hover:bg-white/10"
+                          onClick={() => {
+                            setEditingInlineField("companies");
+                            setInlineValue(selected.companies ? String(selected.companies) : "");
+                            setShowSistemaOrigemSelect(false);
+                          }}
+                          title="Editar Empresas"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* SSC com Lápis/Input Inline */}
+                  <div>
+                    <span style={{ color: MUTED }}>SSC: </span>
+                    {editingInlineField === "ssc" ? (
+                      <input
+                        type="text"
+                        className="ds-input w-28 px-2 py-0.5 text-xs ml-1"
+                        value={inlineValue}
+                        onChange={(e) => setInlineValue(e.target.value)}
+                        onBlur={() => setEditingInlineField(null)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void updateSingleField("ssc", inlineValue || null);
+                          } else if (e.key === "Escape") {
+                            setEditingInlineField(null);
+                          }
+                        }}
+                        autoFocus
+                      />
+                    ) : (
+                      <>
+                        <span className="text-white/80">{selected.ssc || "—"}</span>
+                        <button
+                          type="button"
+                          className="ml-1.5 p-1 inline-flex items-center text-slate-300 hover:text-white transition-all rounded border border-white/20 bg-white/5 hover:bg-white/10"
+                          onClick={() => {
+                            setEditingInlineField("ssc");
+                            setInlineValue(selected.ssc ?? "");
+                            setShowSistemaOrigemSelect(false);
+                          }}
+                          title="Editar SSC"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Outros campos de apenas leitura */}
                   {[
-                    ["Sistema origem", selected.sistemaOrigem],
-                    ["Empresas", selected.companies],
-                    ["SSC", selected.ssc],
                     ["Tempo de migração", selected.tempoMigracao],
                     ["Total de dias", `${calculateTotalDays(selected.createdAt)} dias`],
                     ["Lembrete", formatDate(selected.lembrete)],
@@ -1022,16 +1354,55 @@ export function TransbordoDashboard({
                     ))}
                 </div>
 
-                {selected.solicitacao && (
-                  <div className="pt-2 border-t border-white/10">
+                {/* Solicitação com Lápis/Textarea Inline */}
+                <div className="pt-2 border-t border-white/10">
+                  <div className="flex items-center gap-1.5">
                     <span className="text-xs font-medium" style={{ color: MUTED }}>
                       Solicitação:
                     </span>
-                    <p className="text-xs text-white/80 mt-1 whitespace-pre-wrap">
-                      {selected.solicitacao}
-                    </p>
+                    {editingInlineField !== "solicitacao" && (
+                      <button
+                        type="button"
+                        className="p-1 inline-flex items-center text-slate-300 hover:text-white transition-all rounded border border-white/20 bg-white/5 hover:bg-white/10"
+                        onClick={() => {
+                          setEditingInlineField("solicitacao");
+                          setInlineValue(selected.solicitacao ?? "");
+                          setShowSistemaOrigemSelect(false);
+                        }}
+                        title="Editar Solicitação"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
-                )}
+
+                  {editingInlineField === "solicitacao" ? (
+                    <div className="mt-1">
+                      <textarea
+                        className="ds-input w-full text-xs p-2"
+                        rows={3}
+                        value={inlineValue}
+                        onChange={(e) => setInlineValue(e.target.value)}
+                        onBlur={() => setEditingInlineField(null)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            void updateSingleField("solicitacao", inlineValue || null);
+                          } else if (e.key === "Escape") {
+                            setEditingInlineField(null);
+                          }
+                        }}
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-xs text-white/80 mt-1 whitespace-pre-wrap">
+                      {selected.solicitacao || "—"}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Mostruário de Comentários */}
@@ -1102,17 +1473,29 @@ export function TransbordoDashboard({
                 placeholder="Adicionar comentário…"
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!sendingComment && commentText.trim()) {
+                      void sendComment();
+                    }
+                  }
+                }}
               />
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <button
-                    className="text-xs link-muted"
+                    type="button"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-300 rounded-lg px-3 py-1.5 border border-white/15 bg-white/5 hover:bg-white/10 hover:border-white/25 hover:text-white transition-all"
                     onClick={() => fileRef.current?.click()}
                   >
-                    Anexar
+                    <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                    <span>Anexar</span>
                   </button>
                   {commentFiles.length > 0 && (
-                    <span className="text-xs" style={{ color: MUTED }}>
+                    <span className="text-xs font-medium text-slate-400">
                       {commentFiles.length} arquivo{commentFiles.length !== 1 ? "s" : ""}
                     </span>
                   )}
@@ -1125,7 +1508,7 @@ export function TransbordoDashboard({
                   />
                 </div>
                 <button
-                  className="btn-primary text-xs px-4 py-2"
+                  className="btn-primary text-xs px-5 py-2 rounded-lg font-semibold transition-all shadow-md"
                   onClick={sendComment}
                   disabled={sendingComment || !commentText.trim()}
                 >
@@ -1165,6 +1548,13 @@ export function TransbordoDashboard({
           mensagem={`Excluir opção de status "${deleteStatus.label}"?`}
           onConfirm={confirmDeleteStatus}
           onCancel={() => setDeleteStatus(null)}
+        />
+      )}
+      {deleteSistemaOrigem && (
+        <ConfirmModal
+          mensagem={`Excluir sistema origem "${deleteSistemaOrigem.label}"?`}
+          onConfirm={confirmDeleteSistemaOrigem}
+          onCancel={() => setDeleteSistemaOrigem(null)}
         />
       )}
     </>
