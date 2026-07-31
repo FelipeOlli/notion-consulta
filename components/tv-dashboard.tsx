@@ -201,23 +201,6 @@ export function TvDashboard() {
   return (
     <main className="relative z-10 min-h-screen p-6 lg:p-10">
       <div className="mx-auto max-w-[1600px]">
-        {monitoresAtivos.length > 0 && (
-          <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-            {monitoresAtivos.map((m) => (
-              <span key={m.id} className="flex items-center gap-1.5 text-xs">
-                <span
-                  className="inline-block size-1.5 shrink-0 rounded-full"
-                  style={{ background: STATUS_COLOR[m.lastStatus], boxShadow: m.lastStatus === "UP" ? `0 0 4px ${STATUS_COLOR[m.lastStatus]}` : undefined }}
-                />
-                <span className="font-semibold text-white">{m.name}</span>
-                <span style={{ color: "var(--onity-dark-text-muted)" }}>
-                  {m.lastStatus === "UP" ? formatUptime(m.lastDownAt ?? m.createdAt) : STATUS_LABEL[m.lastStatus]}
-                </span>
-              </span>
-            ))}
-          </div>
-        )}
-
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
             <p className="section-label">Operação de TI</p>
@@ -237,6 +220,23 @@ export function TvDashboard() {
             </p>
           </div>
         </div>
+
+        {monitoresAtivos.length > 0 && (
+          <div className="mb-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            {monitoresAtivos.map((m) => (
+              <span key={m.id} className="flex items-center gap-1.5 text-xs">
+                <span
+                  className="inline-block size-1.5 shrink-0 rounded-full"
+                  style={{ background: STATUS_COLOR[m.lastStatus], boxShadow: m.lastStatus === "UP" ? `0 0 4px ${STATUS_COLOR[m.lastStatus]}` : undefined }}
+                />
+                <span className="font-semibold text-white">{m.name}</span>
+                <span style={{ color: "var(--onity-dark-text-muted)" }}>
+                  {m.lastStatus === "UP" ? formatUptime(m.lastDownAt ?? m.createdAt) : STATUS_LABEL[m.lastStatus]}
+                </span>
+              </span>
+            ))}
+          </div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Tickets */}
