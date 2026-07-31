@@ -65,11 +65,11 @@ function isPendente(t: Ticket): boolean {
 function formatUptime(iso: string | null): string {
   const ms = Date.now() - new Date(iso ?? Date.now()).getTime();
   const minutes = Math.floor(ms / 60_000);
-  if (minutes < 60) return `${minutes}m ativo`;
+  if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ${minutes % 60}m ativo`;
+  if (hours < 24) return `${hours}h ${minutes % 60}m`;
   const days = Math.floor(hours / 24);
-  return `${days}d ${hours % 24}h ativo`;
+  return `${days}d ${hours % 24}h`;
 }
 
 function ProportionBar({ data }: { data: { name: string; value: number; color: string }[] }) {
@@ -191,9 +191,6 @@ export function TvDashboard() {
   }, []);
 
   const monitoresAtivos = monitors.filter((m) => m.active);
-  const upCount = monitoresAtivos.filter((m) => m.lastStatus === "UP").length;
-  const downCount = monitoresAtivos.filter((m) => m.lastStatus === "DOWN").length;
-  const pendingCount = monitoresAtivos.filter((m) => m.lastStatus === "PENDING").length;
 
   const tickets = ticketsData?.tickets ?? [];
   const emAberto = tickets.filter((t) => !isConcluido(t) && !isPendente(t)).length;
@@ -204,6 +201,23 @@ export function TvDashboard() {
   return (
     <main className="relative z-10 min-h-screen p-6 lg:p-10">
       <div className="mx-auto max-w-[1600px]">
+        {monitoresAtivos.length > 0 && (
+          <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+            {monitoresAtivos.map((m) => (
+              <span key={m.id} className="flex items-center gap-1.5 text-xs">
+                <span
+                  className="inline-block size-1.5 shrink-0 rounded-full"
+                  style={{ background: STATUS_COLOR[m.lastStatus], boxShadow: m.lastStatus === "UP" ? `0 0 4px ${STATUS_COLOR[m.lastStatus]}` : undefined }}
+                />
+                <span className="font-semibold text-white">{m.name}</span>
+                <span style={{ color: "var(--onity-dark-text-muted)" }}>
+                  {m.lastStatus === "UP" ? formatUptime(m.lastDownAt ?? m.createdAt) : STATUS_LABEL[m.lastStatus]}
+                </span>
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
             <p className="section-label">Operação de TI</p>
@@ -221,40 +235,6 @@ export function TvDashboard() {
               {now.toLocaleTimeString("pt-BR")}
               {lastUpdated && ` · atualizado às ${lastUpdated.toLocaleTimeString("pt-BR")}`}
             </p>
-          </div>
-        </div>
-
-        {/* Conexões — linha única no topo */}
-        <div className="glass-card mb-6 rounded-2xl p-5">
-          <div className="mb-3 flex items-center justify-between gap-4">
-            <h2 className="text-lg font-bold text-white">Conexões ativas</h2>
-            <span className="text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
-              {upCount} online · {downCount} offline{pendingCount > 0 ? ` · ${pendingCount} aguardando` : ""}
-            </span>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            {monitoresAtivos.map((m) => (
-              <div
-                key={m.id}
-                className="flex items-center gap-2 rounded-xl px-4 py-2"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-              >
-                <span
-                  className="inline-block size-2.5 shrink-0 rounded-full"
-                  style={{ background: STATUS_COLOR[m.lastStatus], boxShadow: m.lastStatus === "UP" ? `0 0 6px ${STATUS_COLOR[m.lastStatus]}` : undefined }}
-                />
-                <p className="text-sm font-semibold text-white">{m.name}</p>
-                <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
-                  {m.lastStatus === "UP" ? formatUptime(m.lastDownAt ?? m.createdAt) : STATUS_LABEL[m.lastStatus]}
-                </p>
-              </div>
-            ))}
-            {monitoresAtivos.length === 0 && (
-              <p className="text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
-                Nenhuma conexão ativa monitorada.
-              </p>
-            )}
           </div>
         </div>
 
@@ -387,6 +367,28 @@ export function TvDashboard() {
                 )}
               </>
             )}
+          </div>
+
+          {/* Transbordo — aguardando definição da fonte de dados */}
+          <div
+            className="glass-card flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-2xl p-6 text-center"
+            style={{ border: "1px dashed rgba(255,255,255,0.12)" }}
+          >
+            <h2 className="text-xl font-bold text-white">Transbordo</h2>
+            <p className="text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
+              Em breve — aguardando definição da métrica
+            </p>
+          </div>
+
+          {/* SLA de atendimento — aguardando definição da fonte de dados */}
+          <div
+            className="glass-card flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-2xl p-6 text-center"
+            style={{ border: "1px dashed rgba(255,255,255,0.12)" }}
+          >
+            <h2 className="text-xl font-bold text-white">SLA de atendimento</h2>
+            <p className="text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
+              Em breve — aguardando definição da métrica
+            </p>
           </div>
         </div>
       </div>
