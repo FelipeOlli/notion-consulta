@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
 type MonitorStatus = "UP" | "DOWN" | "PENDING";
 
@@ -56,34 +55,21 @@ function formatUptime(iso: string | null): string {
   return `${days}d ${hours % 24}h ativo`;
 }
 
-function DonutStat({ data }: { data: { name: string; value: number; color: string }[] }) {
+function ProportionBar({ data }: { data: { name: string; value: number; color: string }[] }) {
   const total = data.reduce((acc, d) => acc + d.value, 0);
-  if (total === 0) {
-    return (
-      <div className="flex h-[140px] items-center justify-center text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
-        Sem dados
-      </div>
-    );
-  }
   return (
-    <ResponsiveContainer width="100%" height={140}>
-      <PieChart>
-        <Pie
-          data={data}
-          dataKey="value"
-          nameKey="name"
-          innerRadius={40}
-          outerRadius={62}
-          paddingAngle={2}
-          stroke="none"
-          isAnimationActive={false}
-        >
-          {data.map((d) => (
-            <Cell key={d.name} fill={d.color} />
+    <div className="flex h-[10px] w-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+      {total > 0 &&
+        data
+          .filter((d) => d.value > 0)
+          .map((d) => (
+            <div
+              key={d.name}
+              title={`${d.name}: ${d.value}`}
+              style={{ flex: d.value, background: d.color, transition: "flex 300ms ease" }}
+            />
           ))}
-        </Pie>
-      </PieChart>
-    </ResponsiveContainer>
+    </div>
   );
 }
 
@@ -246,7 +232,7 @@ export function TvDashboard() {
               </span>
             </div>
 
-            <DonutStat
+            <ProportionBar
               data={[
                 { name: "Em aberto", value: emAberto, color: "#f59e0b" },
                 { name: "Pendente", value: pendentesTickets.length, color: "#ef4444" },
@@ -274,7 +260,7 @@ export function TvDashboard() {
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--onity-dark-text-muted)" }}>
                   Pendentes — precisam de atenção
                 </p>
-                <div className="max-h-[220px] space-y-2 overflow-y-auto pr-1">
+                <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
                   {pendentesTickets.map((t) => (
                     <div
                       key={t.id}
