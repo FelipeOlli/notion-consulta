@@ -9,7 +9,7 @@ export async function GET() {
   if (!ok) return NextResponse.json({ message: "Não autorizado." }, { status: 403 });
 
   const tickets = await prisma.transbordoTicket.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: { updatedAt: "desc" },
     include: {
       _count: { select: { comments: true } },
       statusColor: true,

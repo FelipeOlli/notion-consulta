@@ -74,6 +74,12 @@ function formatDate(iso: string | null) {
   return new Date(iso).toLocaleDateString("pt-BR");
 }
 
+function formatDateTime(iso: string | null) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return `${d.toLocaleDateString("pt-BR")} às ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
 function calculateTotalDays(createdAtIso: string) {
   if (!createdAtIso) return 1;
   const created = new Date(createdAtIso);
@@ -139,6 +145,7 @@ export function TransbordoDashboard({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [sistemaOrigemOptions, setSistemaOrigemOptions] = useState<any[]>(initialSistemaOrigemOptions ?? []);
   const [statusDropdownTicketId, setStatusDropdownTicketId] = useState<string | null>(null);
+  const [listTab, setListTab] = useState<"andamento" | "recentes" | "concluidos">("andamento");
 
   useEffect(() => {
     fetch("/api/admin/transbordo/sistema-origem-options")
@@ -150,6 +157,7 @@ export function TransbordoDashboard({
   async function changeStatusInline(ticketId: string, newStatus: string, colorId?: number | null) {
     const targetColor = colorId ? badgeColors.find((c) => c.id === colorId) : null;
     
+    const now = new Date().toISOString();
     // Optimistic UI Update
     setTickets((prev) =>
       prev.map((t) => {
@@ -159,6 +167,7 @@ export function TransbordoDashboard({
           status: newStatus,
           statusColorId: colorId !== undefined ? colorId : t.statusColorId,
           ...(targetColor ? { statusColor: targetColor } : {}),
+          updatedAt: now,
         };
       })
     );
@@ -368,10 +377,11 @@ export function TransbordoDashboard({
         }
         const createdComment: Comment = await resC.json();
         setComments((prev) => [...prev, createdComment]);
+        const now = new Date().toISOString();
         setTickets((prev) =>
           prev.map((t) =>
             t.id === targetTicketId
-              ? { ...t, _count: { comments: t._count.comments + 1 } }
+              ? { ...t, updatedAt: now, _count: { comments: t._count.comments + 1 } }
               : t
           )
         );
@@ -433,10 +443,11 @@ export function TransbordoDashboard({
       }
       const comment: Comment = await res.json();
       setComments((prev) => [...prev, comment]);
+      const now = new Date().toISOString();
       setTickets((prev) =>
         prev.map((t) =>
           t.id === selected.id
-            ? { ...t, _count: { comments: t._count.comments + 1 } }
+            ? { ...t, updatedAt: now, _count: { comments: t._count.comments + 1 } }
             : t
         )
       );
@@ -449,13 +460,17 @@ export function TransbordoDashboard({
 
   async function confirmDeleteComment() {
     if (!deleteComment) return;
-    await fetch(`/api/admin/transbordo/comments/${deleteComment.id}`, { method: "DELETE" });
-    setComments((prev) => prev.filter((c) => c.id !== deleteComment.id));
+    const res = await fetch(`/api/admin/transbordo/comments/${deleteComment.id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    const remaining = comments.filter((c) => c.id !== deleteComment.id);
+    setComments(remaining);
     if (selected) {
+      const fallbackDate = remaining.length > 0 ? remaining[remaining.length - 1].createdAt : selected.createdAt;
+      const newUpdatedAt = data.newUpdatedAt ?? fallbackDate;
       setTickets((prev) =>
         prev.map((t) =>
           t.id === selected.id
-            ? { ...t, _count: { comments: Math.max(0, t._count.comments - 1) } }
+            ? { ...t, updatedAt: newUpdatedAt, _count: { comments: Math.max(0, t._count.comments - 1) } }
             : t
         )
       );
@@ -532,37 +547,81 @@ export function TransbordoDashboard({
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 
+  const filteredTickets = tickets
+    .filter((t) => {
+      if (listTab === "concluidos") {
+        return t.status === "Transbordo concluído";
+      }
+      if (listTab === "andamento") {
+        return t.status !== "Transbordo concluído";
+      }
+      return true; // "recentes" mostra todos ordenados por última alteração
+    })
+    .sort((a, b) => {
+      const timeA = new Date(a.updatedAt || a.createdAt).getTime();
+      const timeB = new Date(b.updatedAt || b.createdAt).getTime();
+      return timeB - timeA;
+    });
+
   return (
     <>
       {/* ── Toolbar ── */}
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <button className="btn-primary text-sm px-5 py-2 rounded-lg" onClick={openCreate}>
-          + Novo Ticket
-        </button>
-        {isMaster && (
-          <button
-            className="text-sm px-4 py-2 rounded-lg border transition-colors"
-            style={{
-              borderColor: "rgba(139,92,246,.3)",
-              color: "#8b5cf6",
-              background: "rgba(139,92,246,.08)",
-            }}
-            onClick={() => setConfigOpen((v) => !v)}
-          >
-            Configurações
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button className="btn-primary text-sm px-5 py-2 rounded-lg" onClick={openCreate}>
+            + Novo Ticket
           </button>
-        )}
-        <button
-          className="text-sm px-4 py-2 rounded-lg border transition-colors border-red-500/30 text-red-400 bg-red-500/10 hover:bg-red-500/20"
-          onClick={() => {
-            if (tickets.length > 0) setDeleteTicket(tickets[0]);
-          }}
-        >
-          Excluir
-        </button>
-        <span className="ml-auto text-xs" style={{ color: MUTED }}>
-          {tickets.length} ticket{tickets.length !== 1 ? "s" : ""}
-        </span>
+          {isMaster && (
+            <button
+              className="text-sm px-4 py-2 rounded-lg border transition-colors"
+              style={{
+                borderColor: "rgba(139,92,246,.3)",
+                color: "#8b5cf6",
+                background: "rgba(139,92,246,.08)",
+              }}
+              onClick={() => setConfigOpen((v) => !v)}
+            >
+              Configurações
+            </button>
+          )}
+        </div>
+
+        {/* Abas Em Andamento / Recentes / Concluídos */}
+        <div className="flex items-center gap-1 rounded-xl p-1 bg-white/5 border border-white/10">
+          <button
+            type="button"
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              listTab === "andamento"
+                ? "bg-blue-600 text-white shadow-md font-semibold"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
+            }`}
+            onClick={() => setListTab("andamento")}
+          >
+            Em Andamento ({tickets.filter((t) => t.status !== "Transbordo concluído").length})
+          </button>
+          <button
+            type="button"
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              listTab === "recentes"
+                ? "bg-violet-600 text-white shadow-md font-semibold"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
+            }`}
+            onClick={() => setListTab("recentes")}
+          >
+            Recentes ({tickets.length})
+          </button>
+          <button
+            type="button"
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              listTab === "concluidos"
+                ? "bg-emerald-600 text-white shadow-md font-semibold"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
+            }`}
+            onClick={() => setListTab("concluidos")}
+          >
+            Concluídos ({tickets.filter((t) => t.status === "Transbordo concluído").length})
+          </button>
+        </div>
       </div>
 
       {/* ── Modal Pop-up Novo/Editar Ticket ── */}
@@ -1140,16 +1199,20 @@ export function TransbordoDashboard({
       )}
 
       {/* ── Tabela de tickets ── */}
-      {tickets.length === 0 ? (
+      {filteredTickets.length === 0 ? (
         <div
           className="rounded-xl border border-white/10 p-10 text-center text-sm"
           style={{ color: MUTED }}
         >
-          Nenhum ticket cadastrado. Clique em &quot;+ Novo Ticket&quot; para começar.
+          {listTab === "concluidos"
+            ? "Nenhum ticket concluído encontrado."
+            : listTab === "recentes"
+            ? "Nenhum ticket com atividade recente."
+            : "Nenhum ticket em andamento. Clique em \"+ Novo Ticket\" para começar."}
         </div>
       ) : (
         <div className="space-y-3">
-          {tickets.map((t) => {
+          {filteredTickets.map((t) => {
             // resolve a cor: t.statusColor ou pela cor associada ao status
             const statusOpt = statusOptions.find((so) => so.label === t.status);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1243,6 +1306,11 @@ export function TransbordoDashboard({
                       {t.companies != null && <span>{t.companies} empresa{t.companies !== 1 ? "s" : ""}</span>}
                       {t.ssc && <span>SSC: {t.ssc}</span>}
                       <span>Total de dias: {calculateTotalDays(t.createdAt)}</span>
+                      {listTab === "recentes" && (
+                        <span className="text-violet-400 font-medium">
+                          Modificado: {formatDateTime(t.updatedAt || t.createdAt)}
+                        </span>
+                      )}
                     </div>
                   </div>
 

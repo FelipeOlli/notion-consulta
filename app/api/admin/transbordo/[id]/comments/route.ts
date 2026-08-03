@@ -83,6 +83,11 @@ export async function POST(
       data: { ticketId, content, attachments: attachments.length ? attachments : undefined },
     });
 
+    await prisma.transbordoTicket.update({
+      where: { id: ticketId },
+      data: { updatedAt: new Date() },
+    });
+
     return NextResponse.json(comment, { status: 201 });
   }
 
@@ -90,6 +95,11 @@ export async function POST(
   const body = await req.json();
   const comment = await prisma.transbordoComment.create({
     data: { ticketId, content: body.content ?? "" },
+  });
+
+  await prisma.transbordoTicket.update({
+    where: { id: ticketId },
+    data: { updatedAt: new Date() },
   });
 
   return NextResponse.json(comment, { status: 201 });
