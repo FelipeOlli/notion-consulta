@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
 type MonitorStatus = "UP" | "DOWN" | "PENDING";
 
@@ -29,6 +28,23 @@ type TicketsApiData = {
   tickets?: Ticket[];
 };
 
+type CadastroAtrasada = {
+  id: number;
+  empresaNome: string;
+  dataAbertura: string;
+  responsavel: string;
+  diasAtraso: number;
+};
+
+type CadastroTvData = {
+  mesNome: string;
+  totalMes: number;
+  pendentes: number;
+  atrasadas: number;
+  concluidas: number;
+  listaAtrasadas: CadastroAtrasada[];
+};
+
 const STATUS_COLOR: Record<MonitorStatus, string> = {
   UP: "#00cc66",
   DOWN: "#ff453a",
@@ -49,47 +65,36 @@ function isPendente(t: Ticket): boolean {
 function formatUptime(iso: string | null): string {
   const ms = Date.now() - new Date(iso ?? Date.now()).getTime();
   const minutes = Math.floor(ms / 60_000);
-  if (minutes < 60) return `${minutes}m ativo`;
+  if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ${minutes % 60}m ativo`;
+  if (hours < 24) return `${hours}h ${minutes % 60}m`;
   const days = Math.floor(hours / 24);
-  return `${days}d ${hours % 24}h ativo`;
+  return `${days}d ${hours % 24}h`;
 }
 
-function DonutStat({ data }: { data: { name: string; value: number; color: string }[] }) {
+function ProportionBar({ data }: { data: { name: string; value: number; color: string }[] }) {
   const total = data.reduce((acc, d) => acc + d.value, 0);
-  if (total === 0) {
-    return (
-      <div className="flex h-[140px] items-center justify-center text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
-        Sem dados
-      </div>
-    );
-  }
   return (
-    <ResponsiveContainer width="100%" height={140}>
-      <PieChart>
-        <Pie
-          data={data}
-          dataKey="value"
-          nameKey="name"
-          innerRadius={40}
-          outerRadius={62}
-          paddingAngle={2}
-          stroke="none"
-          isAnimationActive={false}
-        >
-          {data.map((d) => (
-            <Cell key={d.name} fill={d.color} />
+    <div className="flex h-[10px] w-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+      {total > 0 &&
+        data
+          .filter((d) => d.value > 0)
+          .map((d) => (
+            <div
+              key={d.name}
+              title={`${d.name}: ${d.value}`}
+              style={{ flex: d.value, background: d.color, transition: "flex 300ms ease" }}
+            />
           ))}
-        </Pie>
-      </PieChart>
-    </ResponsiveContainer>
+    </div>
   );
 }
 
 export function TvDashboard() {
   const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [ticketsData, setTicketsData] = useState<TicketsApiData | null>(null);
+  const [cadastroData, setCadastroData] = useState<CadastroTvData | null>(null);
+  const [cadastroError, setCadastroError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [now, setNow] = useState(new Date());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -97,9 +102,10 @@ export function TvDashboard() {
 
   // Carga inicial: só GET, rápido — não espera nenhuma checagem de conexão.
   const loadInitial = useCallback(async () => {
-    const [monitorsRes, ticketsRes] = await Promise.all([
+    const [monitorsRes, ticketsRes, cadastroRes] = await Promise.all([
       fetch("/api/admin/monitors"),
       fetch("/api/admin/tickets-ti"),
+      fetch("/api/admin/cadastro-empresa-tv"),
     ]);
     if (monitorsRes.ok) {
       const json = await monitorsRes.json();
@@ -108,13 +114,30 @@ export function TvDashboard() {
     if (ticketsRes.ok) {
       setTicketsData(await ticketsRes.json());
     }
+    if (cadastroRes.ok) {
+      setCadastroData(await cadastroRes.json());
+      setCadastroError(null);
+    } else {
+      const json = await cadastroRes.json().catch(() => null);
+      setCadastroError(json?.detail ?? json?.message ?? "Falha ao carregar métricas de cadastro.");
+    }
     setLastUpdated(new Date());
   }, []);
 
   // Atualiza só os tickets (rápido, não depende da checagem de conexões).
   const refreshTickets = useCallback(async () => {
-    const res = await fetch("/api/admin/tickets-ti");
-    if (res.ok) setTicketsData(await res.json());
+    const [ticketsRes, cadastroRes] = await Promise.all([
+      fetch("/api/admin/tickets-ti"),
+      fetch("/api/admin/cadastro-empresa-tv"),
+    ]);
+    if (ticketsRes.ok) setTicketsData(await ticketsRes.json());
+    if (cadastroRes.ok) {
+      setCadastroData(await cadastroRes.json());
+      setCadastroError(null);
+    } else {
+      const json = await cadastroRes.json().catch(() => null);
+      setCadastroError(json?.detail ?? json?.message ?? "Falha ao carregar métricas de cadastro.");
+    }
     setLastUpdated(new Date());
   }, []);
 
@@ -168,16 +191,12 @@ export function TvDashboard() {
   }, []);
 
   const monitoresAtivos = monitors.filter((m) => m.active);
-  const upCount = monitoresAtivos.filter((m) => m.lastStatus === "UP").length;
-  const downCount = monitoresAtivos.filter((m) => m.lastStatus === "DOWN").length;
-  const pendingCount = monitoresAtivos.filter((m) => m.lastStatus === "PENDING").length;
 
   const tickets = ticketsData?.tickets ?? [];
   const emAberto = tickets.filter((t) => !isConcluido(t) && !isPendente(t)).length;
   const pendentesTickets = tickets
     .filter((t) => !isConcluido(t) && isPendente(t))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  const concluidos = tickets.filter((t) => isConcluido(t)).length;
 
   return (
     <main className="relative z-10 min-h-screen p-6 lg:p-10">
@@ -202,39 +221,22 @@ export function TvDashboard() {
           </div>
         </div>
 
-        {/* Conexões — linha única no topo */}
-        <div className="glass-card mb-6 rounded-2xl p-5">
-          <div className="mb-3 flex items-center justify-between gap-4">
-            <h2 className="text-lg font-bold text-white">Conexões ativas</h2>
-            <span className="text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
-              {upCount} online · {downCount} offline{pendingCount > 0 ? ` · ${pendingCount} aguardando` : ""}
-            </span>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
+        {monitoresAtivos.length > 0 && (
+          <div className="mb-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
             {monitoresAtivos.map((m) => (
-              <div
-                key={m.id}
-                className="flex items-center gap-2 rounded-xl px-4 py-2"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-              >
+              <span key={m.id} className="flex items-center gap-1.5 text-xs">
                 <span
-                  className="inline-block size-2.5 shrink-0 rounded-full"
-                  style={{ background: STATUS_COLOR[m.lastStatus], boxShadow: m.lastStatus === "UP" ? `0 0 6px ${STATUS_COLOR[m.lastStatus]}` : undefined }}
+                  className="inline-block size-1.5 shrink-0 rounded-full"
+                  style={{ background: STATUS_COLOR[m.lastStatus], boxShadow: m.lastStatus === "UP" ? `0 0 4px ${STATUS_COLOR[m.lastStatus]}` : undefined }}
                 />
-                <p className="text-sm font-semibold text-white">{m.name}</p>
-                <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
+                <span className="font-semibold text-white">{m.name}</span>
+                <span style={{ color: "var(--onity-dark-text-muted)" }}>
                   {m.lastStatus === "UP" ? formatUptime(m.lastDownAt ?? m.createdAt) : STATUS_LABEL[m.lastStatus]}
-                </p>
-              </div>
+                </span>
+              </span>
             ))}
-            {monitoresAtivos.length === 0 && (
-              <p className="text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
-                Nenhuma conexão ativa monitorada.
-              </p>
-            )}
           </div>
-        </div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Tickets */}
@@ -246,15 +248,14 @@ export function TvDashboard() {
               </span>
             </div>
 
-            <DonutStat
+            <ProportionBar
               data={[
                 { name: "Em aberto", value: emAberto, color: "#f59e0b" },
                 { name: "Pendente", value: pendentesTickets.length, color: "#ef4444" },
-                { name: "Concluído", value: concluidos, color: "#00cc66" },
               ]}
             />
 
-            <div className="mt-4 grid grid-cols-3 gap-3">
+            <div className="mt-4 grid grid-cols-2 gap-3">
               <div className="rounded-xl p-4 text-center" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
                 <p className="text-3xl font-bold" style={{ color: "#f59e0b" }}>{emAberto}</p>
                 <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Em aberto</p>
@@ -263,10 +264,6 @@ export function TvDashboard() {
                 <p className="text-3xl font-bold" style={{ color: "#ef4444" }}>{pendentesTickets.length}</p>
                 <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Pendente</p>
               </div>
-              <div className="rounded-xl p-4 text-center" style={{ background: "rgba(0,204,102,0.08)", border: "1px solid rgba(0,204,102,0.2)" }}>
-                <p className="text-3xl font-bold" style={{ color: "#00cc66" }}>{concluidos}</p>
-                <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Concluído</p>
-              </div>
             </div>
 
             {pendentesTickets.length > 0 && (
@@ -274,7 +271,7 @@ export function TvDashboard() {
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--onity-dark-text-muted)" }}>
                   Pendentes — precisam de atenção
                 </p>
-                <div className="max-h-[220px] space-y-2 overflow-y-auto pr-1">
+                <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
                   {pendentesTickets.map((t) => (
                     <div
                       key={t.id}
@@ -292,13 +289,105 @@ export function TvDashboard() {
             )}
           </div>
 
-          {/* Espaço reservado para a próxima métrica */}
+          {/* Cadastro de empresa */}
+          <div className="glass-card rounded-2xl p-6">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-white">Cadastro de empresa</h2>
+                {cadastroData && (
+                  <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
+                    {cadastroData.mesNome}
+                  </p>
+                )}
+              </div>
+              {cadastroData && (
+                <span className="text-sm whitespace-nowrap" style={{ color: "var(--onity-dark-text-muted)" }}>
+                  {cadastroData.totalMes} no mês
+                </span>
+              )}
+            </div>
+
+            {!cadastroData && !cadastroError && (
+              <p className="text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
+                Carregando métricas de cadastro…
+              </p>
+            )}
+
+            {cadastroError && !cadastroData && (
+              <p className="text-sm" style={{ color: "#ef4444" }}>
+                {cadastroError}
+              </p>
+            )}
+
+            {cadastroData && (
+              <>
+                <ProportionBar
+                  data={[
+                    { name: "Pendentes", value: cadastroData.pendentes, color: "#f59e0b" },
+                    { name: "Atrasadas", value: cadastroData.atrasadas, color: "#ef4444" },
+                    { name: "Concluídas", value: cadastroData.concluidas, color: "#00cc66" },
+                  ]}
+                />
+
+                <div className="mt-4 grid grid-cols-3 gap-3">
+                  <div className="rounded-xl p-4 text-center" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                    <p className="text-3xl font-bold" style={{ color: "#f59e0b" }}>{cadastroData.pendentes}</p>
+                    <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Pendentes</p>
+                  </div>
+                  <div className="rounded-xl p-4 text-center" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                    <p className="text-3xl font-bold" style={{ color: "#ef4444" }}>{cadastroData.atrasadas}</p>
+                    <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Atrasadas</p>
+                  </div>
+                  <div className="rounded-xl p-4 text-center" style={{ background: "rgba(0,204,102,0.08)", border: "1px solid rgba(0,204,102,0.2)" }}>
+                    <p className="text-3xl font-bold" style={{ color: "#00cc66" }}>{cadastroData.concluidas}</p>
+                    <p className="mt-1 text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>Concluídas</p>
+                  </div>
+                </div>
+
+                {cadastroData.listaAtrasadas.length > 0 && (
+                  <div className="mt-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--onity-dark-text-muted)" }}>
+                      Atrasadas — precisam de atenção
+                    </p>
+                    <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
+                      {cadastroData.listaAtrasadas.map((t) => (
+                        <div
+                          key={t.id}
+                          className="rounded-lg px-3 py-2"
+                          style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)" }}
+                        >
+                          <p className="truncate text-sm text-white">{t.empresaNome}</p>
+                          <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
+                            Aberto em {t.dataAbertura} · {t.responsavel} · {t.diasAtraso}d de atraso
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Transbordo — aguardando definição da fonte de dados */}
           <div
-            className="glass-card flex min-h-[300px] items-center justify-center rounded-2xl p-6"
+            className="glass-card flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-2xl p-6 text-center"
             style={{ border: "1px dashed rgba(255,255,255,0.12)" }}
           >
+            <h2 className="text-xl font-bold text-white">Transbordo</h2>
             <p className="text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
-              Em breve — próxima métrica
+              Em breve — aguardando definição da métrica
+            </p>
+          </div>
+
+          {/* SLA de atendimento — aguardando definição da fonte de dados */}
+          <div
+            className="glass-card flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-2xl p-6 text-center"
+            style={{ border: "1px dashed rgba(255,255,255,0.12)" }}
+          >
+            <h2 className="text-xl font-bold text-white">SLA de atendimento</h2>
+            <p className="text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
+              Em breve — aguardando definição da métrica
             </p>
           </div>
         </div>
