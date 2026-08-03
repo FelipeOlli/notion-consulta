@@ -307,7 +307,7 @@ export function TransbordoDashboard({
         franchiseName: form.franchiseName.trim(),
         sistemaOrigem: form.sistemaOrigem || null,
         status: form.status,
-        statusColorId: form.statusColorId || null,
+        statusColorId: form.statusColorId ? Number(form.statusColorId) : null,
         companies: form.companies ? Number(form.companies) : null,
         lembrete: form.lembrete || null,
         agendado: form.agendado || null,
@@ -322,7 +322,7 @@ export function TransbordoDashboard({
       if (editing) {
         // Optimistic UI para edição
         setTickets((prev) =>
-          prev.map((t) => (t.id === editing.id ? { ...t, ...payload } : t))
+          prev.map((t) => (t.id === editing.id ? ({ ...t, ...payload } as Ticket) : t))
         );
         handleCloseForm();
         fetch(`/api/admin/transbordo/${editing.id}`, {
