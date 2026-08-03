@@ -138,6 +138,7 @@ export function TransbordoDashboard({
   const [showSistemaOrigemSelect, setShowSistemaOrigemSelect] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [sistemaOrigemOptions, setSistemaOrigemOptions] = useState<any[]>(initialSistemaOrigemOptions ?? []);
+  const [statusDropdownTicketId, setStatusDropdownTicketId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/transbordo/sistema-origem-options")
@@ -145,6 +146,48 @@ export function TransbordoDashboard({
       .then((data) => setSistemaOrigemOptions(data))
       .catch(() => {});
   }, []);
+
+  async function changeStatusInline(ticketId: string, newStatus: string, colorId?: number | null) {
+    const targetColor = colorId ? badgeColors.find((c) => c.id === colorId) : null;
+    
+    // Optimistic UI Update
+    setTickets((prev) =>
+      prev.map((t) => {
+        if (t.id !== ticketId) return t;
+        return {
+          ...t,
+          status: newStatus,
+          statusColorId: colorId !== undefined ? colorId : t.statusColorId,
+          ...(targetColor ? { statusColor: targetColor } : {}),
+        };
+      })
+    );
+    setStatusDropdownTicketId(null);
+
+    try {
+      const payload: Record<string, any> = { status: newStatus };
+      if (colorId !== undefined) {
+        payload.statusColorId = colorId;
+      }
+      const res = await fetch(`/api/admin/transbordo/${ticketId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const updated: Ticket = await res.json();
+        setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+        if (selected?.id === updated.id) {
+          setSelected(updated);
+        }
+      }
+    } catch {
+      // Rollback se falhar
+      fetch("/api/admin/transbordo")
+        .then((r) => r.json())
+        .then((data) => setTickets(data));
+    }
+  }
 
   async function updateSingleField(field: string, value: any) {
     if (!selected) return;
@@ -277,15 +320,23 @@ export function TransbordoDashboard({
       let targetTicketId = editing?.id;
 
       if (editing) {
-        const res = await fetch(`/api/admin/transbordo/${editing.id}`, {
+        // Optimistic UI para edição
+        setTickets((prev) =>
+          prev.map((t) => (t.id === editing.id ? { ...t, ...payload } : t))
+        );
+        handleCloseForm();
+        fetch(`/api/admin/transbordo/${editing.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-        });
-        const updated: Ticket = await res.json();
-        setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-        if (selected?.id === updated.id) setSelected(updated);
+        })
+          .then((r) => r.json())
+          .then((updated: Ticket) => {
+            setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+            if (selected?.id === updated.id) setSelected(updated);
+          });
       } else {
+        // Criação rápida: fecha modal imediatamente ao receber resposta do backend
         const res = await fetch("/api/admin/transbordo", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -294,6 +345,7 @@ export function TransbordoDashboard({
         const created: Ticket = await res.json();
         targetTicketId = created.id;
         setTickets((prev) => [created, ...prev]);
+        handleCloseForm();
       }
 
       // Enviar comentário com anexos se preenchido no formulário de criação/edição
@@ -572,9 +624,9 @@ export function TransbordoDashboard({
                     onChange={(e) => setForm((f) => ({ ...f, sistemaOrigem: e.target.value }))}
                   >
                     <option value="">— selecionar —</option>
-                    {SYSTEMS.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
+                    {sistemaOrigemOptions.map((s) => (
+                      <option key={s.id || s.label} value={s.label}>
+                        {s.label}
                       </option>
                     ))}
                   </select>
@@ -1102,10 +1154,13 @@ export function TransbordoDashboard({
             const statusOpt = statusOptions.find((so) => so.label === t.status);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const matchedColor = t.statusColor ?? badgeColors.find((c) => c.id === (statusOpt as any)?.colorId);
+            const isDropdownOpen = statusDropdownTicketId === t.id;
             return (
               <div
                 key={t.id}
-                className="glass-card rounded-xl p-4 cursor-pointer hover:border-white/20 transition-all"
+                className={`glass-card rounded-xl p-4 cursor-pointer hover:border-white/20 transition-all ${
+                  isDropdownOpen ? "relative z-30" : "relative z-0"
+                }`}
                 onClick={() => openTicket(t)}
               >
                 <div className="flex flex-wrap items-start gap-3">
@@ -1115,25 +1170,71 @@ export function TransbordoDashboard({
                       <span className="text-sm font-semibold text-white truncate max-w-[260px]">
                         {t.franchiseName}
                       </span>
-                      {/* badge de status */}
-                      <span
-                        className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                        style={
-                          matchedColor
-                            ? {
-                                background: matchedColor.hexValue + "22",
-                                color: matchedColor.hexValue,
-                                border: `1px solid ${matchedColor.hexValue}44`,
-                              }
-                            : {
-                                background: "rgba(148,163,184,.15)",
-                                color: "#94a3b8",
-                                border: "1px solid rgba(148,163,184,.2)",
-                              }
-                        }
-                      >
-                        {t.status}
-                      </span>
+                      {/* badge de status interativa */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium hover:brightness-125 transition-all cursor-pointer"
+                          style={
+                            matchedColor
+                              ? {
+                                  background: matchedColor.hexValue + "22",
+                                  color: matchedColor.hexValue,
+                                  border: `1px solid ${matchedColor.hexValue}44`,
+                                }
+                              : {
+                                  background: "rgba(148,163,184,.15)",
+                                  color: "#94a3b8",
+                                  border: "1px solid rgba(148,163,184,.2)",
+                                }
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStatusDropdownTicketId((prev) => (prev === t.id ? null : t.id));
+                          }}
+                          title="Clique para alterar status"
+                        >
+                          <span>{t.status}</span>
+                          <svg className="w-3 h-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+
+                        {isDropdownOpen && (
+                          <div
+                            className="absolute left-0 top-full mt-1.5 z-50 min-w-[200px] rounded-xl p-1.5 shadow-2xl space-y-1 backdrop-blur-md"
+                            style={{ background: "#0f172a", border: "1px solid rgba(255,255,255,.15)" }}
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseLeave={() => setStatusDropdownTicketId(null)}
+                          >
+                            {statusOptions
+                              .filter((so) => so.isActive)
+                              .map((so) => {
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                const c = badgeColors.find((bc) => bc.id === (so as any).colorId);
+                                const hex = c?.hexValue ?? "#3b82f6";
+                                const isSelected = t.status === so.label;
+                                return (
+                                  <button
+                                    key={so.id}
+                                    type="button"
+                                    className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-left transition-all ${
+                                      isSelected ? "bg-white/10 font-semibold" : "hover:bg-white/5"
+                                    }`}
+                                    onClick={() => void changeStatusInline(t.id, so.label, (so as any).colorId)}
+                                  >
+                                    <span
+                                      className="w-2 h-2 rounded-full shrink-0"
+                                      style={{ background: hex }}
+                                    />
+                                    <span className="text-white/90 truncate">{so.label}</span>
+                                    {isSelected && <span className="ml-auto text-emerald-400 font-bold">✓</span>}
+                                  </button>
+                                );
+                              })}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* meta */}
