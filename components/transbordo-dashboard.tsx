@@ -1709,6 +1709,7 @@ export function TransbordoDashboard({
                             <a
                               key={i}
                               href={a.url}
+                              download={a.filename}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="link-accent text-xs underline"
