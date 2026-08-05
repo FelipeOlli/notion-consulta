@@ -871,7 +871,7 @@ export function TransbordoDashboard({
                 Cancelar
               </button>
               <button
-                className="btn-primary text-xs px-5 py-2 rounded-xl font-semibold transition-all shadow-md"
+                className="btn-primary text-xs px-5 py-2 rounded-xl font-semibold transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
                 onClick={saveTicket}
                 disabled={saving || !form.franchiseName.trim()}
               >
