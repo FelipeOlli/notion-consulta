@@ -62,6 +62,12 @@ function isPendente(t: Ticket): boolean {
   return t.statusNome.toLowerCase().includes("pendente");
 }
 
+function formatDataCriacao(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
 function formatUptime(iso: string | null): string {
   const ms = Date.now() - new Date(iso ?? Date.now()).getTime();
   const minutes = Math.floor(ms / 60_000);
@@ -279,9 +285,10 @@ export function TvDashboard() {
                       style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)" }}
                     >
                       <p className="truncate text-sm text-white">{t.nome}</p>
-                      {t.solicitante && (
-                        <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>{t.solicitante}</p>
-                      )}
+                      <p className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
+                        Aberto em {formatDataCriacao(t.createdAt)}
+                        {t.solicitante && ` · ${t.solicitante}`}
+                      </p>
                     </div>
                   ))}
                 </div>
