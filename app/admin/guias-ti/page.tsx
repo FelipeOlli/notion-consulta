@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/session";
 import { AdminNav } from "@/components/admin-nav";
 import { ALL_MODULES_FOR_MASTER, type AppModule } from "@/lib/modules";
+import { AnydeskDashboard } from "@/components/anydesk-dashboard";
 
 export default async function GuiasTiPage() {
   const session = await getAdminSession();
@@ -23,12 +24,7 @@ export default async function GuiasTiPage() {
           </p>
         </header>
 
-        <div className="glass-card rounded-2xl p-10 text-center">
-          <p className="text-lg font-semibold text-white">🚧 Em construção</p>
-          <p className="mt-2 text-sm" style={{ color: "var(--onity-dark-text-muted)" }}>
-            Este módulo está sendo desenvolvido.
-          </p>
-        </div>
+        <AnydeskDashboard />
       </div>
     </main>
   );
