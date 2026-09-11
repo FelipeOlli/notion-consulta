@@ -109,6 +109,13 @@ export default async function AdminPage() {
       description: "Monitoramento da equipe via Time is Money: produtividade e status por pessoa.",
     });
   }
+  if (modules.includes("guias_ti")) {
+    cards.push({
+      href: "/admin/guias-ti",
+      title: "Guias e dados TI",
+      description: "Guias e processos arquivados para uso do time em caso de necessidade.",
+    });
+  }
 
   return (
     <main className="relative z-10 min-h-screen">

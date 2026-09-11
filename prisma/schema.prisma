@@ -21,6 +21,7 @@ enum AppModule {
   MONITORAMENTO
   TICKETS_TI
   TIME_IS_MONEY
+  GUIAS_TI
 }
 
 enum IungoStatus {

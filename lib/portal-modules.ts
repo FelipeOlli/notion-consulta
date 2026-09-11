@@ -22,6 +22,7 @@ const descriptions: Record<AppModule, string> = {
   monitoramento: "Monitoramento de disponibilidade de IPs, HTTP/TCP/PING.",
   tickets_ti: "Acompanhe chamados da equipe de TI: gráfico por status e notificação de ticket novo.",
   time_is_money: "Monitoramento da equipe via Time is Money: tempo ativo/ocioso, produtividade e status por pessoa.",
+  guias_ti: "Guias e processos arquivados para uso do time em caso de necessidade.",
 };
 
 export const moduleHrefs: Record<AppModule, string> = {
@@ -38,6 +39,7 @@ export const moduleHrefs: Record<AppModule, string> = {
   monitoramento: "/admin",
   tickets_ti: "/admin/tickets-ti",
   time_is_money: "/admin/time-is-money",
+  guias_ti: "/admin/guias-ti",
 };
 
 export function getPortalCardsForModules(modules: AppModule[]): PortalModuleCard[] {
