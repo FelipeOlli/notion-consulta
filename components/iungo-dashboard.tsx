@@ -4,6 +4,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { IungoRamal, IungoStatus } from "@prisma/client";
 import { ConfirmModal } from "@/components/confirm-modal";
 
+const VALOR_UNITARIO_RAMAL = 30.9;
+
+const formatarMoeda = (valor: number) =>
+  valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
 const EMPTY_FORM = {
   ramal: "",
   status: "ATIVO" as IungoStatus,
@@ -229,6 +234,7 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
 
   const totalAtivos = ramais.filter((r) => r.status === "ATIVO").length;
   const totalInativos = ramais.filter((r) => r.status === "INATIVO").length;
+  const totalPagoHoje = totalAtivos * VALOR_UNITARIO_RAMAL;
 
   return (
     <div className="space-y-6">
@@ -248,6 +254,22 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
           </span>
           <span className="text-lg font-semibold" style={{ color: "#f87171" }}>
             {totalInativos}
+          </span>
+        </div>
+        <div className="glass-card rounded-xl px-4 py-3 flex items-center gap-2">
+          <span className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
+            Valor unitário
+          </span>
+          <span className="text-lg font-semibold text-white">
+            {formatarMoeda(VALOR_UNITARIO_RAMAL)}
+          </span>
+        </div>
+        <div className="glass-card rounded-xl px-4 py-3 flex items-center gap-2">
+          <span className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
+            Total pago hoje
+          </span>
+          <span className="text-lg font-semibold text-white">
+            {formatarMoeda(totalPagoHoje)}
           </span>
         </div>
       </div>
