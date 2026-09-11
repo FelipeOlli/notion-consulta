@@ -227,8 +227,31 @@ export function IungoDashboard({ isMaster }: { isMaster: boolean }) {
     return a.ramal.localeCompare(b.ramal, undefined, { numeric: true }) * dir;
   });
 
+  const totalAtivos = ramais.filter((r) => r.status === "ATIVO").length;
+  const totalInativos = ramais.filter((r) => r.status === "INATIVO").length;
+
   return (
     <div className="space-y-6">
+      {/* Resumo de status */}
+      <div className="flex flex-wrap gap-3">
+        <div className="glass-card rounded-xl px-4 py-3 flex items-center gap-2">
+          <span className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
+            Ramais ativos
+          </span>
+          <span className="text-lg font-semibold" style={{ color: "#4ade80" }}>
+            {totalAtivos}
+          </span>
+        </div>
+        <div className="glass-card rounded-xl px-4 py-3 flex items-center gap-2">
+          <span className="text-xs" style={{ color: "var(--onity-dark-text-muted)" }}>
+            Ramais inativos
+          </span>
+          <span className="text-lg font-semibold" style={{ color: "#f87171" }}>
+            {totalInativos}
+          </span>
+        </div>
+      </div>
+
       {/* Barra de controles */}
       <div className="flex flex-wrap items-center gap-3">
         <input
