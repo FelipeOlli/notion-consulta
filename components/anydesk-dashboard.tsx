@@ -53,13 +53,20 @@ function Modal({ state, onClose, onSaved }: {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!state.open) return;
+    const isEdit = state.mode === "edit";
+    const editId = state.mode === "edit" ? state.entry.id : undefined;
     setLoading(true);
     setError("");
     const body = { nome, anydesk, senha: temSenha ? senha : null };
     try {
-      const res = state.mode === "edit"
-        ? await fetch(`/api/admin/anydesk/${state.entry.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
-        : await fetch("/api/admin/anydesk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const url = isEdit ? `/api/admin/anydesk/${editId}` : "/api/admin/anydesk";
+      const method = isEdit ? "PATCH" : "POST";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
       if (!res.ok) {
         const j = await res.json();
