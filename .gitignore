@@ -43,3 +43,4 @@ data/certificados/
 
 # ferramentas locais (não fazem parte do projeto)
 docs/superpowers/
+.agents/rules/commit-suggestion.md
