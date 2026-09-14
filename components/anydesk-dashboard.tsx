@@ -96,12 +96,19 @@ function Modal({ state, onClose, onSaved }: {
 
   return (
     <div
-      className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{
+        background: "rgba(0,0,0,0.65)",
+        backdropFilter: "blur(4px)",
+        animation: "adBackdropIn 0.2s ease forwards",
+      }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
+      <style>{`
+        @keyframes adBackdropIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes adPanelIn { from { opacity: 0; transform: translateY(20px) scale(0.95) } to { opacity: 1; transform: translateY(0) scale(1) } }
+      `}</style>
       <div
-        className="modal-panel"
         style={{
           width: "min(440px, 95vw)",
           background: "#0f172a",
@@ -109,6 +116,7 @@ function Modal({ state, onClose, onSaved }: {
           borderRadius: "16px",
           padding: "28px 24px",
           boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+          animation: "adPanelIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards",
         }}
       >
         <div className="flex items-center justify-between mb-6">
@@ -277,12 +285,15 @@ function DetailModal({ entry, onClose, onEdit, onDelete }: {
 
   return (
     <div
-      className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{
+        background: "rgba(0,0,0,0.65)",
+        backdropFilter: "blur(4px)",
+        animation: "adBackdropIn 0.2s ease forwards",
+      }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="modal-panel"
         style={{
           width: "min(420px, 95vw)",
           background: "#0f172a",
@@ -290,6 +301,7 @@ function DetailModal({ entry, onClose, onEdit, onDelete }: {
           borderRadius: "16px",
           padding: "28px 24px",
           boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+          animation: "adPanelIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards",
         }}
       >
         {/* Header */}
