@@ -396,3 +396,28 @@ h1, h2, h3 {
   left: 0;
   color: var(--onity-dark-primary-light);
 }
+
+/* ─── Modal animations ──────────────────────────────────────────────────────── */
+@keyframes modal-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-backdrop {
+  animation: modal-backdrop-in 0.2s ease forwards;
+}
+
+.modal-panel {
+  animation: modal-panel-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}

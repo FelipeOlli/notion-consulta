@@ -96,11 +96,12 @@ function Modal({ state, onClose, onSaved }: {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
+        className="modal-panel"
         style={{
           width: "min(440px, 95vw)",
           background: "#0f172a",
@@ -276,11 +277,12 @@ function DetailModal({ entry, onClose, onEdit, onDelete }: {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
+        className="modal-panel"
         style={{
           width: "min(420px, 95vw)",
           background: "#0f172a",
