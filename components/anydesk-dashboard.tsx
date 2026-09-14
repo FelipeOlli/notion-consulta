@@ -293,6 +293,10 @@ function DetailModal({ entry, onClose, onEdit, onDelete }: {
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
+      <style>{`
+        @keyframes adBackdropIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes adPanelIn { from { opacity: 0; transform: translateY(20px) scale(0.95) } to { opacity: 1; transform: translateY(0) scale(1) } }
+      `}</style>
       <div
         style={{
           width: "min(420px, 95vw)",
