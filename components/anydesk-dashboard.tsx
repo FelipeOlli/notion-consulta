@@ -548,7 +548,7 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
           ) : (
             <div>
               <label style={labelStyle}>Arquivo *</label>
-              <input type="file" accept={ACCEPT[tipo]} required={tipo !== "link"}
+              <input type="file" accept={ACCEPT[tipo]} required
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 style={{ ...inputStyle, padding: "8px 12px", cursor: "pointer" }} />
               {file && <p className="mt-1 text-xs" style={{ color: "#64748b" }}>{file.name} ({(file.size / 1024).toFixed(0)} KB)</p>}
