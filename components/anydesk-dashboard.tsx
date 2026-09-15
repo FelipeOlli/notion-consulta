@@ -249,24 +249,46 @@ function DetailModal({ entry, onClose, onEdit, onDelete }: {
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  async function copyToClipboard(val: string) {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(val);
+      return;
+    }
+    const textArea = document.createElement("textarea");
+    textArea.value = val;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand("copy");
+    } finally {
+      document.body.removeChild(textArea);
+    }
+  }
+
   async function copy(text: string, which: "id" | "senha") {
-    // Copia o valor secundário primeiro, depois o principal com delay.
-    // O histórico do Windows registra cada writeText como entrada separada.
     const secondary = which === "id" ? entry.senha : entry.anydesk;
 
-    if (secondary) {
-      await navigator.clipboard.writeText(secondary);
-      await new Promise((r) => setTimeout(r, 80));
-    }
+    try {
+      if (secondary) {
+        await copyToClipboard(secondary);
+        await new Promise((r) => setTimeout(r, 100));
+      }
 
-    await navigator.clipboard.writeText(text);
+      await copyToClipboard(text);
 
-    if (which === "id") {
-      setCopiedId(true);
-      setTimeout(() => setCopiedId(false), 1800);
-    } else {
-      setCopiedSenha(true);
-      setTimeout(() => setCopiedSenha(false), 1800);
+      if (which === "id") {
+        setCopiedId(true);
+        setTimeout(() => setCopiedId(false), 1800);
+      } else {
+        setCopiedSenha(true);
+        setTimeout(() => setCopiedSenha(false), 1800);
+      }
+    } catch (err) {
+      console.error("Falha ao copiar:", err);
     }
   }
 
