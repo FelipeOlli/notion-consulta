@@ -9,6 +9,11 @@ type Entry = {
   senha: string | null;
 };
 
+type GuiaTag = {
+  id: string;
+  nome: string;
+};
+
 type GuiaTi = {
   id: string;
   nome: string;
@@ -17,6 +22,7 @@ type GuiaTi = {
   fileUrl: string;
   fileName: string | null;
   fileSize: number | null;
+  tags: GuiaTag[];
   createdAt: string;
 };
 
@@ -409,16 +415,24 @@ function DetailModal({ entry, onClose, onEdit, onDelete }: {
 // ─── GuiaModal ───────────────────────────────────────────────────────────────
 function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const [nome, setNome] = useState("");
-  const [modulo, setModulo] = useState("");
-  const [tipo, setTipo] = useState<"link" | "pdf" | "video" | "audio">("link");
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [tags, setTags] = useState<GuiaTag[]>([]);
+  const [newTagName, setNewTagName] = useState("");
+  const [showNewTag, setShowNewTag] = useState(false);
+  const [creatingTag, setCreatingTag] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const nomeRef = useRef<HTMLInputElement>(null);
+  const newTagRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setTimeout(() => nomeRef.current?.focus(), 50);
+    fetch("/api/admin/guias-ti/tags")
+      .then((r) => r.json())
+      .then((j) => setTags(j.data ?? []))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -427,27 +441,60 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  function toggleTag(id: string) {
+    setSelectedTagIds((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+    );
+  }
+
+  async function handleCreateTag() {
+    const n = newTagName.trim();
+    if (!n) return;
+    setCreatingTag(true);
+    try {
+      const res = await fetch("/api/admin/guias-ti/tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome: n }),
+      });
+      if (!res.ok) return;
+      const { data } = await res.json();
+      setTags((prev) => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
+      setSelectedTagIds((prev) => [...prev, data.id]);
+      setNewTagName("");
+      setShowNewTag(false);
+    } finally {
+      setCreatingTag(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!nome.trim()) return;
+    if (!file && !linkUrl.trim()) {
+      setError("Informe uma URL ou selecione um arquivo.");
+      return;
+    }
+    if (file && linkUrl.trim()) {
+      setError("Escolha apenas um: URL ou arquivo.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
       let res: Response;
-      if (tipo === "link") {
+      if (file) {
+        const fd = new FormData();
+        fd.append("nome", nome.trim());
+        fd.append("tagIds", JSON.stringify(selectedTagIds));
+        fd.append("file", file);
+        res = await fetch("/api/admin/guias-ti", { method: "POST", body: fd });
+      } else {
         res = await fetch("/api/admin/guias-ti", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nome: nome.trim(), modulo: modulo.trim() || null, fileUrl: linkUrl.trim() }),
+          body: JSON.stringify({ nome: nome.trim(), fileUrl: linkUrl.trim(), tagIds: selectedTagIds }),
         });
-      } else {
-        if (!file) { setError("Selecione um arquivo."); setLoading(false); return; }
-        const fd = new FormData();
-        fd.append("nome", nome.trim());
-        fd.append("modulo", modulo.trim());
-        fd.append("fileType", tipo);
-        fd.append("file", file);
-        res = await fetch("/api/admin/guias-ti", { method: "POST", body: fd });
       }
       if (!res.ok) {
         const j = await res.json();
@@ -468,13 +515,7 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
     border: "1px solid rgba(29,127,229,0.25)", borderRadius: "8px",
     padding: "10px 14px", color: "white", fontSize: "14px", outline: "none",
   };
-  const labelStyle: React.CSSProperties = { color: "#94a3b8", fontSize: "11px", fontWeight: 500, display: "block", marginBottom: "6px" };
-
-  const ACCEPT: Record<string, string> = {
-    pdf: ".pdf,application/pdf",
-    video: "video/*",
-    audio: "audio/*",
-  };
+  const labelStyle: React.CSSProperties = { color: "#94a3b8", fontSize: "11px", fontWeight: 500 };
 
   return (
     <div
@@ -485,79 +526,147 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
       <style>{`
         @keyframes adBackdropIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes adPanelIn { from { opacity: 0; transform: translateY(20px) scale(0.95) } to { opacity: 1; transform: translateY(0) scale(1) } }
+        .guia-tag-chip { transition: background 0.15s, border-color 0.15s, color 0.15s; }
       `}</style>
       <div style={{
-        width: "min(460px, 95vw)", background: "#0f172a",
+        width: "min(480px, 95vw)", background: "#0f172a",
         border: "1px solid rgba(29,127,229,0.25)", borderRadius: "16px",
         padding: "28px 24px", boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
         animation: "adPanelIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+        maxHeight: "90vh", overflowY: "auto",
       }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-white">Nova Guia</h2>
           <button onClick={onClose} className="text-[#6b8aaa] hover:text-white transition text-xl leading-none">×</button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Nome */}
           <div>
-            <label style={labelStyle}>Nome do passo a passo *</label>
+            <label style={{ ...labelStyle, display: "block", marginBottom: 6 }}>Nome do passo a passo *</label>
             <input ref={nomeRef} value={nome} onChange={(e) => setNome(e.target.value)}
               placeholder="Ex: Como configurar o Alterdata" required style={inputStyle}
               onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.6)")}
               onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.25)")} />
           </div>
 
-          {/* Módulo */}
+          {/* Tags */}
           <div>
-            <label style={labelStyle}>Módulo / Plataforma <span style={{ color: "#475569" }}>(opcional)</span></label>
-            <input value={modulo} onChange={(e) => setModulo(e.target.value)}
-              placeholder="Ex: Alterdata, Google Workspace…" style={inputStyle}
-              onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.6)")}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.25)")} />
-          </div>
+            <div className="flex items-center justify-between mb-2">
+              <label style={labelStyle}>Módulo / Plataforma <span style={{ color: "#475569" }}>(opcional)</span></label>
+              <button
+                type="button"
+                onClick={() => { setShowNewTag((s) => !s); setTimeout(() => newTagRef.current?.focus(), 60); }}
+                style={{
+                  fontSize: "11px", fontWeight: 600, padding: "3px 10px", borderRadius: "6px",
+                  background: showNewTag ? "rgba(139,92,246,0.2)" : "rgba(139,92,246,0.1)",
+                  color: "#a78bfa", border: "1px solid rgba(139,92,246,0.3)", cursor: "pointer",
+                }}
+              >
+                + Nova TAG
+              </button>
+            </div>
 
-          {/* Tipo de arquivo */}
-          <div>
-            <label style={labelStyle}>Tipo de arquivo *</label>
-            <div className="grid grid-cols-4 gap-2">
-              {(["link", "pdf", "video", "audio"] as const).map((t) => (
-                <button key={t} type="button" onClick={() => { setTipo(t); setFile(null); setLinkUrl(""); }}
+            {/* Inline new tag input */}
+            {showNewTag && (
+              <div className="flex gap-2 mb-2">
+                <input
+                  ref={newTagRef}
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleCreateTag(); } }}
+                  placeholder="Nome da nova tag…"
+                  style={{ ...inputStyle, flex: 1, padding: "7px 12px", fontSize: "13px" }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.5)")}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.25)")}
+                />
+                <button
+                  type="button"
+                  onClick={handleCreateTag}
+                  disabled={creatingTag || !newTagName.trim()}
                   style={{
-                    padding: "8px 4px", borderRadius: "8px", fontSize: "12px", fontWeight: 500, cursor: "pointer",
-                    background: tipo === t ? "rgba(29,127,229,0.25)" : "rgba(255,255,255,0.04)",
-                    border: `1px solid ${tipo === t ? "rgba(29,127,229,0.5)" : "rgba(255,255,255,0.08)"}`,
-                    color: tipo === t ? "#4da3ff" : "#64748b",
-                    transition: "all 0.15s",
+                    padding: "7px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 600,
+                    background: "rgba(139,92,246,0.25)", color: "#a78bfa",
+                    border: "1px solid rgba(139,92,246,0.4)", cursor: "pointer", whiteSpace: "nowrap",
+                    opacity: creatingTag || !newTagName.trim() ? 0.5 : 1,
                   }}
                 >
-                  {{ link: "🔗 Link", pdf: "📄 PDF", video: "🎬 Vídeo", audio: "🎙 Áudio" }[t]}
+                  {creatingTag ? "…" : "Criar"}
                 </button>
-              ))}
-            </div>
+              </div>
+            )}
+
+            {/* Tag chips */}
+            {tags.length === 0 ? (
+              <p style={{ fontSize: "12px", color: "#475569" }}>Nenhuma tag cadastrada. Crie uma com &quot;+ Nova TAG&quot;.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag) => {
+                  const selected = selectedTagIds.includes(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleTag(tag.id)}
+                      className="guia-tag-chip"
+                      style={{
+                        padding: "4px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: 500,
+                        cursor: "pointer",
+                        background: selected ? "rgba(139,92,246,0.25)" : "rgba(255,255,255,0.04)",
+                        border: `1px solid ${selected ? "rgba(139,92,246,0.6)" : "rgba(255,255,255,0.1)"}`,
+                        color: selected ? "#c4b5fd" : "#64748b",
+                      }}
+                    >
+                      {selected && <span style={{ marginRight: 4 }}>✓</span>}
+                      {tag.nome}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Link ou arquivo */}
-          {tipo === "link" ? (
-            <div>
-              <label style={labelStyle}>URL *</label>
-              <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)}
-                placeholder="https://drive.google.com/…" required={tipo === "link"} style={inputStyle}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.6)")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.25)")} />
-            </div>
-          ) : (
-            <div>
-              <label style={labelStyle}>Arquivo *</label>
-              <input type="file" accept={ACCEPT[tipo]} required
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                style={{ ...inputStyle, padding: "8px 12px", cursor: "pointer" }} />
-              {file && <p className="mt-1 text-xs" style={{ color: "#64748b" }}>{file.name} ({(file.size / 1024).toFixed(0)} KB)</p>}
-            </div>
-          )}
+          {/* URL */}
+          <div>
+            <label style={{ ...labelStyle, display: "block", marginBottom: 6 }}>URL <span style={{ color: "#475569" }}>(opcional se enviar arquivo)</span></label>
+            <input
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              placeholder="https://drive.google.com/…"
+              style={inputStyle}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.6)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.25)")}
+            />
+          </div>
+
+          {/* Arquivo */}
+          <div>
+            <label style={{ ...labelStyle, display: "block", marginBottom: 6 }}>Arquivo <span style={{ color: "#475569" }}>(PDF, vídeo, áudio, etc.)</span></label>
+            <label
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                background: "rgba(8,15,26,0.8)",
+                border: `1px solid ${file ? "rgba(74,222,128,0.35)" : "rgba(29,127,229,0.25)"}`,
+                borderRadius: "8px", padding: "10px 14px", cursor: "pointer",
+                color: file ? "#4ade80" : "#475569", fontSize: "13px",
+              }}
+            >
+              <span style={{ fontSize: 16 }}>{file ? "📎" : "⬆️"}</span>
+              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {file ? `${file.name} (${(file.size / 1024).toFixed(0)} KB)` : "Clique para selecionar um arquivo…"}
+              </span>
+              {file && (
+                <button type="button" onClick={(e) => { e.preventDefault(); setFile(null); }}
+                  style={{ color: "#f87171", fontSize: 13, lineHeight: 1, background: "none", border: "none", cursor: "pointer" }}>✕</button>
+              )}
+              <input type="file" accept="*/*" style={{ display: "none" }}
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            </label>
+          </div>
 
           {error && <p className="text-sm" style={{ color: "#f87171" }}>{error}</p>}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="flex-1 rounded-lg py-2.5 text-sm font-medium"
               style={{ background: "rgba(255,255,255,0.05)", color: "#94a3b8", border: "1px solid rgba(255,255,255,0.08)" }}>
               Cancelar
@@ -736,17 +845,24 @@ export function AnydeskDashboard() {
                   style={{ background: "rgba(29,127,229,0.08)", border: "1px solid rgba(29,127,229,0.2)", padding: "8px 14px" }}>
                   {/* Ícone do tipo */}
                   <span className="text-sm" style={{ color: "#4da3ff" }}>
-                    {{ link: "🔗", pdf: "📄", video: "🎬", audio: "🎙" }[g.fileType] ?? "📎"}
+                    {({ link: "🔗", pdf: "📄", video: "🎬", audio: "🎙" } as Record<string, string>)[g.fileType] ?? "📎"}
                   </span>
                   {/* Nome clicável */}
                   <a href={g.fileUrl} target="_blank" rel="noopener noreferrer"
                     className="text-sm font-medium text-white hover:text-[#4da3ff] transition-colors">
                     {g.nome}
                   </a>
-                  {/* Módulo badge */}
-                  {g.modulo && (
-                    <span className="text-[10px] font-mono rounded px-1.5 py-0.5 ml-1"
-                      style={{ background: "rgba(139,92,246,0.12)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.2)" }}>
+                  {/* Tags novas (roxo) */}
+                  {g.tags?.map((tag) => (
+                    <span key={tag.id} className="text-[10px] font-mono rounded px-1.5 py-0.5"
+                      style={{ background: "rgba(139,92,246,0.18)", color: "#c4b5fd", border: "1px solid rgba(139,92,246,0.3)" }}>
+                      {tag.nome}
+                    </span>
+                  ))}
+                  {/* Módulo legado (cinza) */}
+                  {(!g.tags || g.tags.length === 0) && g.modulo && (
+                    <span className="text-[10px] font-mono rounded px-1.5 py-0.5"
+                      style={{ background: "rgba(255,255,255,0.05)", color: "#64748b", border: "1px solid rgba(255,255,255,0.08)" }}>
                       {g.modulo}
                     </span>
                   )}

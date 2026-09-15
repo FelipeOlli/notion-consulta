@@ -4,11 +4,22 @@ import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
+/** Infere fileType a partir do MIME do arquivo. */
+function mimeToFileType(mime: string): string {
+  if (mime === "application/pdf") return "pdf";
+  if (mime.startsWith("video/")) return "video";
+  if (mime.startsWith("audio/")) return "audio";
+  return "file";
+}
+
 export async function GET() {
   const ok = await ensureModuleAccess("guias_ti");
   if (!ok) return NextResponse.json({ message: "Não autorizado." }, { status: 401 });
 
-  const data = await prisma.guiaTi.findMany({ orderBy: { createdAt: "desc" } });
+  const data = await prisma.guiaTi.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { tags: true },
+  });
   return NextResponse.json({ data });
 }
 
@@ -23,15 +34,15 @@ export async function POST(request: NextRequest) {
       // Upload de arquivo físico
       const formData = await request.formData();
       const nome = (formData.get("nome") as string)?.trim();
-      const modulo = (formData.get("modulo") as string)?.trim() || null;
-      const fileType = (formData.get("fileType") as string)?.trim();
       const file = formData.get("file") as File | null;
+      const tagIdsRaw = (formData.get("tagIds") as string) ?? "[]";
+      let tagIds: string[] = [];
+      try { tagIds = JSON.parse(tagIdsRaw); } catch { tagIds = []; }
 
-      if (!nome || !fileType || !file) {
-        return NextResponse.json({ message: "nome, fileType e file são obrigatórios." }, { status: 400 });
+      if (!nome || !file) {
+        return NextResponse.json({ message: "nome e file são obrigatórios." }, { status: 400 });
       }
 
-      // Salvar arquivo em public/uploads/guias/
       const uploadsDir = path.join(process.cwd(), "public", "uploads", "guias");
       await mkdir(uploadsDir, { recursive: true });
 
@@ -42,34 +53,40 @@ export async function POST(request: NextRequest) {
       await writeFile(filePath, buffer);
 
       const fileUrl = `/uploads/guias/${safeName}`;
+      const fileType = mimeToFileType(file.type);
 
       const created = await prisma.guiaTi.create({
         data: {
           nome,
-          modulo,
+          modulo: null,
           fileType,
           fileUrl,
           fileName: file.name,
           fileSize: file.size,
+          tags: tagIds.length > 0 ? { connect: tagIds.map((id) => ({ id })) } : undefined,
         },
+        include: { tags: true },
       });
       return NextResponse.json({ data: created }, { status: 201 });
 
     } else {
       // Link externo (JSON)
-      const { nome, modulo, fileUrl } = await request.json();
+      const { nome, fileUrl, tagIds } = await request.json();
       if (!nome?.trim() || !fileUrl?.trim()) {
         return NextResponse.json({ message: "nome e fileUrl são obrigatórios." }, { status: 400 });
       }
+      const ids: string[] = Array.isArray(tagIds) ? tagIds : [];
       const created = await prisma.guiaTi.create({
         data: {
           nome: nome.trim(),
-          modulo: modulo?.trim() || null,
+          modulo: null,
           fileType: "link",
           fileUrl: fileUrl.trim(),
           fileName: null,
           fileSize: null,
+          tags: ids.length > 0 ? { connect: ids.map((id) => ({ id })) } : undefined,
         },
+        include: { tags: true },
       });
       return NextResponse.json({ data: created }, { status: 201 });
     }

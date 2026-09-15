@@ -635,10 +635,11 @@ model AnydeskEntry {
 }
 
 model GuiaTi {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   nome      String
+  /// Legado: texto livre. Novos registros usam relação tags[].
   modulo    String?
-  /// "link" | "pdf" | "video" | "audio"
+  /// "link" | "pdf" | "video" | "audio" — inferido do MIME em uploads novos
   fileType  String
   /// URL externa (link) ou caminho relativo do arquivo salvo (/uploads/guias/...)
   fileUrl   String
@@ -646,7 +647,15 @@ model GuiaTi {
   fileName  String?
   /// Tamanho em bytes (null quando fileType = "link")
   fileSize  Int?
+  tags      GuiaTag[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model GuiaTag {
+  id        String   @id @default(cuid())
+  nome      String   @unique
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  guias     GuiaTi[]
 }
 
