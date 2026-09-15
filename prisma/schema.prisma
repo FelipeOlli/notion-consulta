@@ -634,3 +634,19 @@ model AnydeskEntry {
   updatedAt DateTime @updatedAt
 }
 
+model GuiaTi {
+  id        String   @id @default(cuid())
+  nome      String
+  modulo    String?
+  /// "link" | "pdf" | "video" | "audio"
+  fileType  String
+  /// URL externa (link) ou caminho relativo do arquivo salvo (/uploads/guias/...)
+  fileUrl   String
+  /// Nome original do arquivo (null quando fileType = "link")
+  fileName  String?
+  /// Tamanho em bytes (null quando fileType = "link")
+  fileSize  Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

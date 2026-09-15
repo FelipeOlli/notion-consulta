@@ -9,6 +9,17 @@ type Entry = {
   senha: string | null;
 };
 
+type GuiaTi = {
+  id: string;
+  nome: string;
+  modulo: string | null;
+  fileType: string;
+  fileUrl: string;
+  fileName: string | null;
+  fileSize: number | null;
+  createdAt: string;
+};
+
 type ModalState = { open: false } | { open: true; mode: "create" } | { open: true; mode: "edit"; entry: Entry };
 
 function Modal({ state, onClose, onSaved }: {
@@ -233,7 +244,17 @@ function DetailModal({ entry, onClose, onEdit, onDelete }: {
   }, [onClose]);
 
   async function copy(text: string, which: "id" | "senha") {
+    // Copia o valor secundário primeiro, depois o principal com delay.
+    // O histórico do Windows registra cada writeText como entrada separada.
+    const secondary = which === "id" ? entry.senha : entry.anydesk;
+
+    if (secondary) {
+      await navigator.clipboard.writeText(secondary);
+      await new Promise((r) => setTimeout(r, 80));
+    }
+
     await navigator.clipboard.writeText(text);
+
     if (which === "id") {
       setCopiedId(true);
       setTimeout(() => setCopiedId(false), 1800);
@@ -385,12 +406,185 @@ function DetailModal({ entry, onClose, onEdit, onDelete }: {
   );
 }
 
+// ─── GuiaModal ───────────────────────────────────────────────────────────────
+function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const [nome, setNome] = useState("");
+  const [modulo, setModulo] = useState("");
+  const [tipo, setTipo] = useState<"link" | "pdf" | "video" | "audio">("link");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const nomeRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setTimeout(() => nomeRef.current?.focus(), 50);
+  }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nome.trim()) return;
+    setLoading(true);
+    setError("");
+    try {
+      let res: Response;
+      if (tipo === "link") {
+        res = await fetch("/api/admin/guias-ti", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nome: nome.trim(), modulo: modulo.trim() || null, fileUrl: linkUrl.trim() }),
+        });
+      } else {
+        if (!file) { setError("Selecione um arquivo."); setLoading(false); return; }
+        const fd = new FormData();
+        fd.append("nome", nome.trim());
+        fd.append("modulo", modulo.trim());
+        fd.append("fileType", tipo);
+        fd.append("file", file);
+        res = await fetch("/api/admin/guias-ti", { method: "POST", body: fd });
+      }
+      if (!res.ok) {
+        const j = await res.json();
+        setError(j.message ?? "Erro desconhecido.");
+        return;
+      }
+      onSaved();
+      onClose();
+    } catch {
+      setError("Falha de rede.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", background: "rgba(8,15,26,0.8)",
+    border: "1px solid rgba(29,127,229,0.25)", borderRadius: "8px",
+    padding: "10px 14px", color: "white", fontSize: "14px", outline: "none",
+  };
+  const labelStyle: React.CSSProperties = { color: "#94a3b8", fontSize: "11px", fontWeight: 500, display: "block", marginBottom: "6px" };
+
+  const ACCEPT: Record<string, string> = {
+    pdf: ".pdf,application/pdf",
+    video: "video/*",
+    audio: "audio/*",
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)", animation: "adBackdropIn 0.2s ease forwards" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <style>{`
+        @keyframes adBackdropIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes adPanelIn { from { opacity: 0; transform: translateY(20px) scale(0.95) } to { opacity: 1; transform: translateY(0) scale(1) } }
+      `}</style>
+      <div style={{
+        width: "min(460px, 95vw)", background: "#0f172a",
+        border: "1px solid rgba(29,127,229,0.25)", borderRadius: "16px",
+        padding: "28px 24px", boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+        animation: "adPanelIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+      }}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold text-white">Nova Guia</h2>
+          <button onClick={onClose} className="text-[#6b8aaa] hover:text-white transition text-xl leading-none">×</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Nome */}
+          <div>
+            <label style={labelStyle}>Nome do passo a passo *</label>
+            <input ref={nomeRef} value={nome} onChange={(e) => setNome(e.target.value)}
+              placeholder="Ex: Como configurar o Alterdata" required style={inputStyle}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.6)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.25)")} />
+          </div>
+
+          {/* Módulo */}
+          <div>
+            <label style={labelStyle}>Módulo / Plataforma <span style={{ color: "#475569" }}>(opcional)</span></label>
+            <input value={modulo} onChange={(e) => setModulo(e.target.value)}
+              placeholder="Ex: Alterdata, Google Workspace…" style={inputStyle}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.6)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.25)")} />
+          </div>
+
+          {/* Tipo de arquivo */}
+          <div>
+            <label style={labelStyle}>Tipo de arquivo *</label>
+            <div className="grid grid-cols-4 gap-2">
+              {(["link", "pdf", "video", "audio"] as const).map((t) => (
+                <button key={t} type="button" onClick={() => { setTipo(t); setFile(null); setLinkUrl(""); }}
+                  style={{
+                    padding: "8px 4px", borderRadius: "8px", fontSize: "12px", fontWeight: 500, cursor: "pointer",
+                    background: tipo === t ? "rgba(29,127,229,0.25)" : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${tipo === t ? "rgba(29,127,229,0.5)" : "rgba(255,255,255,0.08)"}`,
+                    color: tipo === t ? "#4da3ff" : "#64748b",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {{ link: "🔗 Link", pdf: "📄 PDF", video: "🎬 Vídeo", audio: "🎙 Áudio" }[t]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Link ou arquivo */}
+          {tipo === "link" ? (
+            <div>
+              <label style={labelStyle}>URL *</label>
+              <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)}
+                placeholder="https://drive.google.com/…" required={tipo === "link"} style={inputStyle}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.6)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.25)")} />
+            </div>
+          ) : (
+            <div>
+              <label style={labelStyle}>Arquivo *</label>
+              <input type="file" accept={ACCEPT[tipo]} required={tipo !== "link"}
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                style={{ ...inputStyle, padding: "8px 12px", cursor: "pointer" }} />
+              {file && <p className="mt-1 text-xs" style={{ color: "#64748b" }}>{file.name} ({(file.size / 1024).toFixed(0)} KB)</p>}
+            </div>
+          )}
+
+          {error && <p className="text-sm" style={{ color: "#f87171" }}>{error}</p>}
+
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 rounded-lg py-2.5 text-sm font-medium"
+              style={{ background: "rgba(255,255,255,0.05)", color: "#94a3b8", border: "1px solid rgba(255,255,255,0.08)" }}>
+              Cancelar
+            </button>
+            <button type="submit" disabled={loading} className="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white"
+              style={{ background: loading ? "rgba(29,127,229,0.4)" : "#1d7fe5" }}>
+              {loading ? "Salvando..." : "Criar guia"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── Dashboard principal ──────────────────────────────────────────────────────
 export function AnydeskDashboard() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [editModal, setEditModal] = useState<ModalState>({ open: false });
   const [detailEntry, setDetailEntry] = useState<Entry | null>(null);
+
+  // Guias state
+  const [guias, setGuias] = useState<GuiaTi[]>([]);
+  const [guiasLoading, setGuiasLoading] = useState(true);
+  const [showGuiaModal, setShowGuiaModal] = useState(false);
+  const [deletingGuiaId, setDeletingGuiaId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -404,6 +598,27 @@ export function AnydeskDashboard() {
   }
 
   useEffect(() => { load(); }, []);
+
+  async function loadGuias() {
+    setGuiasLoading(true);
+    try {
+      const res = await fetch("/api/admin/guias-ti");
+      const j = await res.json();
+      setGuias(j.data ?? []);
+    } finally {
+      setGuiasLoading(false);
+    }
+  }
+
+  useEffect(() => { loadGuias(); }, []);
+
+  async function handleDeleteGuia(id: string) {
+    if (!confirm("Remover esta guia?")) return;
+    setDeletingGuiaId(id);
+    await fetch(`/api/admin/guias-ti/${id}`, { method: "DELETE" });
+    setDeletingGuiaId(null);
+    loadGuias();
+  }
 
   async function handleDelete(id: string) {
     await fetch(`/api/admin/anydesk/${id}`, { method: "DELETE" });
@@ -495,14 +710,11 @@ export function AnydeskDashboard() {
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-base font-semibold text-white">Guias</h2>
           <button
-            disabled
+            onClick={() => setShowGuiaModal(true)}
             className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition"
-            style={{
-              background: "#1d7fe5",
-              border: "none",
-              opacity: 0.55,
-              cursor: "not-allowed",
-            }}
+            style={{ background: "#1d7fe5", border: "none" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#1a6fd0")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#1d7fe5")}
           >
             + Guia
           </button>
@@ -510,12 +722,58 @@ export function AnydeskDashboard() {
 
         {/* Container Guias — sempre visível */}
         <div className="glass-card rounded-2xl p-5" style={{ minHeight: "96px" }}>
-          <div className="flex flex-col items-center justify-center py-6">
-            <p className="text-sm font-medium" style={{ color: "#64748b" }}>Nenhuma guia cadastrada.</p>
-            <p className="text-xs mt-1" style={{ color: "#475569" }}>Em breve será possível adicionar guias e passo a passos.</p>
-          </div>
+          {guiasLoading ? (
+            <p className="text-sm" style={{ color: "#64748b" }}>Carregando...</p>
+          ) : guias.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-6">
+              <p className="text-sm font-medium" style={{ color: "#64748b" }}>Nenhuma guia cadastrada.</p>
+              <p className="text-xs mt-1" style={{ color: "#475569" }}>Clique em &quot;+ Guia&quot; para adicionar.</p>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {guias.map((g) => (
+                <div key={g.id} className="group relative flex items-center gap-2 rounded-lg"
+                  style={{ background: "rgba(29,127,229,0.08)", border: "1px solid rgba(29,127,229,0.2)", padding: "8px 14px" }}>
+                  {/* Ícone do tipo */}
+                  <span className="text-sm" style={{ color: "#4da3ff" }}>
+                    {{ link: "🔗", pdf: "📄", video: "🎬", audio: "🎙" }[g.fileType] ?? "📎"}
+                  </span>
+                  {/* Nome clicável */}
+                  <a href={g.fileUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-medium text-white hover:text-[#4da3ff] transition-colors">
+                    {g.nome}
+                  </a>
+                  {/* Módulo badge */}
+                  {g.modulo && (
+                    <span className="text-[10px] font-mono rounded px-1.5 py-0.5 ml-1"
+                      style={{ background: "rgba(139,92,246,0.12)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.2)" }}>
+                      {g.modulo}
+                    </span>
+                  )}
+                  {/* Botão remover */}
+                  <button
+                    onClick={() => handleDeleteGuia(g.id)}
+                    disabled={deletingGuiaId === g.id}
+                    className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                    style={{ color: "#f87171" }}
+                    title="Remover"
+                  >
+                    {deletingGuiaId === g.id ? "…" : "✕"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Modal nova guia */}
+      {showGuiaModal && (
+        <GuiaModal
+          onClose={() => setShowGuiaModal(false)}
+          onSaved={loadGuias}
+        />
+      )}
     </>
   );
 }
