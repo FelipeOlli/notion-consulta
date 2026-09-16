@@ -15,12 +15,17 @@ export async function POST(request: NextRequest) {
   if (!ok) return NextResponse.json({ message: "Não autorizado." }, { status: 401 });
 
   try {
-    const { nome, anydesk, senha } = await request.json();
+    const { nome, anydesk, senha, observacoes } = await request.json();
     if (!nome?.trim() || !anydesk?.trim()) {
       return NextResponse.json({ message: "Nome e Anydesk são obrigatórios." }, { status: 400 });
     }
     const created = await prisma.anydeskEntry.create({
-      data: { nome: nome.trim(), anydesk: anydesk.trim(), senha: senha?.trim() || null },
+      data: {
+        nome: nome.trim(),
+        anydesk: anydesk.trim(),
+        senha: senha?.trim() || null,
+        observacoes: observacoes?.trim() || null,
+      },
     });
     return NextResponse.json({ data: created }, { status: 201 });
   } catch (error) {

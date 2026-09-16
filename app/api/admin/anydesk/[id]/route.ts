@@ -16,11 +16,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (!ok) return NextResponse.json({ message: "Não autorizado." }, { status: 401 });
 
   const { id } = await params;
-  const { nome, anydesk, senha } = await request.json();
+  const { nome, anydesk, senha, observacoes } = await request.json();
 
   const updated = await prisma.anydeskEntry.update({
     where: { id },
-    data: { nome: nome.trim(), anydesk: anydesk.trim(), senha: senha?.trim() || null },
+    data: {
+      nome: nome.trim(),
+      anydesk: anydesk.trim(),
+      senha: senha?.trim() || null,
+      observacoes: observacoes?.trim() || null,
+    },
   });
   return NextResponse.json({ data: updated });
 }

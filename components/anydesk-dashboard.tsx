@@ -7,6 +7,7 @@ type Entry = {
   nome: string;
   anydesk: string;
   senha: string | null;
+  observacoes?: string | null;
 };
 
 type GuiaTag = {
@@ -78,8 +79,8 @@ function Modal({ state, onClose, onSaved }: {
 }) {
   const [nome, setNome] = useState("");
   const [anydesk, setAnydesk] = useState("");
-  const [temSenha, setTemSenha] = useState(false);
   const [senha, setSenha] = useState("");
+  const [observacoes, setObservacoes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const nomeRef = useRef<HTMLInputElement>(null);
@@ -89,13 +90,13 @@ function Modal({ state, onClose, onSaved }: {
     if (state.mode === "edit") {
       setNome(state.entry.nome);
       setAnydesk(state.entry.anydesk);
-      setTemSenha(Boolean(state.entry.senha));
       setSenha(state.entry.senha ?? "");
+      setObservacoes(state.entry.observacoes ?? "");
     } else {
       setNome("");
       setAnydesk("");
-      setTemSenha(false);
       setSenha("");
+      setObservacoes("");
     }
     setError("");
     setTimeout(() => nomeRef.current?.focus(), 50);
@@ -118,7 +119,12 @@ function Modal({ state, onClose, onSaved }: {
     const editId = state.mode === "edit" ? state.entry.id : undefined;
     setLoading(true);
     setError("");
-    const body = { nome, anydesk, senha: temSenha ? senha : null };
+    const body = {
+      nome,
+      anydesk,
+      senha: senha.trim() || null,
+      observacoes: observacoes.trim() || null,
+    };
     try {
       const url = isEdit ? `/api/admin/anydesk/${editId}` : "/api/admin/anydesk";
       const method = isEdit ? "PATCH" : "POST";
@@ -177,6 +183,8 @@ function Modal({ state, onClose, onSaved }: {
           padding: "28px 24px",
           boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
           animation: "adPanelIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+          maxHeight: "90vh",
+          overflowY: "auto",
         }}
       >
         <div className="flex items-center justify-between mb-6">
@@ -216,33 +224,40 @@ function Modal({ state, onClose, onSaved }: {
             />
           </div>
 
-          {/* Tem senha? */}
-          <label className="flex items-center gap-3 cursor-pointer select-none">
+          {/* Senha (sempre à mostra) */}
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: "#94a3b8" }}>Senha</label>
             <input
-              type="checkbox"
-              checked={temSenha}
-              onChange={(e) => setTemSenha(e.target.checked)}
-              style={{ width: 16, height: 16, accentColor: "#1d7fe5", cursor: "pointer" }}
+              type="text"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              placeholder="Senha do AnyDesk"
+              style={inputStyle}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.6)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.25)")}
             />
-            <span className="text-sm" style={{ color: "#94a3b8" }}>Tem senha?</span>
-          </label>
+          </div>
 
-          {/* Senha (condicional) */}
-          {temSenha && (
-            <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "#94a3b8" }}>Senha</label>
-              <input
-                type="text"
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                placeholder="Senha do AnyDesk"
-                required={temSenha}
-                style={inputStyle}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.6)")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.25)")}
-              />
-            </div>
-          )}
+          {/* Observações */}
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: "#94a3b8" }}>
+              Observações <span style={{ color: "#475569" }}>(opcional)</span>
+            </label>
+            <textarea
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              placeholder="Observações ou informações adicionais..."
+              rows={3}
+              style={{
+                ...inputStyle,
+                resize: "vertical",
+                minHeight: "75px",
+                lineHeight: "1.4",
+              }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.6)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.25)")}
+            />
+          </div>
 
           {error && (
             <p className="text-sm" style={{ color: "#f87171" }}>{error}</p>
@@ -419,8 +434,8 @@ function DetailModal({ entry, onClose, onEdit, onDelete }: {
         </div>
 
         {/* Senha */}
-        {entry.senha !== null ? (
-          <div className="mb-6" style={rowStyle}>
+        {entry.senha ? (
+          <div className="mb-3" style={rowStyle}>
             <div>
               <p className="text-[10px] font-mono uppercase tracking-wider mb-0.5" style={{ color: "#475569" }}>Senha</p>
               <p className="text-sm font-mono font-semibold" style={{ color: "#94a3b8" }}>
@@ -447,7 +462,25 @@ function DetailModal({ entry, onClose, onEdit, onDelete }: {
             </div>
           </div>
         ) : (
-          <p className="mb-6 text-xs" style={{ color: "#475569" }}>Sem senha cadastrada.</p>
+          <p className="mb-3 text-xs" style={{ color: "#475569" }}>Sem senha cadastrada.</p>
+        )}
+
+        {/* Observações */}
+        {entry.observacoes && (
+          <div
+            className="mb-6 rounded-lg p-3"
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
+            <p className="text-[10px] font-mono uppercase tracking-wider mb-1" style={{ color: "#475569" }}>
+              Observações
+            </p>
+            <p className="text-xs text-[#cbd5e1] whitespace-pre-wrap leading-relaxed">
+              {entry.observacoes}
+            </p>
+          </div>
         )}
 
         {/* Ações */}
@@ -876,6 +909,18 @@ export function AnydeskDashboard() {
                 }}
               >
                 {e.nome}
+                {e.observacoes && (
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      opacity: 0.7,
+                      marginLeft: "6px",
+                    }}
+                    title="Possui observações"
+                  >
+                    💬
+                  </span>
+                )}
               </button>
             ))}
           </div>

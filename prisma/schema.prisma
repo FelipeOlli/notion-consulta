@@ -626,12 +626,13 @@ model GoogleOAuthToken {
 }
 
 model AnydeskEntry {
-  id        String   @id @default(cuid())
-  nome      String
-  anydesk   String
-  senha     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  nome        String
+  anydesk     String
+  senha       String?
+  observacoes String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model GuiaTi {
