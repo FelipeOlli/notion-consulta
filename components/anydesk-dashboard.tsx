@@ -22,9 +22,52 @@ type GuiaTi = {
   fileUrl: string;
   fileName: string | null;
   fileSize: number | null;
+  observacoes?: string | null;
   tags: GuiaTag[];
   createdAt: string;
 };
+
+function getFileBadgeInfo(g: GuiaTi): { label: string; icon: string; bg: string; color: string; border: string } | null {
+  if (!g.fileUrl) return null;
+
+  const type = (g.fileType || "").toLowerCase();
+  const ext = g.fileName ? g.fileName.split(".").pop()?.toLowerCase() || "" : "";
+
+  if (type === "pdf" || ext === "pdf") {
+    return { label: "PDF", icon: "📄", bg: "rgba(239,68,68,0.14)", color: "#fca5a5", border: "rgba(239,68,68,0.3)" };
+  }
+  if (type === "mp4" || type === "video" || ext === "mp4" || ext === "mkv" || ext === "avi" || ext === "mov" || ext === "webm") {
+    return { label: "MP4", icon: "🎬", bg: "rgba(168,85,247,0.14)", color: "#d8b4fe", border: "rgba(168,85,247,0.3)" };
+  }
+  if (type === "mp3" || type === "audio" || ext === "mp3" || ext === "wav" || ext === "ogg" || ext === "m4a" || ext === "aac") {
+    return { label: "MP3", icon: "🎙", bg: "rgba(234,179,8,0.14)", color: "#fde047", border: "rgba(234,179,8,0.3)" };
+  }
+  if (type === "word" || ext === "doc" || ext === "docx") {
+    return { label: "WORD", icon: "📝", bg: "rgba(59,130,246,0.15)", color: "#93c5fd", border: "rgba(59,130,246,0.3)" };
+  }
+  if (type === "excel" || ext === "xls" || ext === "xlsx" || ext === "csv") {
+    return { label: "EXCEL", icon: "📊", bg: "rgba(34,197,94,0.14)", color: "#86efac", border: "rgba(34,197,94,0.3)" };
+  }
+  if (type === "powerpoint" || ext === "ppt" || ext === "pptx") {
+    return { label: "PPT", icon: "📑", bg: "rgba(249,115,22,0.14)", color: "#fdba74", border: "rgba(249,115,22,0.3)" };
+  }
+  if (type === "zip" || ext === "zip" || ext === "rar" || ext === "7z") {
+    return { label: "ZIP", icon: "🗜", bg: "rgba(217,70,239,0.14)", color: "#f0abfc", border: "rgba(217,70,239,0.3)" };
+  }
+  if (type === "image" || ["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) {
+    return { label: ext ? ext.toUpperCase() : "IMG", icon: "🖼", bg: "rgba(20,184,166,0.14)", color: "#5eead4", border: "rgba(20,184,166,0.3)" };
+  }
+  if (type === "link") {
+    return { label: "LINK", icon: "🔗", bg: "rgba(14,165,233,0.14)", color: "#7dd3fc", border: "rgba(14,165,233,0.3)" };
+  }
+  if (ext) {
+    return { label: ext.toUpperCase(), icon: "📎", bg: "rgba(100,116,139,0.16)", color: "#cbd5e1", border: "rgba(100,116,139,0.25)" };
+  }
+  if (type !== "note") {
+    return { label: "ARQUIVO", icon: "📎", bg: "rgba(100,116,139,0.16)", color: "#cbd5e1", border: "rgba(100,116,139,0.25)" };
+  }
+  return null;
+}
 
 type ModalState = { open: false } | { open: true; mode: "create" } | { open: true; mode: "edit"; entry: Entry };
 
@@ -444,6 +487,7 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
   const [creatingTag, setCreatingTag] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [observacoes, setObservacoes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const nomeRef = useRef<HTMLInputElement>(null);
@@ -493,10 +537,6 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!nome.trim()) return;
-    if (!file && !linkUrl.trim()) {
-      setError("Informe uma URL ou selecione um arquivo.");
-      return;
-    }
     if (file && linkUrl.trim()) {
       setError("Escolha apenas um: URL ou arquivo.");
       return;
@@ -510,12 +550,18 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
         fd.append("nome", nome.trim());
         fd.append("tagIds", JSON.stringify(selectedTagIds));
         fd.append("file", file);
+        if (observacoes.trim()) fd.append("observacoes", observacoes.trim());
         res = await fetch("/api/admin/guias-ti", { method: "POST", body: fd });
       } else {
         res = await fetch("/api/admin/guias-ti", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nome: nome.trim(), fileUrl: linkUrl.trim(), tagIds: selectedTagIds }),
+          body: JSON.stringify({
+            nome: nome.trim(),
+            fileUrl: linkUrl.trim(),
+            observacoes: observacoes.trim() || undefined,
+            tagIds: selectedTagIds,
+          }),
         });
       }
       if (!res.ok) {
@@ -650,7 +696,7 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
 
           {/* URL */}
           <div>
-            <label style={{ ...labelStyle, display: "block", marginBottom: 6 }}>URL <span style={{ color: "#475569" }}>(opcional se enviar arquivo)</span></label>
+            <label style={{ ...labelStyle, display: "block", marginBottom: 6 }}>URL <span style={{ color: "#475569" }}>(opcional)</span></label>
             <input
               value={linkUrl}
               onChange={(e) => setLinkUrl(e.target.value)}
@@ -663,7 +709,7 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
 
           {/* Arquivo */}
           <div>
-            <label style={{ ...labelStyle, display: "block", marginBottom: 6 }}>Arquivo <span style={{ color: "#475569" }}>(PDF, vídeo, áudio, etc.)</span></label>
+            <label style={{ ...labelStyle, display: "block", marginBottom: 6 }}>Arquivo <span style={{ color: "#475569" }}>(opcional - PDF, vídeo, áudio, etc.)</span></label>
             <label
               style={{
                 display: "flex", alignItems: "center", gap: 10,
@@ -684,6 +730,27 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
               <input type="file" accept="*/*" style={{ display: "none" }}
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             </label>
+          </div>
+
+          {/* Observações */}
+          <div>
+            <label style={{ ...labelStyle, display: "block", marginBottom: 6 }}>
+              Observações <span style={{ color: "#475569" }}>(opcional)</span>
+            </label>
+            <textarea
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              placeholder="Digite aqui as observações, detalhes ou notas sobre a guia..."
+              rows={3}
+              style={{
+                ...inputStyle,
+                resize: "vertical",
+                minHeight: "75px",
+                lineHeight: "1.4",
+              }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.6)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(29,127,229,0.25)")}
+            />
           </div>
 
           {error && <p className="text-sm" style={{ color: "#f87171" }}>{error}</p>}
@@ -862,18 +929,52 @@ export function AnydeskDashboard() {
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {guias.map((g) => (
-                <div key={g.id} className="group relative flex items-center gap-2 rounded-lg"
-                  style={{ background: "rgba(29,127,229,0.08)", border: "1px solid rgba(29,127,229,0.2)", padding: "8px 14px" }}>
-                  {/* Ícone do tipo */}
-                  <span className="text-sm" style={{ color: "#4da3ff" }}>
-                    {({ link: "🔗", pdf: "📄", video: "🎬", audio: "🎙" } as Record<string, string>)[g.fileType] ?? "📎"}
-                  </span>
-                  {/* Nome clicável */}
-                  <a href={g.fileUrl} target="_blank" rel="noopener noreferrer"
-                    className="text-sm font-medium text-white hover:text-[#4da3ff] transition-colors">
-                    {g.nome}
-                  </a>
+              {guias.map((g) => {
+                const fileBadge = getFileBadgeInfo(g);
+                return (
+                  <div key={g.id} className="group relative flex items-center gap-2 rounded-lg"
+                    style={{ background: "rgba(29,127,229,0.08)", border: "1px solid rgba(29,127,229,0.2)", padding: "8px 14px" }}>
+                    {/* Badge do tipo de arquivo / link */}
+                    {fileBadge ? (
+                      <span
+                        className="flex items-center gap-1 text-[10px] font-bold rounded px-1.5 py-0.5"
+                        style={{
+                          background: fileBadge.bg,
+                          color: fileBadge.color,
+                          border: `1px solid ${fileBadge.border}`,
+                          letterSpacing: "0.5px",
+                        }}
+                        title={g.fileName ? `Arquivo: ${g.fileName}` : fileBadge.label}
+                      >
+                        <span style={{ fontSize: "11px" }}>{fileBadge.icon}</span>
+                        {fileBadge.label}
+                      </span>
+                    ) : (
+                      <span className="text-sm" style={{ color: "#94a3b8" }} title="Nota sem arquivo">
+                        📝
+                      </span>
+                    )}
+
+                    {/* Nome clicável ou estático com título */}
+                    {g.fileUrl ? (
+                      <a href={g.fileUrl} target="_blank" rel="noopener noreferrer"
+                        className="text-sm font-medium text-white hover:text-[#4da3ff] transition-colors"
+                        title={g.observacoes ? `Observações:\n${g.observacoes}` : undefined}>
+                        {g.nome}
+                      </a>
+                    ) : (
+                      <span className="text-sm font-medium text-white"
+                        title={g.observacoes ? `Observações:\n${g.observacoes}` : undefined}>
+                        {g.nome}
+                      </span>
+                    )}
+
+                    {/* Ícone de nota se houver observações */}
+                    {g.observacoes && (
+                      <span title={g.observacoes} style={{ cursor: "help", fontSize: "11px", color: "#e2e8f0", opacity: 0.75 }}>
+                        💬
+                      </span>
+                    )}
                   {/* Tags novas (roxo) */}
                   {g.tags?.map((tag) => (
                     <span key={tag.id} className="text-[10px] font-mono rounded px-1.5 py-0.5"
@@ -898,8 +999,9 @@ export function AnydeskDashboard() {
                   >
                     {deletingGuiaId === g.id ? "…" : "✕"}
                   </button>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

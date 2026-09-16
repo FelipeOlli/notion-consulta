@@ -646,9 +646,10 @@ model GuiaTi {
   /// Nome original do arquivo (null quando fileType = "link")
   fileName  String?
   /// Tamanho em bytes (null quando fileType = "link")
-  fileSize  Int?
-  tags      GuiaTag[]
-  createdAt DateTime  @default(now())
+  fileSize    Int?
+  observacoes String?
+  tags        GuiaTag[]
+  createdAt   DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
 
