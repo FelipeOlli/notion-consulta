@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/session";
 import { AdminNav } from "@/components/admin-nav";
 import { ALL_MODULES_FOR_MASTER, type AppModule } from "@/lib/modules";
+import { BitLockerDashboard } from "@/components/bitlocker-dashboard";
+import { prisma } from "@/lib/prisma";
 
 export default async function SegurancaPage() {
   const session = await getAdminSession();
@@ -11,6 +13,10 @@ export default async function SegurancaPage() {
 
   const modules: AppModule[] =
     session.role === "master" ? [...ALL_MODULES_FOR_MASTER] : (session.modules ?? []);
+
+  const entries = await prisma.bitLockerEntry.findMany({
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
     <main className="relative z-10 min-h-screen">
@@ -25,18 +31,7 @@ export default async function SegurancaPage() {
           </p>
         </header>
 
-        {/* Conteúdo do módulo de Segurança */}
-        <div
-          className="rounded-2xl p-10 text-center"
-          style={{
-            border: "1px dashed rgba(29,127,229,0.2)",
-            background: "rgba(8,15,26,0.4)",
-          }}
-        >
-          <p className="text-base" style={{ color: "var(--onity-dark-text-muted)" }}>
-            Módulo em construção.
-          </p>
-        </div>
+        <BitLockerDashboard initialEntries={entries} />
       </div>
     </main>
   );

@@ -662,3 +662,11 @@ model GuiaTag {
   guias     GuiaTi[]
 }
 
+model BitLockerEntry {
+  id            String   @id @default(cuid())
+  nomeDispositivo String
+  deviceId      String
+  codigoBitLocker String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
