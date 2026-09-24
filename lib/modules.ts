@@ -1,6 +1,6 @@
 import type { AppModule as PrismaAppModule } from "@prisma/client";
 
-export const appModules = ["senha", "certificados", "financeiro", "usuarios", "cadastro_empresa", "nucleo_ti", "alterdata", "chips", "dominio", "iungo", "monitoramento", "tickets_ti", "time_is_money", "guias_ti"] as const;
+export const appModules = ["senha", "certificados", "financeiro", "usuarios", "cadastro_empresa", "nucleo_ti", "alterdata", "chips", "dominio", "iungo", "monitoramento", "tickets_ti", "time_is_money", "guias_ti", "seguranca"] as const;
 
 export type AppModule = (typeof appModules)[number];
 
@@ -20,6 +20,7 @@ export const ALL_MODULES_FOR_MASTER: AppModule[] = [
   "tickets_ti",
   "time_is_money",
   "guias_ti",
+  "seguranca",
 ];
 
 export const moduleLabels: Record<AppModule, string> = {
@@ -37,6 +38,7 @@ export const moduleLabels: Record<AppModule, string> = {
   tickets_ti: "Tickets TI",
   time_is_money: "Time is Money",
   guias_ti: "Guias e dados TI",
+  seguranca: "Segurança",
 };
 
 export function normalizeModule(value: string): AppModule | null {
@@ -75,6 +77,8 @@ export function toPrismaModule(moduleKey: AppModule): PrismaAppModule {
       throw new Error("nucleo_ti não existe no banco de dados");
     case "guias_ti":
       return "GUIAS_TI";
+    case "seguranca":
+      return "SEGURANCA";
   }
 }
 
@@ -106,6 +110,8 @@ export function fromPrismaModule(moduleKey: PrismaAppModule): AppModule {
       return "time_is_money";
     case "GUIAS_TI":
       return "guias_ti";
+    case "SEGURANCA":
+      return "seguranca";
     default:
       throw new Error(`Módulo desconhecido: ${moduleKey}`);
   }

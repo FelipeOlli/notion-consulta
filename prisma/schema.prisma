@@ -22,6 +22,7 @@ enum AppModule {
   TICKETS_TI
   TIME_IS_MONEY
   GUIAS_TI
+  SEGURANCA
 }
 
 enum IungoStatus {

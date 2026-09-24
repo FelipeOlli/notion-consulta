@@ -116,6 +116,13 @@ export default async function AdminPage() {
       description: "Guias e processos arquivados para uso do time em caso de necessidade.",
     });
   }
+  if (modules.includes("seguranca")) {
+    cards.push({
+      href: "/admin/seguranca",
+      title: "Segurança",
+      description: "Gestão de acessos, senhas, políticas de segurança e controle de permissões.",
+    });
+  }
 
   return (
     <main className="relative z-10 min-h-screen">
