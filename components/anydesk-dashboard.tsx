@@ -31,6 +31,7 @@ export type GuiaTi = {
   modulo: string | null;
   fileType: string;
   fileUrl: string;
+  linkUrl?: string | null;
   fileName: string | null;
   fileSize: number | null;
   observacoes?: string | null;
@@ -608,14 +609,14 @@ function GuiaDetailModal({ guia, onClose, onDelete }: {
     >
       <div
         style={{
-          width: "min(720px, 96vw)",
+          width: "min(880px, 96vw)",
           background: "#0b1220",
           border: "1px solid rgba(29,127,229,0.3)",
           borderRadius: "18px",
           padding: "24px",
           boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
           animation: "adPanelIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards",
-          maxHeight: "92vh",
+          maxHeight: "94vh",
           display: "flex",
           flexDirection: "column",
           gap: "18px",
@@ -679,55 +680,76 @@ function GuiaDetailModal({ guia, onClose, onDelete }: {
                 Abrir em nova aba ↗
               </a>
             </div>
-            <video
-              key={currentVideoUrl}
-              controls
-              autoPlay={false}
-              playsInline
-              className="w-full max-h-[380px] bg-black"
-              style={{ display: "block" }}
-            >
-              <source src={currentVideoUrl} />
-              Seu navegador não suporta a tag de vídeo.
-            </video>
+            <div className="relative w-full bg-black flex items-center justify-center" style={{ minHeight: "360px", maxHeight: "540px" }}>
+              <video
+                key={currentVideoUrl}
+                controls
+                autoPlay={false}
+                playsInline
+                preload="metadata"
+                className="w-full h-auto max-h-[540px] bg-black"
+                style={{ display: "block", outline: "none" }}
+              >
+                <source src={currentVideoUrl} />
+                {currentVideoUrl.startsWith("/uploads/guias/") && (
+                  <source src={`/api/admin/guias-ti/files/${currentVideoUrl.split("/").pop()}`} />
+                )}
+                Seu navegador não suporta a tag de vídeo.
+              </video>
+            </div>
           </div>
         )}
 
         {/* Scrollable info container */}
         <div className="overflow-y-auto space-y-4 pr-1" style={{ maxHeight: "calc(90vh - 200px)" }}>
-          {/* Link externo se houver */}
-          {guia.fileUrl && (guia.fileType === "link" || guia.fileUrl.startsWith("http")) && (
-            <div
-              className="p-3.5 rounded-xl flex items-center justify-between gap-3"
-              style={{
-                background: "rgba(14,165,233,0.08)",
-                border: "1px solid rgba(14,165,233,0.25)",
-              }}
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-mono uppercase tracking-wider text-[#38bdf8] mb-0.5">
-                  Link / URL da Guia
-                </p>
+          {/* Link externo / Google Drive se informado */}
+          {(() => {
+            const externalUrl = (guia.linkUrl && guia.linkUrl.trim())
+              ? guia.linkUrl.trim()
+              : (guia.fileUrl && (guia.fileType === "link" || guia.fileUrl.startsWith("http")))
+              ? guia.fileUrl.trim()
+              : null;
+
+            if (!externalUrl) return null;
+            const isDrive = externalUrl.includes("drive.google.com") || externalUrl.includes("docs.google.com");
+
+            return (
+              <div
+                className="p-3.5 rounded-xl flex items-center justify-between gap-3"
+                style={{
+                  background: isDrive ? "rgba(34,197,94,0.08)" : "rgba(14,165,233,0.08)",
+                  border: `1px solid ${isDrive ? "rgba(34,197,94,0.3)" : "rgba(14,165,233,0.25)"}`,
+                }}
+              >
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="text-[10px] font-mono uppercase tracking-wider mb-0.5 flex items-center gap-1.5"
+                    style={{ color: isDrive ? "#4ade80" : "#38bdf8" }}
+                  >
+                    <span>{isDrive ? "📁 Google Drive" : "🔗 Link / URL da Guia"}</span>
+                  </p>
+                  <a
+                    href={externalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-white hover:underline truncate block"
+                    style={{ color: isDrive ? "#86efac" : "#7dd3fc" }}
+                  >
+                    {externalUrl}
+                  </a>
+                </div>
                 <a
-                  href={guia.fileUrl}
+                  href={externalUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm font-medium text-white hover:text-[#38bdf8] underline truncate block"
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white shrink-0 transition"
+                  style={{ background: isDrive ? "#16a34a" : "#0284c7" }}
                 >
-                  {guia.fileUrl}
+                  {isDrive ? "Abrir Drive ↗" : "Acessar ↗"}
                 </a>
               </div>
-              <a
-                href={guia.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white shrink-0 transition"
-                style={{ background: "#0284c7" }}
-              >
-                Acessar ↗
-              </a>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Observações / Descrição do passo a passo */}
           {guia.observacoes && (
@@ -747,101 +769,93 @@ function GuiaDetailModal({ guia, onClose, onDelete }: {
             </div>
           )}
 
-          {/* Anexos / Arquivos */}
-          {fileItems.length > 0 && (
-            <div>
-              <p className="text-[11px] font-mono uppercase tracking-wider mb-2 text-[#94a3b8] flex items-center justify-between">
-                <span>Anexos ({fileItems.length})</span>
-                <span className="text-[10px] normal-case text-[#64748b]">Vídeos abrem no player acima</span>
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {fileItems.map((item) => {
-                  const badge = getRawFileBadgeInfo(item.fileType, item.fileName, item.fileUrl);
-                  const isVideo = isVideoFile(item.fileType, item.fileName, item.fileUrl);
-                  const isAudio = isAudioFile(item.fileType, item.fileName, item.fileUrl);
-                  const isPlayingThis = currentVideoUrl === item.fileUrl;
+          {/* Outros Anexos / Arquivos (esconde vídeos que já possuem player) */}
+          {(() => {
+            // Se já tem vídeo em exibição no player, exibe apenas os outros anexos
+            const otherFiles = currentVideoUrl
+              ? fileItems.filter((item) => !isVideoFile(item.fileType, item.fileName, item.fileUrl))
+              : fileItems;
 
-                  return (
-                    <div
-                      key={item.id}
-                      className="p-2.5 rounded-xl flex items-center justify-between gap-2.5 transition"
-                      style={{
-                        background: isPlayingThis ? "rgba(168,85,247,0.14)" : "rgba(255,255,255,0.03)",
-                        border: `1px solid ${isPlayingThis ? "rgba(168,85,247,0.45)" : "rgba(255,255,255,0.08)"}`,
-                      }}
-                    >
-                      <div className="min-w-0 flex-1 flex items-center gap-2">
-                        {badge && (
-                          <span
-                            className="text-[10px] font-bold rounded px-1.5 py-0.5 shrink-0"
-                            style={{ background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}
-                          >
-                            {badge.icon} {badge.label}
-                          </span>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-white truncate" title={item.fileName}>
-                            {item.fileName}
-                          </p>
-                          {item.fileSize && (
-                            <p className="text-[10px] font-mono text-[#64748b]">
-                              {(item.fileSize / 1024).toFixed(0)} KB
-                            </p>
+            if (otherFiles.length === 0) return null;
+
+            return (
+              <div>
+                <p className="text-[11px] font-mono uppercase tracking-wider mb-2 text-[#94a3b8] flex items-center justify-between">
+                  <span>Outros Arquivos Anexos ({otherFiles.length})</span>
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {otherFiles.map((item) => {
+                    const badge = getRawFileBadgeInfo(item.fileType, item.fileName, item.fileUrl);
+                    const isAudio = isAudioFile(item.fileType, item.fileName, item.fileUrl);
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="p-2.5 rounded-xl flex items-center justify-between gap-2.5 transition"
+                        style={{
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                        }}
+                      >
+                        <div className="min-w-0 flex-1 flex items-center gap-2">
+                          {badge && (
+                            <span
+                              className="text-[10px] font-bold rounded px-1.5 py-0.5 shrink-0"
+                              style={{ background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}
+                            >
+                              {badge.icon} {badge.label}
+                            </span>
                           )}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium text-white truncate" title={item.fileName}>
+                              {item.fileName}
+                            </p>
+                            {item.fileSize && (
+                              <p className="text-[10px] font-mono text-[#64748b]">
+                                {(item.fileSize / 1024).toFixed(0)} KB
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {isVideo && (
-                          <button
-                            type="button"
-                            onClick={() => setActiveMediaUrl(item.fileUrl)}
-                            className="px-2 py-1 rounded text-[11px] font-semibold text-white transition cursor-pointer"
-                            style={{
-                              background: isPlayingThis ? "rgba(168,85,247,0.6)" : "rgba(168,85,247,0.25)",
-                              border: "1px solid rgba(168,85,247,0.4)",
-                            }}
-                            title="Reproduzir vídeo no player"
-                          >
-                            ▶ Assistir
-                          </button>
-                        )}
-                        {isAudio && !isVideo && (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {isAudio && (
+                            <a
+                              href={item.fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2 py-1 rounded text-[11px] font-semibold text-white transition"
+                              style={{
+                                background: "rgba(234,179,8,0.2)",
+                                border: "1px solid rgba(234,179,8,0.4)",
+                                color: "#fde047",
+                              }}
+                            >
+                              Ouvir
+                            </a>
+                          )}
                           <a
                             href={item.fileUrl}
+                            download={item.fileName}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-2 py-1 rounded text-[11px] font-semibold text-white transition"
+                            className="px-2 py-1 rounded text-[11px] text-[#cbd5e1] hover:text-white transition"
                             style={{
-                              background: "rgba(234,179,8,0.2)",
-                              border: "1px solid rgba(234,179,8,0.4)",
-                              color: "#fde047",
+                              background: "rgba(255,255,255,0.06)",
+                              border: "1px solid rgba(255,255,255,0.1)",
                             }}
+                            title="Baixar ou abrir em nova aba"
                           >
-                            Ouvir
+                            ⬇
                           </a>
-                        )}
-                        <a
-                          href={item.fileUrl}
-                          download={item.fileName}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-2 py-1 rounded text-[11px] text-[#cbd5e1] hover:text-white transition"
-                          style={{
-                            background: "rgba(255,255,255,0.06)",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                          }}
-                          title="Baixar ou abrir em nova aba"
-                        >
-                          ⬇
-                        </a>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* Footer ações */}

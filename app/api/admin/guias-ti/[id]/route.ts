@@ -19,19 +19,28 @@ export async function DELETE(
     });
     if (!guia) return NextResponse.json({ message: "Guia não encontrada." }, { status: 404 });
 
+    function getLocalPath(url: string) {
+      if (url.startsWith("/api/admin/guias-ti/files/")) {
+        const fname = path.basename(url);
+        return path.join(process.cwd(), "public", "uploads", "guias", fname);
+      }
+      if (url.startsWith("/uploads/")) {
+        return path.join(process.cwd(), "public", url);
+      }
+      return null;
+    }
+
     // Remover arquivo legado principal se existir
-    if (guia.fileType !== "link" && guia.fileUrl.startsWith("/uploads/")) {
-      const filePath = path.join(process.cwd(), "public", guia.fileUrl);
-      await unlink(filePath).catch(() => {/* ignora se já não existe */});
+    if (guia.fileType !== "link") {
+      const p = getLocalPath(guia.fileUrl);
+      if (p) await unlink(p).catch(() => {});
     }
 
     // Remover todos os arquivos associados
     if (guia.arquivos?.length) {
       for (const arq of guia.arquivos) {
-        if (arq.fileUrl.startsWith("/uploads/")) {
-          const filePath = path.join(process.cwd(), "public", arq.fileUrl);
-          await unlink(filePath).catch(() => {/* ignora se já não existe */});
-        }
+        const p = getLocalPath(arq.fileUrl);
+        if (p) await unlink(p).catch(() => {});
       }
     }
 

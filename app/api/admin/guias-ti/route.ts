@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
         await writeFile(filePath, buffer);
 
         createdArquivos.push({
-          fileUrl: `/uploads/guias/${safeName}`,
+          fileUrl: `/api/admin/guias-ti/files/${safeName}`,
           fileType: inferFileType(file.type, file.name),
           fileName: file.name,
           fileSize: file.size,
@@ -140,6 +140,7 @@ export async function POST(request: NextRequest) {
           modulo: null,
           fileType: mainFileType,
           fileUrl: mainFileUrl,
+          linkUrl: linkUrl || null,
           fileName: mainFileName,
           fileSize: mainFileSize,
           observacoes,
@@ -167,6 +168,7 @@ export async function POST(request: NextRequest) {
           modulo: null,
           fileType,
           fileUrl: url,
+          linkUrl: url || null,
           fileName: null,
           fileSize: null,
           observacoes: obs,

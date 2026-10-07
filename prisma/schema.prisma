@@ -645,6 +645,8 @@ model GuiaTi {
   fileType  String
   /// URL externa (link) ou caminho relativo do arquivo salvo (/uploads/guias/...)
   fileUrl   String
+  /// Link web/Google Drive explícito quando cadastrado em conjunto com arquivos
+  linkUrl   String?
   /// Nome original do arquivo (null quando fileType = "link")
   fileName  String?
   /// Tamanho em bytes (null quando fileType = "link")
