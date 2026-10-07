@@ -15,7 +15,17 @@ type GuiaTag = {
   nome: string;
 };
 
-type GuiaTi = {
+export type GuiaArquivoItem = {
+  id: string;
+  guiaId: string;
+  fileType: string;
+  fileUrl: string;
+  fileName: string;
+  fileSize: number;
+  createdAt: string;
+};
+
+export type GuiaTi = {
   id: string;
   nome: string;
   modulo: string | null;
@@ -25,34 +35,35 @@ type GuiaTi = {
   fileSize: number | null;
   observacoes?: string | null;
   tags: GuiaTag[];
+  arquivos?: GuiaArquivoItem[];
   createdAt: string;
 };
 
-function getFileBadgeInfo(g: GuiaTi): { label: string; icon: string; bg: string; color: string; border: string } | null {
-  if (!g.fileUrl) return null;
+function getRawFileBadgeInfo(fileType?: string | null, fileName?: string | null, fileUrl?: string | null): { label: string; icon: string; bg: string; color: string; border: string } | null {
+  if (!fileUrl && !fileType) return null;
 
-  const type = (g.fileType || "").toLowerCase();
-  const ext = g.fileName ? g.fileName.split(".").pop()?.toLowerCase() || "" : "";
+  const type = (fileType || "").toLowerCase();
+  const ext = fileName ? fileName.split(".").pop()?.toLowerCase() || "" : "";
 
   if (type === "pdf" || ext === "pdf") {
     return { label: "PDF", icon: "📄", bg: "rgba(239,68,68,0.14)", color: "#fca5a5", border: "rgba(239,68,68,0.3)" };
   }
-  if (type === "mp4" || type === "video" || ext === "mp4" || ext === "mkv" || ext === "avi" || ext === "mov" || ext === "webm") {
-    return { label: "MP4", icon: "🎬", bg: "rgba(168,85,247,0.14)", color: "#d8b4fe", border: "rgba(168,85,247,0.3)" };
+  if (type === "mp4" || type === "video" || ["mp4", "mkv", "avi", "mov", "webm"].includes(ext)) {
+    return { label: "VÍDEO", icon: "🎬", bg: "rgba(168,85,247,0.14)", color: "#d8b4fe", border: "rgba(168,85,247,0.3)" };
   }
-  if (type === "mp3" || type === "audio" || ext === "mp3" || ext === "wav" || ext === "ogg" || ext === "m4a" || ext === "aac") {
-    return { label: "MP3", icon: "🎙", bg: "rgba(234,179,8,0.14)", color: "#fde047", border: "rgba(234,179,8,0.3)" };
+  if (type === "mp3" || type === "audio" || ["mp3", "wav", "ogg", "m4a", "aac"].includes(ext)) {
+    return { label: "ÁUDIO", icon: "🎙", bg: "rgba(234,179,8,0.14)", color: "#fde047", border: "rgba(234,179,8,0.3)" };
   }
-  if (type === "word" || ext === "doc" || ext === "docx") {
+  if (type === "word" || ["doc", "docx"].includes(ext)) {
     return { label: "WORD", icon: "📝", bg: "rgba(59,130,246,0.15)", color: "#93c5fd", border: "rgba(59,130,246,0.3)" };
   }
-  if (type === "excel" || ext === "xls" || ext === "xlsx" || ext === "csv") {
+  if (type === "excel" || ["xls", "xlsx", "csv"].includes(ext)) {
     return { label: "EXCEL", icon: "📊", bg: "rgba(34,197,94,0.14)", color: "#86efac", border: "rgba(34,197,94,0.3)" };
   }
-  if (type === "powerpoint" || ext === "ppt" || ext === "pptx") {
+  if (type === "powerpoint" || ["ppt", "pptx"].includes(ext)) {
     return { label: "PPT", icon: "📑", bg: "rgba(249,115,22,0.14)", color: "#fdba74", border: "rgba(249,115,22,0.3)" };
   }
-  if (type === "zip" || ext === "zip" || ext === "rar" || ext === "7z") {
+  if (type === "zip" || ["zip", "rar", "7z"].includes(ext)) {
     return { label: "ZIP", icon: "🗜", bg: "rgba(217,70,239,0.14)", color: "#f0abfc", border: "rgba(217,70,239,0.3)" };
   }
   if (type === "image" || ["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) {
@@ -64,10 +75,20 @@ function getFileBadgeInfo(g: GuiaTi): { label: string; icon: string; bg: string;
   if (ext) {
     return { label: ext.toUpperCase(), icon: "📎", bg: "rgba(100,116,139,0.16)", color: "#cbd5e1", border: "rgba(100,116,139,0.25)" };
   }
-  if (type !== "note") {
+  if (type !== "note" && fileUrl) {
     return { label: "ARQUIVO", icon: "📎", bg: "rgba(100,116,139,0.16)", color: "#cbd5e1", border: "rgba(100,116,139,0.25)" };
   }
   return null;
+}
+
+function getFileBadgeInfo(g: GuiaTi): { label: string; icon: string; bg: string; color: string; border: string } | null {
+  if (g.arquivos && g.arquivos.length > 1) {
+    return { label: `${g.arquivos.length} ARQUIVOS`, icon: "📁", bg: "rgba(99,102,241,0.16)", color: "#a5b4fc", border: "rgba(99,102,241,0.35)" };
+  }
+  if (g.arquivos && g.arquivos.length === 1) {
+    return getRawFileBadgeInfo(g.arquivos[0].fileType, g.arquivos[0].fileName, g.arquivos[0].fileUrl);
+  }
+  return getRawFileBadgeInfo(g.fileType, g.fileName, g.fileUrl);
 }
 
 type ModalState = { open: false } | { open: true; mode: "create" } | { open: true; mode: "edit"; entry: Entry };
@@ -510,6 +531,343 @@ function DetailModal({ entry, onClose, onEdit, onDelete }: {
   );
 }
 
+// ─── GuiaDetailModal (Visualização completa com player de vídeo) ─────────────
+function isVideoFile(fileType?: string | null, fileName?: string | null, fileUrl?: string | null): boolean {
+  const type = (fileType || "").toLowerCase();
+  const name = (fileName || fileUrl || "").toLowerCase();
+  const ext = name.split("?")[0].split(".").pop() || "";
+  return (
+    type === "mp4" ||
+    type === "video" ||
+    ["mp4", "webm", "ogg", "mov", "mkv"].includes(ext)
+  );
+}
+
+function isAudioFile(fileType?: string | null, fileName?: string | null, fileUrl?: string | null): boolean {
+  const type = (fileType || "").toLowerCase();
+  const name = (fileName || fileUrl || "").toLowerCase();
+  const ext = name.split("?")[0].split(".").pop() || "";
+  return (
+    type === "mp3" ||
+    type === "audio" ||
+    ["mp3", "wav", "ogg", "m4a", "aac"].includes(ext)
+  );
+}
+
+function GuiaDetailModal({ guia, onClose, onDelete }: {
+  guia: GuiaTi;
+  onClose: () => void;
+  onDelete: () => void;
+}) {
+  const [activeMediaUrl, setActiveMediaUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // Lista consolidada de todos os arquivos/mídias anexados
+  const fileItems: {
+    id: string;
+    fileUrl: string;
+    fileName: string;
+    fileSize: number | null;
+    fileType: string;
+  }[] = [];
+
+  if (guia.arquivos && guia.arquivos.length > 0) {
+    guia.arquivos.forEach((a) => {
+      fileItems.push({
+        id: a.id,
+        fileUrl: a.fileUrl,
+        fileName: a.fileName,
+        fileSize: a.fileSize,
+        fileType: a.fileType,
+      });
+    });
+  } else if (guia.fileUrl && guia.fileType !== "link") {
+    fileItems.push({
+      id: "legacy",
+      fileUrl: guia.fileUrl,
+      fileName: guia.fileName || "Arquivo da guia",
+      fileSize: guia.fileSize,
+      fileType: guia.fileType,
+    });
+  }
+
+  // Primeiro vídeo padrão para abrir no player
+  const firstVideo = fileItems.find((f) => isVideoFile(f.fileType, f.fileName, f.fileUrl));
+  const currentVideoUrl = activeMediaUrl || firstVideo?.fileUrl || null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)", animation: "adBackdropIn 0.2s ease forwards" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        style={{
+          width: "min(720px, 96vw)",
+          background: "#0b1220",
+          border: "1px solid rgba(29,127,229,0.3)",
+          borderRadius: "18px",
+          padding: "24px",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+          animation: "adPanelIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+          maxHeight: "92vh",
+          display: "flex",
+          flexDirection: "column",
+          gap: "18px",
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-1.5">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#4da3ff]">
+                Guia TI
+              </span>
+              {guia.tags?.map((tag) => (
+                <span
+                  key={tag.id}
+                  className="text-[10px] font-mono rounded px-1.5 py-0.5"
+                  style={{ background: "rgba(139,92,246,0.2)", color: "#c4b5fd", border: "1px solid rgba(139,92,246,0.35)" }}
+                >
+                  {tag.nome}
+                </span>
+              ))}
+              {(!guia.tags || guia.tags.length === 0) && guia.modulo && (
+                <span
+                  className="text-[10px] font-mono rounded px-1.5 py-0.5"
+                  style={{ background: "rgba(255,255,255,0.06)", color: "#94a3b8", border: "1px solid rgba(255,255,255,0.1)" }}
+                >
+                  {guia.modulo}
+                </span>
+              )}
+            </div>
+            <h2 className="text-xl font-bold text-white break-words">{guia.nome}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-[#6b8aaa] hover:text-white transition text-2xl leading-none px-1"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Player de Vídeo em destaque caso haja vídeo */}
+        {currentVideoUrl && isVideoFile(null, null, currentVideoUrl) && (
+          <div
+            className="rounded-xl overflow-hidden border"
+            style={{
+              background: "#020617",
+              borderColor: "rgba(168,85,247,0.35)",
+              boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
+            }}
+          >
+            <div className="px-3 py-2 flex items-center justify-between text-xs" style={{ background: "rgba(168,85,247,0.12)" }}>
+              <span className="font-semibold text-[#d8b4fe] flex items-center gap-1.5">
+                <span>🎬</span> Player de Vídeo
+              </span>
+              <a
+                href={currentVideoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] text-[#a78bfa] hover:text-white underline"
+              >
+                Abrir em nova aba ↗
+              </a>
+            </div>
+            <video
+              key={currentVideoUrl}
+              controls
+              autoPlay={false}
+              playsInline
+              className="w-full max-h-[380px] bg-black"
+              style={{ display: "block" }}
+            >
+              <source src={currentVideoUrl} />
+              Seu navegador não suporta a tag de vídeo.
+            </video>
+          </div>
+        )}
+
+        {/* Scrollable info container */}
+        <div className="overflow-y-auto space-y-4 pr-1" style={{ maxHeight: "calc(90vh - 200px)" }}>
+          {/* Link externo se houver */}
+          {guia.fileUrl && (guia.fileType === "link" || guia.fileUrl.startsWith("http")) && (
+            <div
+              className="p-3.5 rounded-xl flex items-center justify-between gap-3"
+              style={{
+                background: "rgba(14,165,233,0.08)",
+                border: "1px solid rgba(14,165,233,0.25)",
+              }}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-mono uppercase tracking-wider text-[#38bdf8] mb-0.5">
+                  Link / URL da Guia
+                </p>
+                <a
+                  href={guia.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-white hover:text-[#38bdf8] underline truncate block"
+                >
+                  {guia.fileUrl}
+                </a>
+              </div>
+              <a
+                href={guia.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white shrink-0 transition"
+                style={{ background: "#0284c7" }}
+              >
+                Acessar ↗
+              </a>
+            </div>
+          )}
+
+          {/* Observações / Descrição do passo a passo */}
+          {guia.observacoes && (
+            <div
+              className="p-4 rounded-xl"
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              <p className="text-[10px] font-mono uppercase tracking-wider mb-1.5" style={{ color: "#94a3b8" }}>
+                Instruções e Observações
+              </p>
+              <p className="text-sm text-[#e2e8f0] whitespace-pre-wrap leading-relaxed">
+                {guia.observacoes}
+              </p>
+            </div>
+          )}
+
+          {/* Anexos / Arquivos */}
+          {fileItems.length > 0 && (
+            <div>
+              <p className="text-[11px] font-mono uppercase tracking-wider mb-2 text-[#94a3b8] flex items-center justify-between">
+                <span>Anexos ({fileItems.length})</span>
+                <span className="text-[10px] normal-case text-[#64748b]">Vídeos abrem no player acima</span>
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {fileItems.map((item) => {
+                  const badge = getRawFileBadgeInfo(item.fileType, item.fileName, item.fileUrl);
+                  const isVideo = isVideoFile(item.fileType, item.fileName, item.fileUrl);
+                  const isAudio = isAudioFile(item.fileType, item.fileName, item.fileUrl);
+                  const isPlayingThis = currentVideoUrl === item.fileUrl;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="p-2.5 rounded-xl flex items-center justify-between gap-2.5 transition"
+                      style={{
+                        background: isPlayingThis ? "rgba(168,85,247,0.14)" : "rgba(255,255,255,0.03)",
+                        border: `1px solid ${isPlayingThis ? "rgba(168,85,247,0.45)" : "rgba(255,255,255,0.08)"}`,
+                      }}
+                    >
+                      <div className="min-w-0 flex-1 flex items-center gap-2">
+                        {badge && (
+                          <span
+                            className="text-[10px] font-bold rounded px-1.5 py-0.5 shrink-0"
+                            style={{ background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}
+                          >
+                            {badge.icon} {badge.label}
+                          </span>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-white truncate" title={item.fileName}>
+                            {item.fileName}
+                          </p>
+                          {item.fileSize && (
+                            <p className="text-[10px] font-mono text-[#64748b]">
+                              {(item.fileSize / 1024).toFixed(0)} KB
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isVideo && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveMediaUrl(item.fileUrl)}
+                            className="px-2 py-1 rounded text-[11px] font-semibold text-white transition cursor-pointer"
+                            style={{
+                              background: isPlayingThis ? "rgba(168,85,247,0.6)" : "rgba(168,85,247,0.25)",
+                              border: "1px solid rgba(168,85,247,0.4)",
+                            }}
+                            title="Reproduzir vídeo no player"
+                          >
+                            ▶ Assistir
+                          </button>
+                        )}
+                        {isAudio && !isVideo && (
+                          <a
+                            href={item.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2 py-1 rounded text-[11px] font-semibold text-white transition"
+                            style={{
+                              background: "rgba(234,179,8,0.2)",
+                              border: "1px solid rgba(234,179,8,0.4)",
+                              color: "#fde047",
+                            }}
+                          >
+                            Ouvir
+                          </a>
+                        )}
+                        <a
+                          href={item.fileUrl}
+                          download={item.fileName}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2 py-1 rounded text-[11px] text-[#cbd5e1] hover:text-white transition"
+                          style={{
+                            background: "rgba(255,255,255,0.06)",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                          }}
+                          title="Baixar ou abrir em nova aba"
+                        >
+                          ⬇
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer ações */}
+        <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+          <button
+            onClick={onDelete}
+            className="rounded-lg px-3 py-1.5 text-xs font-medium transition cursor-pointer"
+            style={{ background: "rgba(239,68,68,0.1)", color: "#f87171", border: "1px solid rgba(239,68,68,0.25)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.2)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.1)")}
+          >
+            Excluir Guia
+          </button>
+          <button
+            onClick={onClose}
+            className="rounded-lg px-4 py-1.5 text-xs font-semibold text-white transition cursor-pointer"
+            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)" }}
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── GuiaModal ───────────────────────────────────────────────────────────────
 function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const [nome, setNome] = useState("");
@@ -519,12 +877,13 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
   const [showNewTag, setShowNewTag] = useState(false);
   const [creatingTag, setCreatingTag] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [observacoes, setObservacoes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const nomeRef = useRef<HTMLInputElement>(null);
   const newTagRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setTimeout(() => nomeRef.current?.focus(), 50);
@@ -567,23 +926,31 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
     }
   }
 
+  function handleAddFiles(newFileList: FileList | null) {
+    if (!newFileList) return;
+    const added = Array.from(newFileList);
+    setFiles((prev) => [...prev, ...added]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function handleRemoveFile(index: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!nome.trim()) return;
-    if (file && linkUrl.trim()) {
-      setError("Escolha apenas um: URL ou arquivo.");
-      return;
-    }
     setLoading(true);
     setError("");
     try {
       let res: Response;
-      if (file) {
+      if (files.length > 0) {
         const fd = new FormData();
         fd.append("nome", nome.trim());
         fd.append("tagIds", JSON.stringify(selectedTagIds));
-        fd.append("file", file);
+        if (linkUrl.trim()) fd.append("linkUrl", linkUrl.trim());
         if (observacoes.trim()) fd.append("observacoes", observacoes.trim());
+        files.forEach((f) => fd.append("files", f));
         res = await fetch("/api/admin/guias-ti", { method: "POST", body: fd });
       } else {
         res = await fetch("/api/admin/guias-ti", {
@@ -592,6 +959,7 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
           body: JSON.stringify({
             nome: nome.trim(),
             fileUrl: linkUrl.trim(),
+            linkUrl: linkUrl.trim(),
             observacoes: observacoes.trim() || undefined,
             tagIds: selectedTagIds,
           }),
@@ -630,7 +998,7 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
         .guia-tag-chip { transition: background 0.15s, border-color 0.15s, color 0.15s; }
       `}</style>
       <div style={{
-        width: "min(480px, 95vw)", background: "#0f172a",
+        width: "min(520px, 95vw)", background: "#0f172a",
         border: "1px solid rgba(29,127,229,0.25)", borderRadius: "16px",
         padding: "28px 24px", boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
         animation: "adPanelIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards",
@@ -729,7 +1097,9 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
 
           {/* URL */}
           <div>
-            <label style={{ ...labelStyle, display: "block", marginBottom: 6 }}>URL <span style={{ color: "#475569" }}>(opcional)</span></label>
+            <label style={{ ...labelStyle, display: "block", marginBottom: 6 }}>
+              URL <span style={{ color: "#475569" }}>(opcional - link web, Google Drive, doc externo, etc.)</span>
+            </label>
             <input
               value={linkUrl}
               onChange={(e) => setLinkUrl(e.target.value)}
@@ -740,29 +1110,72 @@ function GuiaModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
             />
           </div>
 
-          {/* Arquivo */}
+          {/* Arquivos (Múltiplos) */}
           <div>
-            <label style={{ ...labelStyle, display: "block", marginBottom: 6 }}>Arquivo <span style={{ color: "#475569" }}>(opcional - PDF, vídeo, áudio, etc.)</span></label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label style={labelStyle}>
+                Arquivos <span style={{ color: "#475569" }}>(opcional - quantos quiser: vídeo, áudio, PDF, etc.)</span>
+              </label>
+              {files.length > 0 && (
+                <span className="text-[11px] font-mono" style={{ color: "#4ade80" }}>
+                  {files.length} {files.length === 1 ? "arquivo selecionado" : "arquivos selecionados"}
+                </span>
+              )}
+            </div>
+
             <label
               style={{
-                display: "flex", alignItems: "center", gap: 10,
+                display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", gap: 8,
                 background: "rgba(8,15,26,0.8)",
-                border: `1px solid ${file ? "rgba(74,222,128,0.35)" : "rgba(29,127,229,0.25)"}`,
-                borderRadius: "8px", padding: "10px 14px", cursor: "pointer",
-                color: file ? "#4ade80" : "#475569", fontSize: "13px",
+                border: "1px dashed rgba(29,127,229,0.35)",
+                borderRadius: "8px", padding: "12px 14px", cursor: "pointer",
+                color: "#94a3b8", fontSize: "13px", transition: "border-color 0.2s",
               }}
+              onMouseEnter={(el) => (el.currentTarget.style.borderColor = "rgba(29,127,229,0.7)")}
+              onMouseLeave={(el) => (el.currentTarget.style.borderColor = "rgba(29,127,229,0.35)")}
             >
-              <span style={{ fontSize: 16 }}>{file ? "📎" : "⬆️"}</span>
-              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {file ? `${file.name} (${(file.size / 1024).toFixed(0)} KB)` : "Clique para selecionar um arquivo…"}
-              </span>
-              {file && (
-                <button type="button" onClick={(e) => { e.preventDefault(); setFile(null); }}
-                  style={{ color: "#f87171", fontSize: 13, lineHeight: 1, background: "none", border: "none", cursor: "pointer" }}>✕</button>
-              )}
-              <input type="file" accept="*/*" style={{ display: "none" }}
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              <span style={{ fontSize: 16 }}>📎</span>
+              <span>Clique para selecionar ou adicionar mais arquivos…</span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="*/*"
+                style={{ display: "none" }}
+                onChange={(e) => handleAddFiles(e.target.files)}
+              />
             </label>
+
+            {/* Lista de arquivos selecionados */}
+            {files.length > 0 && (
+              <div className="mt-2.5 space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                {files.map((f, idx) => (
+                  <div
+                    key={`${f.name}-${idx}`}
+                    className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-xs"
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
+                      <span style={{ fontSize: 13 }}>
+                        {f.type.startsWith("video/") ? "🎬" : f.type.startsWith("audio/") ? "🎙️" : f.type === "application/pdf" ? "📄" : "📎"}
+                      </span>
+                      <span className="truncate text-white font-medium">{f.name}</span>
+                      <span className="text-[11px] font-mono shrink-0" style={{ color: "#64748b" }}>
+                        {(f.size / 1024).toFixed(0)} KB
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFile(idx)}
+                      style={{ color: "#f87171", fontSize: 13, background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}
+                      title="Remover arquivo"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Observações */}
@@ -815,6 +1228,7 @@ export function AnydeskDashboard() {
   const [guias, setGuias] = useState<GuiaTi[]>([]);
   const [guiasLoading, setGuiasLoading] = useState(true);
   const [showGuiaModal, setShowGuiaModal] = useState(false);
+  const [detailGuia, setDetailGuia] = useState<GuiaTi | null>(null);
   const [deletingGuiaId, setDeletingGuiaId] = useState<string | null>(null);
 
   async function load() {
@@ -848,6 +1262,7 @@ export function AnydeskDashboard() {
     setDeletingGuiaId(id);
     await fetch(`/api/admin/guias-ti/${id}`, { method: "DELETE" });
     setDeletingGuiaId(null);
+    if (detailGuia?.id === id) setDetailGuia(null);
     loadGuias();
   }
 
@@ -1000,19 +1415,15 @@ export function AnydeskDashboard() {
                       </span>
                     )}
 
-                    {/* Nome clicável ou estático com título */}
-                    {g.fileUrl ? (
-                      <a href={g.fileUrl} target="_blank" rel="noopener noreferrer"
-                        className="text-sm font-medium text-white hover:text-[#4da3ff] transition-colors"
-                        title={g.observacoes ? `Observações:\n${g.observacoes}` : undefined}>
-                        {g.nome}
-                      </a>
-                    ) : (
-                      <span className="text-sm font-medium text-white"
-                        title={g.observacoes ? `Observações:\n${g.observacoes}` : undefined}>
-                        {g.nome}
-                      </span>
-                    )}
+                    {/* Clique para abrir modal completo com player e todos os dados */}
+                    <button
+                      type="button"
+                      onClick={() => setDetailGuia(g)}
+                      className="text-sm font-medium text-white hover:text-[#4da3ff] transition-colors bg-transparent border-0 p-0 cursor-pointer text-left"
+                      title="Clique para ver o guia completo, arquivos e player"
+                    >
+                      {g.nome}
+                    </button>
 
                     {/* Ícone de nota se houver observações */}
                     {g.observacoes && (
@@ -1051,6 +1462,15 @@ export function AnydeskDashboard() {
           )}
         </div>
       </div>
+
+      {/* Modal detalhe da guia (com player de vídeo, anotações, links e múltiplos arquivos) */}
+      {detailGuia && (
+        <GuiaDetailModal
+          guia={detailGuia}
+          onClose={() => setDetailGuia(null)}
+          onDelete={() => handleDeleteGuia(detailGuia.id)}
+        />
+      )}
 
       {/* Modal nova guia */}
       {showGuiaModal && (

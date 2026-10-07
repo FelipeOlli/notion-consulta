@@ -637,11 +637,11 @@ model AnydeskEntry {
 }
 
 model GuiaTi {
-  id        String    @id @default(cuid())
+  id        String        @id @default(cuid())
   nome      String
   /// Legado: texto livre. Novos registros usam relação tags[].
   modulo    String?
-  /// "link" | "pdf" | "video" | "audio" — inferido do MIME em uploads novos
+  /// "link" | "pdf" | "video" | "audio" — mantido para retrocompatibilidade
   fileType  String
   /// URL externa (link) ou caminho relativo do arquivo salvo (/uploads/guias/...)
   fileUrl   String
@@ -651,8 +651,22 @@ model GuiaTi {
   fileSize    Int?
   observacoes String?
   tags        GuiaTag[]
-  createdAt   DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  arquivos    GuiaArquivo[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model GuiaArquivo {
+  id        String   @id @default(cuid())
+  guiaId    String
+  guia      GuiaTi   @relation(fields: [guiaId], references: [id], onDelete: Cascade)
+  fileType  String
+  fileUrl   String
+  fileName  String
+  fileSize  Int
+  createdAt DateTime @default(now())
+
+  @@index([guiaId])
 }
 
 model GuiaTag {
