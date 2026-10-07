@@ -561,6 +561,7 @@ function GuiaDetailModal({ guia, onClose, onDelete }: {
   onDelete: () => void;
 }) {
   const [activeMediaUrl, setActiveMediaUrl] = useState<string | null>(null);
+  const [videoError, setVideoError] = useState(false);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
@@ -599,7 +600,11 @@ function GuiaDetailModal({ guia, onClose, onDelete }: {
 
   // Primeiro vídeo padrão para abrir no player
   const firstVideo = fileItems.find((f) => isVideoFile(f.fileType, f.fileName, f.fileUrl));
-  const currentVideoUrl = activeMediaUrl || firstVideo?.fileUrl || null;
+  const rawVideoUrl = activeMediaUrl || firstVideo?.fileUrl || null;
+  // URLs legadas /uploads/guias/x passam pela rota de streaming
+  const currentVideoUrl = rawVideoUrl?.startsWith("/uploads/guias/")
+    ? `/api/admin/guias-ti/files/${rawVideoUrl.split("/").pop()}`
+    : rawVideoUrl;
 
   return (
     <div
@@ -681,21 +686,28 @@ function GuiaDetailModal({ guia, onClose, onDelete }: {
               </a>
             </div>
             <div className="relative w-full bg-black flex items-center justify-center" style={{ minHeight: "360px", maxHeight: "540px" }}>
-              <video
-                key={currentVideoUrl}
-                controls
-                autoPlay={false}
-                playsInline
-                preload="metadata"
-                className="w-full h-auto max-h-[540px] bg-black"
-                style={{ display: "block", outline: "none" }}
-              >
-                <source src={currentVideoUrl} />
-                {currentVideoUrl.startsWith("/uploads/guias/") && (
-                  <source src={`/api/admin/guias-ti/files/${currentVideoUrl.split("/").pop()}`} />
-                )}
-                Seu navegador não suporta a tag de vídeo.
-              </video>
+              {videoError ? (
+                <div className="text-center px-6 py-10">
+                  <p className="text-3xl mb-2">⚠️</p>
+                  <p className="text-sm font-semibold text-[#fca5a5]">Vídeo não encontrado no servidor</p>
+                  <p className="text-xs text-[#94a3b8] mt-1 max-w-sm">
+                    O arquivo foi perdido (provavelmente em um redeploy). Exclua e recrie a guia anexando o vídeo novamente.
+                  </p>
+                </div>
+              ) : (
+                <video
+                  key={currentVideoUrl}
+                  src={currentVideoUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  onError={() => setVideoError(true)}
+                  className="w-full h-auto max-h-[540px] bg-black"
+                  style={{ display: "block", outline: "none" }}
+                >
+                  Seu navegador não suporta a tag de vídeo.
+                </video>
+              )}
             </div>
           </div>
         )}

@@ -3,6 +3,7 @@ import { ensureModuleAccess } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { GUIAS_UPLOADS_DIR } from "@/lib/guias-storage";
 
 /** Infere fileType a partir do MIME e extensão do arquivo. */
 function inferFileType(mime: string, filename: string): string {
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const uploadsDir = path.join(process.cwd(), "public", "uploads", "guias");
+      const uploadsDir = GUIAS_UPLOADS_DIR;
       if (uploadedFiles.length > 0) {
         await mkdir(uploadsDir, { recursive: true });
       }

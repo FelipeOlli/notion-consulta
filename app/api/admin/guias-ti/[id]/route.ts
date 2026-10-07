@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ensureModuleAccess } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { unlink } from "fs/promises";
-import path from "path";
+import { resolveGuiaFile, guiaFilenameFromUrl } from "@/lib/guias-storage";
 
 export async function DELETE(
   _request: NextRequest,
@@ -19,30 +19,16 @@ export async function DELETE(
     });
     if (!guia) return NextResponse.json({ message: "Guia não encontrada." }, { status: 404 });
 
-    function getLocalPath(url: string) {
-      if (url.startsWith("/api/admin/guias-ti/files/")) {
-        const fname = path.basename(url);
-        return path.join(process.cwd(), "public", "uploads", "guias", fname);
-      }
-      if (url.startsWith("/uploads/")) {
-        return path.join(process.cwd(), "public", url);
-      }
-      return null;
-    }
-
-    // Remover arquivo legado principal se existir
-    if (guia.fileType !== "link") {
-      const p = getLocalPath(guia.fileUrl);
+    async function removeFile(url: string) {
+      const name = guiaFilenameFromUrl(url);
+      if (!name) return;
+      const p = await resolveGuiaFile(name);
       if (p) await unlink(p).catch(() => {});
     }
 
-    // Remover todos os arquivos associados
-    if (guia.arquivos?.length) {
-      for (const arq of guia.arquivos) {
-        const p = getLocalPath(arq.fileUrl);
-        if (p) await unlink(p).catch(() => {});
-      }
-    }
+    // Remover arquivo legado principal e todos os anexos
+    if (guia.fileType !== "link") await removeFile(guia.fileUrl);
+    for (const arq of guia.arquivos ?? []) await removeFile(arq.fileUrl);
 
     await prisma.guiaTi.delete({ where: { id } });
     return NextResponse.json({ ok: true });

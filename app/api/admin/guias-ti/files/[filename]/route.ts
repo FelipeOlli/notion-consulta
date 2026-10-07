@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { ensureModuleAccess } from "@/lib/admin-auth";
+import { resolveGuiaFile } from "@/lib/guias-storage";
 
 const MIME_MAP: Record<string, string> = {
   ".mp4": "video/mp4",
@@ -33,14 +34,11 @@ export async function GET(
   const { filename } = await params;
   // Prevenção básica de path traversal
   const safeBase = path.basename(filename);
-  const filePath = path.join(process.cwd(), "public", "uploads", "guias", safeBase);
-
-  let stat;
-  try {
-    stat = await fs.stat(filePath);
-  } catch {
+  const filePath = await resolveGuiaFile(safeBase);
+  if (!filePath) {
     return NextResponse.json({ message: "Arquivo não encontrado." }, { status: 404 });
   }
+  const stat = await fs.stat(filePath);
 
   const ext = path.extname(safeBase).toLowerCase();
   const contentType = MIME_MAP[ext] || "application/octet-stream";
